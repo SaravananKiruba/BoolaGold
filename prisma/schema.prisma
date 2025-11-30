@@ -1,0 +1,620 @@
+// This is your Prisma schema file for Jewelry Store Management System
+// Covers all 30 user stories with clean, maintainable design
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CUSTOMER MANAGEMENT (User Stories 1-2)
+// ============================================
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+  VIP
+}
+
+model Customer {
+  id               String            @id @default(uuid())
+  name             String            @db.VarChar(100)
+  phone            String            @db.VarChar(10)
+  email            String?           @db.VarChar(255)
+  whatsapp         String?           @db.VarChar(10)
+  address          String?           @db.Text
+  city             String?           @db.VarChar(100)
+  dateOfBirth      DateTime?         @db.Date
+  anniversaryDate  DateTime?         @db.Date
+  customerType     CustomerType      @default(RETAIL)
+  isActive         Boolean           @default(true)
+  registrationDate DateTime          @default(now())
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+
+  // Relations
+  familyMembers    FamilyMember[]
+  salesOrders      SalesOrder[]
+  emiPayments      EmiPayment[]
+  transactions     Transaction[]
+
+  @@index([phone])
+  @@index([customerType])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("customers")
+}
+
+model FamilyMember {
+  id        String    @id @default(uuid())
+  customerId String
+  name      String    @db.VarChar(100)
+  relation  String    @db.VarChar(50)
+  dateOfBirth DateTime? @db.Date
+  anniversary DateTime? @db.Date
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  customer  Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("family_members")
+}
+
+// ============================================
+// SUPPLIER MANAGEMENT (User Story 9)
+// ============================================
+
+model Supplier {
+  id              String    @id @default(uuid())
+  name            String    @db.VarChar(200)
+  contactPerson   String?   @db.VarChar(100)
+  phone           String    @db.VarChar(15)
+  email           String?   @db.VarChar(255)
+  address         String?   @db.Text
+  city            String?   @db.VarChar(100)
+  isActive        Boolean   @default(true)
+  registrationDate DateTime @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  purchaseOrders  PurchaseOrder[]
+
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("suppliers")
+}
+
+// ============================================
+// PRODUCT MANAGEMENT (User Stories 3-5)
+// ============================================
+
+enum MetalType {
+  GOLD
+  SILVER
+  PLATINUM
+}
+
+model Product {
+  id              String     @id @default(uuid())
+  name            String     @db.VarChar(200)
+  metalType       MetalType
+  purity          String     @db.VarChar(20)
+  grossWeight     Decimal    @db.Decimal(10, 3)
+  netWeight       Decimal    @db.Decimal(10, 3)
+  barcode         String     @unique @db.VarChar(100)
+  huid            String?    @db.VarChar(50)
+  tagNumber       String?    @db.VarChar(50)
+  description     String?    @db.Text
+  makingCharges   Decimal    @db.Decimal(10, 2)
+  wastagePercent  Decimal    @db.Decimal(5, 2)
+  stoneWeight     Decimal?   @db.Decimal(10, 3)
+  stoneValue      Decimal?   @db.Decimal(10, 2)
+  stoneDescription String?   @db.Text
+  hallmarkNumber  String?    @db.VarChar(50)
+  bisCompliant    Boolean    @default(false)
+  collectionName  String?    @db.VarChar(100)
+  design          String?    @db.VarChar(200)
+  size            String?    @db.VarChar(50)
+  reorderLevel    Int        @default(1)
+  isActive        Boolean    @default(true)
+  isCustomOrder   Boolean    @default(false)
+  calculatedPrice Decimal?   @db.Decimal(12, 2)
+  priceOverride   Decimal?   @db.Decimal(12, 2)
+  priceOverrideReason String? @db.Text
+  lastPriceUpdate DateTime?
+  rateUsedId      String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  rateUsed        RateMaster? @relation(fields: [rateUsedId], references: [id])
+  stockItems      StockItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+  
+  @@index([metalType])
+  @@index([purity])
+  @@index([collectionName])
+  @@index([barcode])
+  @@index([huid])
+  @@index([tagNumber])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("products")
+}
+
+// ============================================
+// STOCK MANAGEMENT (User Stories 6-8)
+// ============================================
+
+enum StockStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+}
+
+model StockItem {
+  id                String        @id @default(uuid())
+  productId         String
+  tagId             String        @unique @db.VarChar(100)
+  barcode           String        @unique @db.VarChar(100)
+  purchaseCost      Decimal       @db.Decimal(12, 2)
+  sellingPrice      Decimal       @db.Decimal(12, 2)
+  status            StockStatus   @default(AVAILABLE)
+  purchaseOrderId   String?
+  purchaseDate      DateTime?
+  saleDate          DateTime?
+  salesOrderLineId  String?       @unique
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  product           Product       @relation(fields: [productId], references: [id])
+  purchaseOrder     PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  salesOrderLine    SalesOrderLine? @relation(fields: [salesOrderLineId], references: [id])
+
+  @@index([productId])
+  @@index([status])
+  @@index([tagId])
+  @@index([barcode])
+  @@index([purchaseOrderId])
+  @@index([deletedAt])
+  @@map("stock_items")
+}
+
+// ============================================
+// RATE MASTER (User Stories 18-19)
+// ============================================
+
+enum RateSource {
+  MARKET
+  MANUAL
+  API
+}
+
+model RateMaster {
+  id               String      @id @default(uuid())
+  metalType        MetalType
+  purity           String      @db.VarChar(20)
+  ratePerGram      Decimal     @db.Decimal(10, 2)
+  effectiveDate    DateTime
+  validUntil       DateTime?
+  rateSource       RateSource  @default(MANUAL)
+  isActive         Boolean     @default(true)
+  defaultMakingChargePercent Decimal? @db.Decimal(5, 2)
+  createdBy        String?     @db.VarChar(100)
+  updatedBy        String?     @db.VarChar(100)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relations
+  products         Product[]
+
+  @@index([metalType, purity, isActive])
+  @@index([effectiveDate])
+  @@map("rate_master")
+}
+
+// ============================================
+// PURCHASE ORDER MANAGEMENT (User Stories 10-11, 27)
+// ============================================
+
+enum PurchaseOrderStatus {
+  PENDING
+  CONFIRMED
+  PARTIAL
+  DELIVERED
+  CANCELLED
+  CLOSED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+  CREDIT
+  EMI
+}
+
+model PurchaseOrder {
+  id                String                @id @default(uuid())
+  orderNumber       String                @unique @db.VarChar(50)
+  supplierId        String
+  expectedDeliveryDate DateTime?
+  actualDeliveryDate   DateTime?
+  paymentMethod     PaymentMethod
+  discountAmount    Decimal               @default(0) @db.Decimal(10, 2)
+  totalAmount       Decimal               @db.Decimal(12, 2)
+  paidAmount        Decimal               @default(0) @db.Decimal(12, 2)
+  status            PurchaseOrderStatus   @default(PENDING)
+  paymentStatus     PaymentStatus         @default(PENDING)
+  referenceNumber   String?               @db.VarChar(100)
+  notes             String?               @db.Text
+  orderDate         DateTime              @default(now())
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  supplier          Supplier              @relation(fields: [supplierId], references: [id])
+  items             PurchaseOrderItem[]
+  stockItems        StockItem[]
+  payments          PurchasePayment[]
+
+  @@index([supplierId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([orderDate])
+  @@index([deletedAt])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id                String        @id @default(uuid())
+  purchaseOrderId   String
+  productId         String
+  quantity          Int
+  unitPrice         Decimal       @db.Decimal(10, 2)
+  expectedWeight    Decimal?      @db.Decimal(10, 3)
+  receivedQuantity  Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product           Product       @relation(fields: [productId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+model PurchasePayment {
+  id                String        @id @default(uuid())
+  purchaseOrderId   String
+  amount            Decimal       @db.Decimal(12, 2)
+  paymentDate       DateTime      @default(now())
+  paymentMethod     PaymentMethod
+  referenceNumber   String?       @db.VarChar(100)
+  notes             String?       @db.Text
+  createdAt         DateTime      @default(now())
+
+  // Relations
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@index([paymentDate])
+  @@map("purchase_payments")
+}
+
+// ============================================
+// SALES ORDER MANAGEMENT (User Stories 12-14, 26)
+// ============================================
+
+enum SalesOrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  RETAIL
+  WHOLESALE
+  CUSTOM
+  EXCHANGE
+}
+
+model SalesOrder {
+  id              String            @id @default(uuid())
+  invoiceNumber   String            @unique @db.VarChar(50)
+  customerId      String
+  orderTotal      Decimal           @db.Decimal(12, 2)
+  discountAmount  Decimal           @default(0) @db.Decimal(10, 2)
+  finalAmount     Decimal           @db.Decimal(12, 2)
+  paidAmount      Decimal           @default(0) @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod
+  orderType       OrderType         @default(RETAIL)
+  status          SalesOrderStatus  @default(PENDING)
+  paymentStatus   PaymentStatus     @default(PENDING)
+  notes           String?           @db.Text
+  orderDate       DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  customer        Customer          @relation(fields: [customerId], references: [id])
+  lines           SalesOrderLine[]
+  payments        SalesPayment[]
+  transactions    Transaction[]
+
+  @@index([customerId])
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([orderDate])
+  @@index([deletedAt])
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id              String        @id @default(uuid())
+  salesOrderId    String
+  stockItemId     String        @unique
+  quantity        Int           @default(1)
+  unitPrice       Decimal       @db.Decimal(12, 2)
+  lineTotal       Decimal       @db.Decimal(12, 2)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  salesOrder      SalesOrder    @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  stockItem       StockItem?
+
+  @@index([salesOrderId])
+  @@index([stockItemId])
+  @@map("sales_order_lines")
+}
+
+model SalesPayment {
+  id              String        @id @default(uuid())
+  salesOrderId    String
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentDate     DateTime      @default(now())
+  paymentMethod   PaymentMethod
+  referenceNumber String?       @db.VarChar(100)
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+
+  // Relations
+  salesOrder      SalesOrder    @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+
+  @@index([salesOrderId])
+  @@index([paymentDate])
+  @@map("sales_payments")
+}
+
+// ============================================
+// FINANCIAL MANAGEMENT (User Stories 15-17, 25)
+// ============================================
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  EMI
+  METAL_PURCHASE
+  GOLD_SCHEME
+  ADJUSTMENT
+}
+
+enum TransactionCategory {
+  SALES
+  PURCHASE
+  OPERATIONAL
+  OTHER
+}
+
+enum TransactionStatus {
+  COMPLETED
+  PENDING
+  FAILED
+}
+
+model Transaction {
+  id                String              @id @default(uuid())
+  transactionDate   DateTime            @default(now())
+  transactionType   TransactionType
+  amount            Decimal             @db.Decimal(12, 2)
+  paymentMode       PaymentMethod
+  category          TransactionCategory @default(OTHER)
+  description       String?             @db.Text
+  referenceNumber   String?             @db.VarChar(100)
+  customerId        String?
+  salesOrderId      String?
+  status            TransactionStatus   @default(COMPLETED)
+  currency          String              @default("INR") @db.VarChar(3)
+  
+  // Metal Purchase specific fields
+  metalType         MetalType?
+  metalPurity       String?             @db.VarChar(20)
+  metalWeight       Decimal?            @db.Decimal(10, 3)
+  metalRatePerGram  Decimal?            @db.Decimal(10, 2)
+  metalCost         Decimal?            @db.Decimal(12, 2)
+  
+  createdBy         String?             @db.VarChar(100)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  customer          Customer?           @relation(fields: [customerId], references: [id])
+  salesOrder        SalesOrder?         @relation(fields: [salesOrderId], references: [id])
+
+  @@index([transactionDate])
+  @@index([transactionType])
+  @@index([customerId])
+  @@index([salesOrderId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("transactions")
+}
+
+// ============================================
+// EMI MANAGEMENT (User Story 16)
+// ============================================
+
+enum EmiInstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+model EmiPayment {
+  id                  String    @id @default(uuid())
+  customerId          String
+  salesOrderId        String?
+  totalAmount         Decimal   @db.Decimal(12, 2)
+  interestRate        Decimal   @default(0) @db.Decimal(5, 2)
+  numberOfInstallments Int
+  installmentAmount   Decimal   @db.Decimal(10, 2)
+  emiStartDate        DateTime
+  lastPaymentDate     DateTime?
+  nextInstallmentDate DateTime
+  remainingAmount     Decimal   @db.Decimal(12, 2)
+  currentInstallment  Int       @default(1)
+  status              EmiInstallmentStatus @default(PENDING)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  // Relations
+  customer            Customer  @relation(fields: [customerId], references: [id])
+  installments        EmiInstallment[]
+
+  @@index([customerId])
+  @@index([nextInstallmentDate])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("emi_payments")
+}
+
+model EmiInstallment {
+  id              String                @id @default(uuid())
+  emiPaymentId    String
+  installmentNumber Int
+  dueDate         DateTime
+  amount          Decimal               @db.Decimal(10, 2)
+  paidAmount      Decimal               @default(0) @db.Decimal(10, 2)
+  paymentDate     DateTime?
+  paymentMode     PaymentMethod?
+  referenceNumber String?               @db.VarChar(100)
+  status          EmiInstallmentStatus  @default(PENDING)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  // Relations
+  emiPayment      EmiPayment            @relation(fields: [emiPaymentId], references: [id], onDelete: Cascade)
+
+  @@index([emiPaymentId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("emi_installments")
+}
+
+// ============================================
+// AUDIT & COMPLIANCE (User Stories 28-30)
+// ============================================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+}
+
+enum AuditModule {
+  CUSTOMERS
+  PRODUCTS
+  STOCK
+  SUPPLIERS
+  PURCHASE_ORDERS
+  SALES_ORDERS
+  TRANSACTIONS
+  EMI
+  RATE_MASTER
+}
+
+enum AuditSeverity {
+  INFO
+  WARNING
+  ERROR
+}
+
+model AuditLog {
+  id          String         @id @default(uuid())
+  timestamp   DateTime       @default(now())
+  userId      String?        @db.VarChar(100)
+  action      AuditAction
+  module      AuditModule
+  entityId    String?        @db.VarChar(100)
+  beforeData  Json?
+  afterData   Json?
+  severity    AuditSeverity  @default(INFO)
+  ipAddress   String?        @db.VarChar(45)
+  userAgent   String?        @db.Text
+  errorMessage String?       @db.Text
+  stackTrace  String?        @db.Text
+
+  @@index([timestamp])
+  @@index([userId])
+  @@index([module])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+// ============================================
+// BIS HALLMARK COMPLIANCE (User Story 29)
+// ============================================
+
+enum BisComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  PENDING
+}
+
+model BisCompliance {
+  id                String              @id @default(uuid())
+  productId         String?
+  stockItemId       String?
+  huid              String              @unique @db.VarChar(50)
+  huidRegistrationDate DateTime?
+  hallmarkNumber    String?             @db.VarChar(50)
+  complianceStatus  BisComplianceStatus @default(PENDING)
+  bisStandard       String?             @db.VarChar(20)
+  ahcCode           String?             @db.VarChar(50)
+  jewelType         String?             @db.VarChar(100)
+  certificationDate DateTime?
+  expiryDate        DateTime?
+  notes             String?             @db.Text
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([huid])
+  @@index([complianceStatus])
+  @@map("bis_compliance")
+}

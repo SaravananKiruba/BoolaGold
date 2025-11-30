@@ -1,0 +1,132 @@
+// Customer API Route - GET, PUT, DELETE by ID
+// GET /api/customers/[id] - Get customer details
+// PUT /api/customers/[id] - Update customer
+// DELETE /api/customers/[id] - Soft delete customer
+
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { customerRepository } from '@/repositories/customerRepository';
+import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
+import { phoneSchema, emailSchema } from '@/utils/validation';
+import { CustomerType, AuditModule } from '@/domain/entities/types';
+import { logUpdate, logDelete } from '@/utils/audit';
+
+const updateCustomerSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  phone: phoneSchema.optional(),
+  email: emailSchema.optional().or(z.literal('')),
+  whatsapp: z.string().length(10).optional().or(z.literal('')),
+  address: z.string().optional(),
+  city: z.string().max(100).optional(),
+  dateOfBirth: z.string().optional().or(z.literal('')),
+  anniversaryDate: z.string().optional().or(z.literal('')),
+  customerType: z.nativeEnum(CustomerType).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const customer = await customerRepository.findById(params.id);
+
+    if (!customer) {
+      return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
+    }
+
+    // Get customer statistics
+    const stats = await customerRepository.getStatistics(params.id);
+
+    return NextResponse.json(
+      successResponse({
+        ...customer,
+        statistics: stats,
+      })
+    );
+  } catch (error: any) {
+    console.error('Error fetching customer:', error);
+    return NextResponse.json(errorResponse(error.message), { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+
+    // Validate input
+    const validation = updateCustomerSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(validationErrorResponse(validation.error.errors), { status: 400 });
+    }
+
+    const data = validation.data;
+
+    // Check if customer exists
+    const existingCustomer = await customerRepository.findById(params.id);
+    if (!existingCustomer) {
+      return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
+    }
+
+    // If phone is being updated, check for duplicates
+    if (data.phone && data.phone !== existingCustomer.phone) {
+      const phoneExists = await customerRepository.findByPhone(data.phone);
+      if (phoneExists) {
+        return NextResponse.json(errorResponse('Customer with this phone already exists'), {
+          status: 409,
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (data.phone) updateData.phone = data.phone;
+    if (data.email !== undefined) updateData.email = data.email || null;
+    if (data.whatsapp !== undefined) updateData.whatsapp = data.whatsapp || null;
+    if (data.address !== undefined) updateData.address = data.address || null;
+    if (data.city !== undefined) updateData.city = data.city || null;
+    if (data.dateOfBirth !== undefined)
+      updateData.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+    if (data.anniversaryDate !== undefined)
+      updateData.anniversaryDate = data.anniversaryDate ? new Date(data.anniversaryDate) : null;
+    if (data.customerType) updateData.customerType = data.customerType;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
+    const updatedCustomer = await customerRepository.update(params.id, updateData);
+
+    // Log the update
+    await logUpdate(AuditModule.CUSTOMERS, params.id, existingCustomer, updatedCustomer);
+
+    return NextResponse.json(successResponse(updatedCustomer));
+  } catch (error: any) {
+    console.error('Error updating customer:', error);
+    return NextResponse.json(errorResponse(error.message), { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const customer = await customerRepository.findById(params.id);
+
+    if (!customer) {
+      return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
+    }
+
+    await customerRepository.softDelete(params.id);
+
+    // Log the deletion
+    await logDelete(AuditModule.CUSTOMERS, params.id, customer);
+
+    return NextResponse.json(successResponse({ message: 'Customer deleted successfully' }));
+  } catch (error: any) {
+    console.error('Error deleting customer:', error);
+    return NextResponse.json(errorResponse(error.message), { status: 500 });
+  }
+}
