@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     const result = await rateMasterRepository.findAll(filters, { page, pageSize });
 
-    return NextResponse.json(successResponse(result.data, result.meta));
+    return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching rate masters:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

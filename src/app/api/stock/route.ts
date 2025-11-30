@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     const result = await stockItemRepository.findAll(filters, { page, pageSize });
 
-    return successResponse(result);
+    return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

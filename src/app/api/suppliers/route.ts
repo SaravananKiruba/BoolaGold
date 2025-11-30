@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     const result = await supplierRepository.findAll(filters, { page, pageSize });
 
-    return successResponse(result);
+    return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       afterData: supplier,
     });
 
-    return successResponse(supplier, 201);
+    return NextResponse.json(successResponse(supplier), { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

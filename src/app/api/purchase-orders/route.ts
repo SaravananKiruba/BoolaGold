@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     const result = await purchaseOrderRepository.findAll(filters, { page, pageSize });
 
-    return successResponse(result);
+    return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       afterData: purchaseOrder,
     });
 
-    return successResponse(purchaseOrder, 201);
+    return NextResponse.json(successResponse(purchaseOrder), { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

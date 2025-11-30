@@ -105,13 +105,13 @@ export async function POST(
       },
     });
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       payment: result.payment,
       transaction: result.transaction,
       remainingAmount: Number(purchaseOrder.totalAmount) - result.newPaidAmount,
       paymentStatus: result.newPaymentStatus,
       message: 'Payment recorded and expense transaction created successfully',
-    });
+    }), { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -136,7 +136,7 @@ export async function GET(
     const totalAmount = Number(purchaseOrder.totalAmount);
     const paidAmount = Number(purchaseOrder.paidAmount);
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       purchaseOrderId,
       orderNumber: purchaseOrder.orderNumber,
       summary: {
@@ -154,7 +154,7 @@ export async function GET(
         notes: payment.notes,
         createdAt: payment.createdAt,
       })),
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

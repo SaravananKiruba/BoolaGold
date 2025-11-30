@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
         startDate: startDate || null,
         endDate: endDate || null,
       },
-    }));
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

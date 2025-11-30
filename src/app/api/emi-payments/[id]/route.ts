@@ -19,7 +19,7 @@ export async function GET(
       return NextResponse.json(notFoundResponse('EMI Payment'), { status: 404 });
     }
 
-    return NextResponse.json(successResponse(emiPayment));
+    return NextResponse.json(successResponse(emiPayment), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching EMI payment:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -43,7 +43,7 @@ export async function DELETE(
     // Log the deletion
     await logDelete(AuditModule.EMI, params.id, existingEmi);
 
-    return NextResponse.json(successResponse({ message: 'EMI payment deleted successfully' }));
+    return NextResponse.json(successResponse({ message: 'EMI payment deleted successfully' }), { status: 200 });
   } catch (error: any) {
     console.error('Error deleting EMI payment:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

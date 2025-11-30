@@ -32,7 +32,7 @@ export async function GET(
       { page, pageSize }
     );
 
-    return NextResponse.json(successResponse(result.data, result.meta));
+    return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching rate history:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

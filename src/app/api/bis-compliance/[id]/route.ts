@@ -38,7 +38,7 @@ export async function GET(
       return NextResponse.json(notFoundResponse('BIS Compliance Record'), { status: 404 });
     }
 
-    return NextResponse.json(successResponse(record));
+    return NextResponse.json(successResponse(record), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching BIS compliance record:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -110,7 +110,7 @@ export async function PUT(
     // Log update
     await logUpdate(AuditModule.PRODUCTS, params.id, existing, updated);
 
-    return NextResponse.json(successResponse(updated));
+    return NextResponse.json(successResponse(updated), { status: 200 });
   } catch (error: any) {
     console.error('Error updating BIS compliance record:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -142,7 +142,8 @@ export async function DELETE(
     await logDelete(AuditModule.PRODUCTS, params.id, record);
 
     return NextResponse.json(
-      successResponse({ message: 'BIS compliance record deleted successfully' })
+      successResponse({ message: 'BIS compliance record deleted successfully' }),
+      { status: 200 }
     );
   } catch (error: any) {
     console.error('Error deleting BIS compliance record:', error);

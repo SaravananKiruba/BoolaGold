@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Stock item not found' }, { status: 404 });
     }
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       stockItem: {
         id: stockItem.id,
         tagId: stockItem.tagId,
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
           wastagePercent: stockItem.product.wastagePercent,
         },
       },
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

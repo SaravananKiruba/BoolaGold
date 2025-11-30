@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const summary = await transactionRepository.getDashboardSummary(filters);
 
-    return NextResponse.json(successResponse(summary));
+    return NextResponse.json(successResponse(summary), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching transaction summary:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

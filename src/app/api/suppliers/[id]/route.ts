@@ -25,10 +25,10 @@ export async function GET(
     // Get supplier statistics
     const stats = await supplierRepository.getSupplierStats(supplierId);
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       ...supplier,
       stats,
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -115,7 +115,7 @@ export async function PATCH(
       afterData: updatedSupplier,
     });
 
-    return successResponse(updatedSupplier);
+    return NextResponse.json(successResponse(updatedSupplier), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -148,7 +148,7 @@ export async function DELETE(
       beforeData: supplier,
     });
 
-    return successResponse({ message: 'Supplier deleted successfully' });
+    return NextResponse.json(successResponse({ message: 'Supplier deleted successfully' }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

@@ -153,16 +153,18 @@ export default function ProductsPage() {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ margin: 0 }}>Product Management</h1>
-          <p style={{ color: '#666', marginTop: '5px' }}>
+          <h1 className="page-title">💍 Product Management</h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
             Manage jewelry products with auto-pricing and compliance tracking
           </p>
         </div>
-        <Link href="/" style={{ textDecoration: 'none', padding: '10px 20px', background: '#666', color: 'white', borderRadius: '4px' }}>
-          ← Back to Home
-        </Link>
+        <div className="nav-actions">
+          <Link href="/" className="button button-outline" style={{ textDecoration: 'none' }}>
+            ← Home
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -605,34 +607,6 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
-
-      {/* API Info */}
-      <div className="card" style={{ background: '#f8f9fa' }}>
-        <h3 style={{ marginTop: 0 }}>Available API Endpoints</h3>
-        <div style={{ fontSize: '13px', color: '#666' }}>
-          <p>
-            <strong>GET</strong> <code>/api/products</code> - List products with advanced filters
-            (search, barcode, HUID, tag, metal, purity, collection, supplier, stock status, low stock)
-          </p>
-          <p>
-            <strong>POST</strong> <code>/api/products</code> - Create product with auto-price calculation
-          </p>
-          <p>
-            <strong>GET</strong> <code>/api/products/[id]</code> - Get product details with stock summary
-          </p>
-          <p>
-            <strong>PUT</strong> <code>/api/products/[id]</code> - Update product with price recalculation
-          </p>
-          <p>
-            <strong>GET</strong> <code>/api/products/[id]/price-breakdown</code> - Detailed price calculation
-            breakdown
-          </p>
-          <p>
-            <strong>POST</strong> <code>/api/products/recalculate-prices</code> - Bulk price recalculation
-            based on current rates
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

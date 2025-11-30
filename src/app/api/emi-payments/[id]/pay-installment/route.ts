@@ -65,7 +65,7 @@ export async function POST(
     // Log the update
     await logUpdate(AuditModule.EMI, emiPaymentId, emiPayment, result.emiPayment);
 
-    return NextResponse.json(successResponse(result));
+    return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error: any) {
     console.error('Error recording installment payment:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

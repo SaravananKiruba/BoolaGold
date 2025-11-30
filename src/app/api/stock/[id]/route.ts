@@ -19,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: 'Stock item not found' }, { status: 404 });
     }
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       id: stockItem.id,
       tagId: stockItem.tagId,
       barcode: stockItem.barcode,
@@ -31,7 +31,7 @@ export async function GET(
       product: stockItem.product,
       purchaseOrder: stockItem.purchaseOrder,
       salesOrderLine: stockItem.salesOrderLine,
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

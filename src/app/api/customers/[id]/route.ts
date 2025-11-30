@@ -101,7 +101,7 @@ export async function PUT(
     // Log the update
     await logUpdate(AuditModule.CUSTOMERS, params.id, existingCustomer, updatedCustomer);
 
-    return NextResponse.json(successResponse(updatedCustomer));
+    return NextResponse.json(successResponse(updatedCustomer), { status: 200 });
   } catch (error: any) {
     console.error('Error updating customer:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -124,7 +124,7 @@ export async function DELETE(
     // Log the deletion
     await logDelete(AuditModule.CUSTOMERS, params.id, customer);
 
-    return NextResponse.json(successResponse({ message: 'Customer deleted successfully' }));
+    return NextResponse.json(successResponse({ message: 'Customer deleted successfully' }), { status: 200 });
   } catch (error: any) {
     console.error('Error deleting customer:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

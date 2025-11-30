@@ -144,14 +144,16 @@ export default function CustomersPage() {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ margin: 0 }}>Customer Management</h1>
-          <p style={{ color: '#666', marginTop: '5px' }}>Register and manage customer records</p>
+          <h1 className="page-title">👥 Customer Management</h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>Register and manage customer records with family tracking</p>
         </div>
-        <Link href="/" style={{ textDecoration: 'none', padding: '10px 20px', background: '#666', color: 'white', borderRadius: '4px' }}>
-          ← Back to Home
-        </Link>
+        <div className="nav-actions">
+          <Link href="/" className="button button-outline" style={{ textDecoration: 'none' }}>
+            ← Home
+          </Link>
+        </div>
       </div>
 
       {/* Search and Filter Section */}
@@ -399,6 +401,26 @@ export default function CustomersPage() {
     </div>
   );
 }
+
+const errorStyles = {
+  container: {
+    background: '#fff3cd',
+    border: '1px solid #ffc107',
+    borderRadius: '8px',
+    padding: '16px',
+    marginBottom: '20px',
+  } as React.CSSProperties,
+  title: {
+    color: '#856404',
+    fontSize: '16px',
+    fontWeight: 600,
+    marginBottom: '8px',
+  } as React.CSSProperties,
+  message: {
+    color: '#856404',
+    fontSize: '14px',
+  } as React.CSSProperties,
+};
 
 // Customer Detail Modal Component
 function CustomerDetailModal({ customer, onClose }: { customer: CustomerDetails; onClose: () => void }) {

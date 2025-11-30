@@ -116,7 +116,7 @@ export async function GET(
       },
     };
 
-    return NextResponse.json(successResponse(breakdown));
+    return NextResponse.json(successResponse(breakdown), { status: 200 });
   } catch (error: any) {
     console.error('Error getting price breakdown:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

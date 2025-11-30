@@ -95,43 +95,55 @@ export default function DashboardPage() {
   };
 
   if (loading && !metrics) {
-    return <div className="container" style={{ padding: '40px 20px' }}>Loading dashboard...</div>;
+    return (
+      <div className="container">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <div className="spinner" style={{ width: '50px', height: '50px' }} />
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="container" style={{ padding: '40px 20px' }}>
-        <div className="card" style={{ background: '#fee' }}>
-          <p style={{ color: '#c00' }}>Error: {error}</p>
-          <button onClick={fetchMetrics} className="button">Retry</button>
+      <div className="container">
+        <div className="alert alert-error">
+          <h3 style={{ marginTop: 0 }}>❌ Error Loading Dashboard</h3>
+          <p style={{ marginBottom: '16px' }}>{error}</p>
+          <button onClick={fetchMetrics} className="button">🔄 Retry</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container" style={{ padding: '40px 20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1>📊 Business Dashboard</h1>
+    <div className="container">
+      <div className="page-header">
         <div>
-          <Link href="/" className="button" style={{ marginRight: '10px', textDecoration: 'none' }}>
+          <h1 className="page-title">📊 Business Dashboard</h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+            Real-time insights and performance metrics
+          </p>
+        </div>
+        <div className="nav-actions">
+          <Link href="/" className="button button-outline" style={{ textDecoration: 'none' }}>
             ← Home
           </Link>
-          <button onClick={fetchMetrics} className="button" style={{ marginRight: '10px' }}>
+          <button onClick={fetchMetrics} className="button">
             🔄 Refresh
           </button>
-          <button onClick={handleExport} className="button">
+          <button onClick={handleExport} className="button button-gold">
             📥 Export
           </button>
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '20px', background: '#f0f8ff' }}>
-        <p style={{ margin: 0, fontSize: '16px', color: '#333' }}>
-          📅 <strong>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+      <div className="alert alert-info" style={{ marginBottom: '24px' }}>
+        <p style={{ margin: 0, fontSize: '1rem', fontWeight: '500' }}>
+          📅 {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
         {metrics && (
-          <p style={{ margin: '10px 0 0 0', fontSize: '14px', color: '#666' }}>
+          <p style={{ margin: '12px 0 0 0', fontSize: '0.95rem' }}>
             💡 {metrics.insights}
           </p>
         )}
@@ -166,39 +178,45 @@ export default function DashboardPage() {
 
       {metrics && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-            <div className="card" style={{ background: '#e3f2fd', textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#1976d2' }}>{metrics.totalProducts}</div>
-              <div style={{ color: '#555', marginTop: '5px' }}>Total Products</div>
+          <div className="grid-3" style={{ marginBottom: '32px' }}>
+            <div className="metric-card">
+              <div className="metric-value">{metrics.totalProducts}</div>
+              <div className="metric-label">💍 Total Products</div>
             </div>
 
-            <div className="card" style={{ background: '#f3e5f5', textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#7b1fa2' }}>{metrics.totalCustomers}</div>
-              <div style={{ color: '#555', marginTop: '5px' }}>Total Customers</div>
+            <div className="metric-card">
+              <div className="metric-value">{metrics.totalCustomers}</div>
+              <div className="metric-label">👥 Total Customers</div>
             </div>
 
-            <div className="card" style={{ background: '#fff3e0', textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#e65100' }}>{metrics.totalOrders}</div>
-              <div style={{ color: '#555', marginTop: '5px' }}>Total Orders</div>
+            <div className="metric-card">
+              <div className="metric-value">{metrics.totalOrders}</div>
+              <div className="metric-label">🛒 Total Orders</div>
             </div>
 
-            <div className="card" style={{ background: '#e8f5e9', textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2e7d32' }}>₹{metrics.totalRevenue.toLocaleString('en-IN')}</div>
-              <div style={{ color: '#555', marginTop: '5px' }}>Total Revenue</div>
+            <div className="metric-card">
+              <div className="metric-value">₹{(metrics.totalRevenue / 1000).toFixed(1)}K</div>
+              <div className="metric-label">💰 Total Revenue</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                ₹{metrics.totalRevenue.toLocaleString('en-IN')}
+              </div>
             </div>
 
-            <div className="card" style={{ background: '#fce4ec', textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#c2185b' }}>₹{metrics.averageOrderValue.toLocaleString('en-IN')}</div>
-              <div style={{ color: '#555', marginTop: '5px' }}>Avg Order Value</div>
+            <div className="metric-card">
+              <div className="metric-value">₹{(metrics.averageOrderValue / 1000).toFixed(1)}K</div>
+              <div className="metric-label">📊 Avg Order Value</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                ₹{metrics.averageOrderValue.toLocaleString('en-IN')}
+              </div>
             </div>
 
-            <div className="card" style={{ background: '#fff9c4', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f57f17' }}>
+            <div className="metric-card">
+              <div style={{ fontSize: 'clamp(1rem, 2vw, 1.5rem)', fontWeight: '600', color: 'var(--color-gold)', marginBottom: '8px' }}>
                 {metrics.lastOrderDate ? new Date(metrics.lastOrderDate).toLocaleDateString('en-IN') : 'N/A'}
               </div>
-              <div style={{ color: '#555', marginTop: '5px' }}>Last Order Date</div>
+              <div className="metric-label">📅 Last Order Date</div>
               {metrics.lastOrderInvoice && (
-                <div style={{ fontSize: '12px', color: '#777', marginTop: '3px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '4px', fontFamily: 'monospace' }}>
                   {metrics.lastOrderInvoice}
                 </div>
               )}

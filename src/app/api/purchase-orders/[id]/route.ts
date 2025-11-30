@@ -22,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
 
-    return successResponse(purchaseOrder);
+    return NextResponse.json(successResponse(purchaseOrder), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -97,7 +97,7 @@ export async function PATCH(
       afterData: updated,
     });
 
-    return successResponse(updated);
+    return NextResponse.json(successResponse(updated), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -134,10 +134,10 @@ export async function PUT(
         afterData: closed,
       });
 
-      return successResponse({
+      return NextResponse.json(successResponse({
         message: 'Purchase order closed successfully',
         purchaseOrder: closed,
-      });
+      }), { status: 200 });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -172,7 +172,7 @@ export async function DELETE(
       beforeData: existing,
     });
 
-    return successResponse({ message: 'Purchase order deleted successfully' });
+    return NextResponse.json(successResponse({ message: 'Purchase order deleted successfully' }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

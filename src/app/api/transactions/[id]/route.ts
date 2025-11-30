@@ -32,7 +32,7 @@ export async function GET(
       return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
     }
 
-    return NextResponse.json(successResponse(transaction));
+    return NextResponse.json(successResponse(transaction), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching transaction:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -76,7 +76,7 @@ export async function PATCH(
     // Log the update
     await logUpdate(AuditModule.TRANSACTIONS, params.id, existingTransaction, transaction);
 
-    return NextResponse.json(successResponse(transaction));
+    return NextResponse.json(successResponse(transaction), { status: 200 });
   } catch (error: any) {
     console.error('Error updating transaction:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -100,7 +100,7 @@ export async function DELETE(
     // Log the deletion
     await logDelete(AuditModule.TRANSACTIONS, params.id, existingTransaction);
 
-    return NextResponse.json(successResponse({ message: 'Transaction deleted successfully' }));
+    return NextResponse.json(successResponse({ message: 'Transaction deleted successfully' }), { status: 200 });
   } catch (error: any) {
     console.error('Error deleting transaction:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

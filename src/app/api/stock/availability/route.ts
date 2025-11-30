@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     // Check if low stock
     const isLowStock = statusCounts.available <= product.reorderLevel;
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       product: {
         id: product.id,
         name: product.name,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         sellingPrice: item.sellingPrice,
         purchaseDate: item.purchaseDate,
       })),
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

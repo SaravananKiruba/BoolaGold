@@ -13,13 +13,14 @@ export interface ApiResponse<T = any> {
   meta?: any;
 }
 
-export function successResponse<T>(data: T, statusCode: number = 200) {
+export function successResponse<T>(data: T, meta?: any) {
   const responseBody: ApiResponse<T> = {
     success: true,
     data,
+    ...(meta && { meta }),
   };
   
-  return NextResponse.json(responseBody, { status: statusCode });
+  return responseBody;
 }
 
 export function errorResponse(message: string, code?: string, details?: any): ApiResponse {

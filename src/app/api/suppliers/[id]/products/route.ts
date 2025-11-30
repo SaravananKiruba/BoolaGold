@@ -32,7 +32,7 @@ export async function GET(
       pageSize,
     });
 
-    return successResponse(result);
+    return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

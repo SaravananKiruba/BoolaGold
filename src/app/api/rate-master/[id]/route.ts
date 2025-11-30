@@ -33,7 +33,7 @@ export async function GET(
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
     }
 
-    return NextResponse.json(successResponse(rateMaster));
+    return NextResponse.json(successResponse(rateMaster), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching rate master:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -109,7 +109,7 @@ export async function PUT(
     // Log the update
     await logUpdate(AuditModule.RATE_MASTER, params.id, existingRate, updatedRate);
 
-    return NextResponse.json(successResponse(updatedRate));
+    return NextResponse.json(successResponse(updatedRate), { status: 200 });
   } catch (error: any) {
     console.error('Error updating rate master:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -132,7 +132,7 @@ export async function DELETE(
     // Log the deletion
     await logDelete(AuditModule.RATE_MASTER, params.id, existingRate);
 
-    return NextResponse.json(successResponse({ message: 'Rate master deleted successfully' }));
+    return NextResponse.json(successResponse({ message: 'Rate master deleted successfully' }), { status: 200 });
   } catch (error: any) {
     console.error('Error deleting rate master:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
         overdueEmis,
         totalOverdueAmount,
         count: overdueEmis.length,
-      })
+      }),
+      { status: 200 }
     );
   } catch (error: any) {
     console.error('Error fetching overdue EMIs:', error);
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Mark overdue installments
     const result = await emiPaymentRepository.markOverdueInstallments();
 
-    return NextResponse.json(successResponse(result));
+    return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error: any) {
     console.error('Error marking overdue installments:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

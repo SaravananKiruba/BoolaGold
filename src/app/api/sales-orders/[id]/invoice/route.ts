@@ -116,7 +116,7 @@ export async function GET(
     };
 
     if (format === 'json') {
-      return NextResponse.json(successResponse(invoiceData));
+      return NextResponse.json(successResponse(invoiceData), { status: 200 });
     } else if (format === 'html') {
       // Generate HTML invoice for printing
       const html = generateInvoiceHTML(invoiceData);

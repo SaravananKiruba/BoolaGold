@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Get inventory summary by metal type
     const inventorySummary = await productRepository.getInventorySummary();
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       totalInventory: {
         items: purchaseValue.totalItems,
         purchaseValue: purchaseValue.totalValue,
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         totalWeight: item._sum.netWeight || 0,
         totalValue: item._sum.calculatedPrice || 0,
       })),
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

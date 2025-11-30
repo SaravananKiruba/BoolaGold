@@ -32,10 +32,10 @@ export async function GET(request: NextRequest) {
       })),
     }));
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       orders: formattedOrders,
       totalOrders: formattedOrders.length,
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }

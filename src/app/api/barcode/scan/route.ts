@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
         : null,
     };
 
-    return NextResponse.json(successResponse(response));
+    return NextResponse.json(successResponse(response), { status: 200 });
   } catch (error: any) {
     console.error('Error scanning barcode:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

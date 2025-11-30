@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }
 
-    return NextResponse.json(successResponse(salesOrder));
+    return NextResponse.json(successResponse(salesOrder), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching sales order:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -90,7 +90,7 @@ export async function PATCH(
     // Log the update
     await logUpdate(AuditModule.SALES_ORDERS, params.id, existingSalesOrder, updatedSalesOrder);
 
-    return NextResponse.json(successResponse(updatedSalesOrder));
+    return NextResponse.json(successResponse(updatedSalesOrder), { status: 200 });
   } catch (error: any) {
     console.error('Error updating sales order:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -140,7 +140,7 @@ export async function DELETE(
     // Log the deletion
     await logDelete(AuditModule.SALES_ORDERS, params.id, existingSalesOrder);
 
-    return NextResponse.json(successResponse({ message: 'Sales order cancelled and deleted successfully' }));
+    return NextResponse.json(successResponse({ message: 'Sales order cancelled and deleted successfully' }), { status: 200 });
   } catch (error: any) {
     console.error('Error deleting sales order:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

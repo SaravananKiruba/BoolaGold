@@ -150,7 +150,7 @@ export async function PUT(
     // Log the update
     await logUpdate(AuditModule.PRODUCTS, params.id, existingProduct, updatedProduct);
 
-    return NextResponse.json(successResponse(updatedProduct));
+    return NextResponse.json(successResponse(updatedProduct), { status: 200 });
   } catch (error: any) {
     console.error('Error updating product:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });
@@ -182,7 +182,7 @@ export async function DELETE(
     // Log the deletion
     await logDelete(AuditModule.PRODUCTS, params.id, product);
 
-    return NextResponse.json(successResponse({ message: 'Product deleted successfully' }));
+    return NextResponse.json(successResponse({ message: 'Product deleted successfully' }), { status: 200 });
   } catch (error: any) {
     console.error('Error deleting product:', error);
     return NextResponse.json(errorResponse(error.message), { status: 500 });

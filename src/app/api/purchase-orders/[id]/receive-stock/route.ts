@@ -147,11 +147,11 @@ export async function POST(
       },
     });
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       message: 'Stock received successfully',
       purchaseOrder: result.purchaseOrder,
       stockItemsCreated: result.stockItems.length,
-    });
+    }), { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -170,10 +170,10 @@ export async function GET(
 
     const itemsToReceive = await purchaseOrderRepository.getItemsToReceive(purchaseOrderId);
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       purchaseOrderId,
       items: itemsToReceive,
-    });
+    }), { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
