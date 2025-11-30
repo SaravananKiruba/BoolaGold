@@ -104,6 +104,49 @@ export async function PATCH(
 }
 
 /**
+ * PUT /api/purchase-orders/[id]/close
+ * Close purchase order (User Story 11)
+ * Available via query parameter: ?action=close
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+
+    if (action === 'close') {
+      const existing = await purchaseOrderRepository.findById(id);
+      if (!existing) {
+        return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+      }
+
+      const closed = await purchaseOrderRepository.closePurchaseOrder(id);
+
+      // Log audit
+      await logAudit({
+        action: AuditAction.STATUS_CHANGE,
+        module: AuditModule.PURCHASE_ORDERS,
+        entityId: id,
+        beforeData: existing,
+        afterData: closed,
+      });
+
+      return successResponse({
+        message: 'Purchase order closed successfully',
+        purchaseOrder: closed,
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error: any) {
+    return handleApiError(error);
+  }
+}
+
+/**
  * DELETE /api/purchase-orders/[id]
  * Soft delete a purchase order
  */

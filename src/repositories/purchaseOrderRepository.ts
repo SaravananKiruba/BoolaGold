@@ -355,6 +355,39 @@ export class PurchaseOrderRepository {
   }
 
   /**
+   * Close purchase order (User Story 11)
+   * Close when items fully received and financials reconciled
+   */
+  async closePurchaseOrder(id: string) {
+    const purchaseOrder = await this.findById(id);
+    if (!purchaseOrder) {
+      throw new Error('Purchase order not found');
+    }
+
+    // Check if all items are received
+    const allReceived = purchaseOrder.items.every(
+      (item) => item.receivedQuantity >= item.quantity
+    );
+
+    if (!allReceived) {
+      throw new Error('Cannot close purchase order: Items not fully received');
+    }
+
+    // Check if fully paid
+    const fullyPaid = Number(purchaseOrder.paidAmount) >= Number(purchaseOrder.totalAmount);
+
+    if (!fullyPaid) {
+      throw new Error('Cannot close purchase order: Payment not complete');
+    }
+
+    // Update status to CLOSED
+    return prisma.purchaseOrder.update({
+      where: { id },
+      data: { status: PurchaseOrderStatus.CLOSED },
+    });
+  }
+
+  /**
    * Get purchase order summary
    */
   async getSummary(startDate?: Date, endDate?: Date) {

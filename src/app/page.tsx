@@ -52,10 +52,20 @@ export default function HomePage() {
         <div className="card">
           <h2 style={{ marginTop: 0 }}>🏭 Suppliers</h2>
           <p style={{ color: '#666', fontSize: '14px' }}>
-            Manage supplier relationships and purchase orders
+            Manage supplier relationships and vendor information
           </p>
           <Link href="/suppliers" className="button" style={{ display: 'inline-block', textDecoration: 'none', marginTop: '10px' }}>
             View Suppliers
+          </Link>
+        </div>
+
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>📋 Purchase Orders</h2>
+          <p style={{ color: '#666', fontSize: '14px' }}>
+            Create purchase orders, receive stock, track payments
+          </p>
+          <Link href="/purchase-orders" className="button" style={{ display: 'inline-block', textDecoration: 'none', marginTop: '10px' }}>
+            View Purchase Orders
           </Link>
         </div>
 
