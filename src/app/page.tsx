@@ -10,6 +10,16 @@ export default function HomePage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
         <div className="card">
+          <h2 style={{ marginTop: 0 }}>📊 Dashboard</h2>
+          <p style={{ color: '#666', fontSize: '14px' }}>
+            Business overview, key metrics, and performance indicators
+          </p>
+          <Link href="/dashboard" className="button" style={{ display: 'inline-block', textDecoration: 'none', marginTop: '10px' }}>
+            View Dashboard
+          </Link>
+        </div>
+
+        <div className="card">
           <h2 style={{ marginTop: 0 }}>👥 Customer Management</h2>
           <p style={{ color: '#666', fontSize: '14px' }}>
             Register customers, manage profiles, track purchase history

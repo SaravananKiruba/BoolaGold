@@ -158,13 +158,69 @@ This system covers **all 30 user stories** across the following modules:
 - ✅ Upcoming installment notifications (7-day window)
 - ✅ Overdue marking (automated/manual)
 
-### 📈 Reports & Analytics (Stories 20-25)
-- Dashboard with key metrics
-- Sales reports with filters
-- Inventory valuation reports
-- Customer purchase analysis
-- Financial statements
-- Sales summary export
+### 📈 Reports & Analytics (Stories 20-25) ✅ FULLY IMPLEMENTED
+- ✅ **Dashboard Overview** with key business metrics
+  - Total products, customers, orders count
+  - Total revenue with date range filtering
+  - Average order value calculation
+  - Last order details and date
+  - Today's orders and revenue insights
+  - Payment status breakdown
+  - Quick navigation to all modules
+  - Export dashboard summary (JSON)
+  - Real-time data refresh
+- ✅ **Sales Reports** with comprehensive analysis
+  - Date range selection for reporting period
+  - Total sales amount and order count
+  - Sales breakdown by payment method (Cash/Credit/Card/EMI/UPI/Bank Transfer)
+  - Total discount amount tracking
+  - Customer-wise sales analysis (name, phone, orders, total amount)
+  - Product-wise sales analysis (quantity sold, total sales, average price)
+  - Top 5 selling products by quantity and value
+  - Monthly sales trend graphs
+  - Export to JSON
+- ✅ **Inventory Reports** with valuation
+  - Total products count and stock quantity
+  - Total inventory value (purchase cost or selling price basis)
+  - Metal-wise breakdown (Gold, Silver, Platinum)
+    - Count, total weight, total value per metal type
+    - Purity-wise sub-breakdown
+  - Low stock alerts (below reorder level)
+  - Product details report (ID, name, metal, purity, weights, stock, value, HUID, tag)
+  - Stock movement report (opening, additions, sales, closing stock)
+  - Filter by metal type and collection
+  - Export to JSON
+- ✅ **Customer Reports** with behavior analysis
+  - Date range and customer type filtering
+  - Total customers and purchases amount
+  - Customer-wise purchase details (name, phone, total value, order count, last purchase date, pending payments)
+  - Top customers by purchase value
+  - New customer acquisition metrics
+  - Customer retention rate calculation
+  - Repeat vs new customers analysis
+  - Customer type breakdown (Retail/Wholesale/VIP)
+  - Export to JSON
+- ✅ **Sales Summary Export** for accounting
+  - Structured export for CA/external systems
+  - Invoice-wise details (number, date, customer, amount, payment status)
+  - Category-wise totals (by customer type)
+  - Export formats: JSON and CSV
+  - Date range filtering
+- ✅ **Financial Reports** with P&L statement
+  - Comprehensive Profit & Loss statement
+    - Total income breakdown by category
+    - Direct costs (metal purchases)
+    - Gross profit calculation
+    - Operational expenses
+    - Net profit with margin percentage
+  - Income breakdown by category
+  - Expense breakdown by category
+  - Payment mode distribution analysis
+  - Cash flow summary (inflow, outflow, net cash flow)
+  - Metal purchase expenses by type and purity
+  - EMI tracking (total outstanding, received in period)
+  - Monthly financial trend (income, expense, net income by month)
+  - Export to JSON
 
 ### 🔐 Audit & Compliance (Stories 28-30)
 - Complete audit trail logging
@@ -503,6 +559,72 @@ src/
 | PATCH | `/api/transactions/[id]` | Update transaction |
 | DELETE | `/api/transactions/[id]` | Soft delete transaction |
 | GET | `/api/transactions/summary` | Get financial dashboard summary |
+
+### Reporting & Analytics
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/dashboard` | Get business dashboard with key metrics |
+| GET | `/api/reports/sales` | Get detailed sales report with analysis |
+| GET | `/api/reports/inventory` | Get inventory report with valuation |
+| GET | `/api/reports/customers` | Get customer purchase reports |
+| GET | `/api/reports/sales-summary` | Get sales summary for accounting (JSON/CSV) |
+| GET | `/api/reports/financial` | Get comprehensive financial P&L report |
+
+**Query Parameters - Dashboard** (GET `/api/dashboard`):
+- `startDate` - Filter start date for orders/revenue (YYYY-MM-DD)
+- `endDate` - Filter end date for orders/revenue (YYYY-MM-DD)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "totalProducts": 250,
+    "totalCustomers": 150,
+    "totalOrders": 85,
+    "totalRevenue": 12500000.00,
+    "averageOrderValue": 147058.82,
+    "lastOrderDate": "2024-01-15T10:30:00Z",
+    "lastOrderInvoice": "INV-20240115-0001",
+    "lastOrderAmount": 165000.00,
+    "insights": "3 orders today, revenue ₹450000.00",
+    "todayOrders": 3,
+    "todayRevenue": 450000.00,
+    "paymentStatusBreakdown": [
+      { "status": "PAID", "count": 75, "totalAmount": 11250000.00 },
+      { "status": "PENDING", "count": 10, "totalAmount": 1250000.00 }
+    ],
+    "dateRange": {
+      "startDate": "2024-01-01",
+      "endDate": "2024-01-31"
+    }
+  }
+}
+```
+
+**Query Parameters - Sales Report** (GET `/api/reports/sales`):
+- `startDate` - Report start date (YYYY-MM-DD)
+- `endDate` - Report end date (YYYY-MM-DD)
+
+**Query Parameters - Inventory Report** (GET `/api/reports/inventory`):
+- `valuationBasis` - PURCHASE or SELLING (default: PURCHASE)
+- `metalType` - Filter by GOLD/SILVER/PLATINUM
+- `collection` - Filter by collection name
+
+**Query Parameters - Customer Report** (GET `/api/reports/customers`):
+- `startDate` - Report start date (YYYY-MM-DD)
+- `endDate` - Report end date (YYYY-MM-DD)
+- `customerType` - Filter by RETAIL/WHOLESALE/VIP
+
+**Query Parameters - Sales Summary** (GET `/api/reports/sales-summary`):
+- `startDate` - Report start date (YYYY-MM-DD)
+- `endDate` - Report end date (YYYY-MM-DD)
+- `format` - Export format: json or csv (default: json)
+
+**Query Parameters - Financial Report** (GET `/api/reports/financial`):
+- `startDate` - Report start date (YYYY-MM-DD)
+- `endDate` - Report end date (YYYY-MM-DD)
 
 **Query Parameters** (GET):
 - `page` - Page number
@@ -853,20 +975,26 @@ npm run db:reset           # Reset database (DANGER!)
 ## 🎨 Frontend Pages
 
 ### Implemented Pages
-- `/` - Dashboard/Home
+- `/` - Dashboard/Home with module navigation
+- `/dashboard` - Business overview dashboard with metrics
 - `/customers` - Customer listing
 - `/products` - Product catalog
 - `/sales-orders` - Sales order management
-
-### To Implement (Next Steps)
 - `/stock` - Stock management
 - `/suppliers` - Supplier management
 - `/purchase-orders` - Purchase order workflow
-- `/transactions` - Financial transactions
-- `/emi` - EMI management
-- `/rate-master` - Rate management
-- `/reports` - Analytics and reports
-- `/settings` - System configuration
+- `/rate-master` - Rate management with bulk update
+- `/reports` - Comprehensive analytics and reports
+  - Sales reports with analysis
+  - Inventory reports with valuation
+  - Customer purchase reports
+  - Sales summary export (JSON/CSV)
+  - Financial P&L reports
+
+### To Implement (Next Steps)
+- `/transactions` - Direct financial transaction management UI
+- `/emi` - EMI management dashboard UI
+- `/settings` - System configuration UI
 
 ---
 
