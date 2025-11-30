@@ -1,5 +1,7 @@
 // API Response Utilities
 
+import { NextResponse } from 'next/server';
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -11,12 +13,13 @@ export interface ApiResponse<T = any> {
   meta?: any;
 }
 
-export function successResponse<T>(data: T, meta?: any): ApiResponse<T> {
-  return {
+export function successResponse<T>(data: T, statusCode: number = 200) {
+  const responseBody: ApiResponse<T> = {
     success: true,
     data,
-    meta,
   };
+  
+  return NextResponse.json(responseBody, { status: statusCode });
 }
 
 export function errorResponse(message: string, code?: string, details?: any): ApiResponse {

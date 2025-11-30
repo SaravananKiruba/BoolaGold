@@ -42,8 +42,8 @@ export default function PurchaseOrdersPage() {
       const response = await fetch(`/api/purchase-orders?${params}`);
       const result = await response.json();
 
-      if (result.success) {
-        setPurchaseOrders(result.data.items);
+      if (result.success && result.data) {
+        setPurchaseOrders(result.data.data || []);
       }
     } catch (error) {
       console.error('Failed to fetch purchase orders:', error);
@@ -123,7 +123,7 @@ export default function PurchaseOrdersPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {purchaseOrders.map((order) => (
+              {purchaseOrders && purchaseOrders.map((order) => (
                 <tr key={order.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {order.orderNumber}
@@ -176,7 +176,7 @@ export default function PurchaseOrdersPage() {
             </tbody>
           </table>
 
-          {purchaseOrders.length === 0 && (
+          {(!purchaseOrders || purchaseOrders.length === 0) && (
             <div className="text-center py-8 text-gray-500">
               No purchase orders found
             </div>
