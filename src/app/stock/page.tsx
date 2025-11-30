@@ -75,33 +75,35 @@ export default function StockPage() {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Stock Management</h1>
+    <div className="container">
+      <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ margin: 0 }}>Stock Management</h1>
+        <p style={{ color: '#666', marginTop: '5px' }}>Track inventory and stock levels</p>
+      </div>
 
-      {/* Quick Search */}
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Quick Stock Lookup</h2>
-        <div className="flex gap-4">
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <h3 style={{ marginTop: 0 }}>Quick Stock Lookup</h3>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Enter Tag ID or Barcode"
-            className="flex-1 border rounded px-4 py-2"
+            style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           />
           <button
             onClick={handleSearch}
-            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
+            className="button"
           >
             Search
           </button>
         </div>
 
         {searchResult && (
-          <div className="mt-4 p-4 border rounded bg-gray-50">
-            <h3 className="font-semibold mb-2">{searchResult.product.name}</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+          <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px', background: '#f8f9fa' }}>
+            <h4 style={{ marginTop: 0, marginBottom: '10px' }}>{searchResult.product.name}</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '14px' }}>
               <div>Tag ID: {searchResult.tagId}</div>
               <div>Barcode: {searchResult.barcode}</div>
               <div>Status: <span className={`font-semibold ${
@@ -117,46 +119,44 @@ export default function StockPage() {
         )}
       </div>
 
-      {/* Summary Cards */}
       {loading ? (
-        <div className="text-center py-8">Loading...</div>
+        <p>Loading stock summary...</p>
       ) : summary && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Total Items</h3>
-              <p className="text-3xl font-bold">{summary.totalInventory.items}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+            <div className="card">
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Total Items</div>
+              <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{summary.totalInventory.items}</div>
             </div>
 
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Purchase Value</h3>
-              <p className="text-3xl font-bold">
-                ₹{Number(summary.totalInventory.purchaseValue).toLocaleString()}
-              </p>
+            <div className="card">
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Purchase Value</div>
+              <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
+                ₹{Number(summary.totalInventory.purchaseValue).toLocaleString('en-IN')}
+              </div>
             </div>
 
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Selling Value</h3>
-              <p className="text-3xl font-bold">
-                ₹{Number(summary.totalInventory.sellingValue).toLocaleString()}
-              </p>
+            <div className="card">
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Selling Value</div>
+              <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
+                ₹{Number(summary.totalInventory.sellingValue).toLocaleString('en-IN')}
+              </div>
             </div>
 
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Potential Profit</h3>
-              <p className="text-3xl font-bold text-green-600">
-                ₹{Number(summary.totalInventory.potentialProfit).toLocaleString()}
-              </p>
+            <div className="card">
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Potential Profit</div>
+              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#00b894' }}>
+                ₹{Number(summary.totalInventory.potentialProfit).toLocaleString('en-IN')}
+              </div>
             </div>
           </div>
 
-          {/* Low Stock Alerts */}
           {summary.lowStockAlerts.count > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4 text-yellow-800">
-                Low Stock Alerts ({summary.lowStockAlerts.count})
-              </h2>
-              <div className="space-y-2">
+            <div className="card" style={{ marginBottom: '20px', background: '#fff4e6', borderLeft: '4px solid #e67e22' }}>
+              <h3 style={{ marginTop: 0, color: '#e67e22' }}>
+                ⚠️ Low Stock Alerts ({summary.lowStockAlerts.count})
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {summary.lowStockAlerts.products.map((product) => (
                   <div key={product.id} className="flex justify-between items-center">
                     <span className="font-medium">{product.name}</span>

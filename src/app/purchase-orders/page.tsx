@@ -1,8 +1,7 @@
-// Purchase Orders Page
-
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface PurchaseOrder {
   id: string;
@@ -23,6 +22,7 @@ interface PurchaseOrder {
 export default function PurchaseOrdersPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: '',
     paymentStatus: '',
@@ -35,6 +35,7 @@ export default function PurchaseOrdersPage() {
   const fetchPurchaseOrders = async () => {
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams();
       if (filters.status) params.append('status', filters.status);
       if (filters.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
@@ -44,27 +45,37 @@ export default function PurchaseOrdersPage() {
 
       if (result.success && result.data) {
         setPurchaseOrders(result.data.data || []);
+      } else {
+        setError(result.error?.message || 'Failed to fetch purchase orders');
       }
-    } catch (error) {
-      console.error('Failed to fetch purchase orders:', error);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-4">Purchase Orders</h1>
+    <div className="container">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>Purchase Orders</h1>
+          <p style={{ color: '#666', marginTop: '5px' }}>Manage supplier orders and inventory receipts</p>
+        </div>
+        <Link href="/" style={{ textDecoration: 'none', padding: '10px 20px', background: '#666', color: 'white', borderRadius: '4px' }}>
+          ← Back to Home
+        </Link>
+      </div>
 
-        {/* Filters */}
-        <div className="flex gap-4 mb-4">
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <h3 style={{ marginTop: 0 }}>Filters</h3>
+        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
           <div>
-            <label className="block text-sm font-medium mb-1">Status</label>
+            <label style={{ display: 'block', fontSize: '14px', marginBottom: '5px', fontWeight: 500 }}>Status</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="border rounded px-3 py-2"
+              style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', minWidth: '150px' }}
             >
               <option value="">All Status</option>
               <option value="PENDING">Pending</option>
@@ -76,11 +87,11 @@ export default function PurchaseOrdersPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Payment Status</label>
+            <label style={{ display: 'block', fontSize: '14px', marginBottom: '5px', fontWeight: 500 }}>Payment Status</label>
             <select
               value={filters.paymentStatus}
               onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}
-              className="border rounded px-3 py-2"
+              style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', minWidth: '150px' }}
             >
               <option value="">All Payment Status</option>
               <option value="PENDING">Pending</option>
@@ -91,98 +102,97 @@ export default function PurchaseOrdersPage() {
         </div>
       </div>
 
-      {/* Purchase Orders List */}
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0 }}>Purchase Orders ({purchaseOrders.length})</h2>
+          <button className="button">+ Create Order</button>
+        </div>
+
+        {loading && <p>Loading purchase orders...</p>}
+        {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+
+        {!loading && !error && purchaseOrders.length === 0 && (
+          <p style={{ color: '#999', textAlign: 'center', padding: '40px 0' }}>
+            No purchase orders found. Create your first purchase order to get started.
+          </p>
+        )}
+
+        {!loading && !error && purchaseOrders.length > 0 && (
+          <table className="table">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Order Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Supplier
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Order Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Payment
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Actions
-                </th>
+                <th>Order #</th>
+                <th>Supplier</th>
+                <th>Order Date</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Amount</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {purchaseOrders && purchaseOrders.map((order) => (
+            <tbody>
+              {purchaseOrders.map((order) => (
                 <tr key={order.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td style={{ fontWeight: 500, fontFamily: 'monospace', fontSize: '13px' }}>
                     {order.orderNumber}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {order.supplier.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {new Date(order.orderDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
-                      order.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                      order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
+                  <td>{order.supplier.name}</td>
+                  <td>{new Date(order.orderDate).toLocaleDateString()}</td>
+                  <td>
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      background: order.status === 'DELIVERED' ? '#d5f4e6' : 
+                                  order.status === 'PARTIAL' ? '#fff4e6' : 
+                                  order.status === 'CANCELLED' ? '#ffcdd2' : '#e3f2fd',
+                      color: order.status === 'DELIVERED' ? '#00b894' : 
+                             order.status === 'PARTIAL' ? '#e67e22' : 
+                             order.status === 'CANCELLED' ? '#d32f2f' : '#0070f3',
+                      borderRadius: '4px', 
+                      fontSize: '12px' 
+                    }}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      order.paymentStatus === 'PAID' ? 'bg-green-100 text-green-800' :
-                      order.paymentStatus === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                  <td>
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      background: order.paymentStatus === 'PAID' ? '#d5f4e6' : 
+                                  order.paymentStatus === 'PARTIAL' ? '#fff4e6' : '#ffcdd2',
+                      color: order.paymentStatus === 'PAID' ? '#00b894' : 
+                             order.paymentStatus === 'PARTIAL' ? '#e67e22' : '#d32f2f',
+                      borderRadius: '4px', 
+                      fontSize: '12px' 
+                    }}>
                       {order.paymentStatus}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    ₹{Number(order.totalAmount).toLocaleString()}
+                  <td style={{ fontWeight: 500 }}>
+                    ₹{Number(order.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     {order.paidAmount > 0 && (
-                      <div className="text-xs text-gray-500">
-                        Paid: ₹{Number(order.paidAmount).toLocaleString()}
+                      <div style={{ fontSize: '11px', color: '#999' }}>
+                        Paid: ₹{Number(order.paidAmount).toFixed(2)}
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button className="text-blue-600 hover:text-blue-800 mr-3">
+                  <td>
+                    <button style={{ 
+                      padding: '4px 12px', 
+                      background: 'transparent', 
+                      border: '1px solid #0070f3', 
+                      color: '#0070f3', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}>
                       View
                     </button>
-                    {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
-                      <button className="text-green-600 hover:text-green-800">
-                        Receive Stock
-                      </button>
-                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-
-          {(!purchaseOrders || purchaseOrders.length === 0) && (
-            <div className="text-center py-8 text-gray-500">
-              No purchase orders found
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

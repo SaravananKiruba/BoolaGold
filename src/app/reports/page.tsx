@@ -91,19 +91,19 @@ export default function ReportsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Orders</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData.summary.totalOrders}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData?.summary?.totalOrders || 0}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Sales</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.summary.totalSalesAmount.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.summary?.totalSalesAmount || 0).toLocaleString('en-IN')}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Avg Order Value</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.summary.averageOrderValue.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.summary?.averageOrderValue || 0).toLocaleString('en-IN')}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Discount</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.summary.totalDiscountAmount.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.summary?.totalDiscountAmount || 0).toLocaleString('en-IN')}</div>
                 </div>
               </div>
             </div>
@@ -119,7 +119,7 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.paymentMethodBreakdown.map((item: any) => (
+                  {(reportData?.paymentMethodBreakdown || []).map((item: any) => (
                     <tr key={item.paymentMethod} style={{ borderBottom: '1px solid #eee' }}>
                       <td style={{ padding: '10px' }}>{item.paymentMethod}</td>
                       <td style={{ textAlign: 'right', padding: '10px' }}>{item.count}</td>
@@ -142,7 +142,7 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.topSellingProducts.byQuantity.slice(0, 5).map((item: any, idx: number) => (
+                  {(reportData?.topSellingProducts?.byQuantity || []).slice(0, 5).map((item: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
                       <td style={{ padding: '10px' }}>{item.productName}</td>
                       <td style={{ textAlign: 'center', padding: '10px' }}>{item.quantitySold}</td>
@@ -163,20 +163,20 @@ export default function ReportsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Products</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData.summary.totalProducts}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData?.summary?.totalProducts || 0}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Stock Quantity</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData.summary.totalStockQuantity}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData?.summary?.totalStockQuantity || 0}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Inventory Value</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.summary.totalInventoryValue.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.summary?.totalInventoryValue || 0).toLocaleString('en-IN')}</div>
                 </div>
               </div>
             </div>
 
-            {reportData.lowStockItems.length > 0 && (
+            {(reportData?.lowStockItems || []).length > 0 && (
               <div className="card" style={{ marginBottom: '20px', background: '#fff3e0' }}>
                 <h3 style={{ marginTop: 0 }}>⚠️ Low Stock Alert</h3>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -188,7 +188,7 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {reportData.lowStockItems.map((item: any, idx: number) => (
+                    {(reportData?.lowStockItems || []).map((item: any, idx: number) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
                         <td style={{ padding: '10px' }}>{item.name}</td>
                         <td style={{ textAlign: 'center', padding: '10px' }}>{item.stockQuantity}</td>
@@ -202,7 +202,7 @@ export default function ReportsPage() {
 
             <div className="card">
               <h3 style={{ marginTop: 0 }}>🏅 Metal-wise Breakdown</h3>
-              {reportData.metalBreakdown.map((metal: any, idx: number) => (
+              {(reportData?.metalBreakdown || []).map((metal: any, idx: number) => (
                 <div key={idx} style={{ marginBottom: '20px', padding: '15px', background: '#f5f5f5', borderRadius: '5px' }}>
                   <h4 style={{ marginTop: 0 }}>{metal.metalType}</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '10px' }}>
@@ -233,19 +233,19 @@ export default function ReportsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Customers</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData.summary.totalCustomers}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData?.summary?.totalCustomers || 0}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Purchases</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.summary.totalPurchasesAmount.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.summary?.totalPurchasesAmount || 0).toLocaleString('en-IN')}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>New Customers</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData.summary.newCustomersCount}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData?.summary?.newCustomersCount || 0}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Retention Rate</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData.summary.retentionRate}%</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData?.summary?.retentionRate || 0}%</div>
                 </div>
               </div>
             </div>
@@ -262,7 +262,7 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.topCustomers.map((customer: any, idx: number) => (
+                  {(reportData?.topCustomers || []).map((customer: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
                       <td style={{ padding: '10px' }}>{customer.customerName}</td>
                       <td style={{ padding: '10px' }}>{customer.customerPhone}</td>
@@ -284,11 +284,11 @@ export default function ReportsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Invoices</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData.summary.totalInvoices}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{reportData?.summary?.totalInvoices || 0}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Sales Amount</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.summary.totalSalesAmount.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.summary?.totalSalesAmount || 0).toLocaleString('en-IN')}</div>
                 </div>
               </div>
             </div>
@@ -304,7 +304,7 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.categoryTotals.map((item: any, idx: number) => (
+                  {(reportData?.categoryTotals || []).map((item: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
                       <td style={{ padding: '10px' }}>{item.category}</td>
                       <td style={{ textAlign: 'center', padding: '10px' }}>{item.invoiceCount}</td>
@@ -325,28 +325,28 @@ export default function ReportsPage() {
               <div style={{ padding: '15px', background: '#fff', borderRadius: '5px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Total Income:</span>
-                  <strong>₹{reportData.profitAndLoss.totalIncome.toLocaleString('en-IN')}</strong>
+                  <strong>₹{(reportData?.profitAndLoss?.totalIncome || 0).toLocaleString('en-IN')}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Direct Costs (Metal Purchases):</span>
-                  <strong style={{ color: '#d32f2f' }}>₹{reportData.profitAndLoss.directCosts.metalPurchases.toLocaleString('en-IN')}</strong>
+                  <strong style={{ color: '#d32f2f' }}>₹{(reportData?.profitAndLoss?.directCosts?.metalPurchases || 0).toLocaleString('en-IN')}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingTop: '10px', borderTop: '1px solid #ddd' }}>
                   <span><strong>Gross Profit:</strong></span>
-                  <strong style={{ color: '#2e7d32' }}>₹{reportData.profitAndLoss.grossProfit.toLocaleString('en-IN')}</strong>
+                  <strong style={{ color: '#2e7d32' }}>₹{(reportData?.profitAndLoss?.grossProfit || 0).toLocaleString('en-IN')}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Operational Expenses:</span>
-                  <strong style={{ color: '#d32f2f' }}>₹{reportData.profitAndLoss.operationalExpenses.toLocaleString('en-IN')}</strong>
+                  <strong style={{ color: '#d32f2f' }}>₹{(reportData?.profitAndLoss?.operationalExpenses || 0).toLocaleString('en-IN')}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', borderTop: '2px solid #333' }}>
                   <span><strong>Net Profit:</strong></span>
-                  <strong style={{ fontSize: '20px', color: reportData.profitAndLoss.netProfit >= 0 ? '#2e7d32' : '#d32f2f' }}>
-                    ₹{reportData.profitAndLoss.netProfit.toLocaleString('en-IN')}
+                  <strong style={{ fontSize: '20px', color: (reportData?.profitAndLoss?.netProfit || 0) >= 0 ? '#2e7d32' : '#d32f2f' }}>
+                    ₹{(reportData?.profitAndLoss?.netProfit || 0).toLocaleString('en-IN')}
                   </strong>
                 </div>
                 <div style={{ textAlign: 'right', marginTop: '5px', fontSize: '14px', color: '#666' }}>
-                  Profit Margin: {reportData.profitAndLoss.profitMargin}%
+                  Profit Margin: {reportData?.profitAndLoss?.profitMargin || 0}%
                 </div>
               </div>
             </div>
@@ -356,16 +356,16 @@ export default function ReportsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
                 <div style={{ padding: '15px', background: '#e8f5e9', borderRadius: '5px', textAlign: 'center' }}>
                   <div style={{ fontSize: '14px', color: '#666' }}>Inflow</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>₹{reportData.cashFlow.inflow.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>₹{(reportData?.cashFlow?.inflow || 0).toLocaleString('en-IN')}</div>
                 </div>
                 <div style={{ padding: '15px', background: '#ffebee', borderRadius: '5px', textAlign: 'center' }}>
                   <div style={{ fontSize: '14px', color: '#666' }}>Outflow</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#d32f2f' }}>₹{reportData.cashFlow.outflow.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#d32f2f' }}>₹{(reportData?.cashFlow?.outflow || 0).toLocaleString('en-IN')}</div>
                 </div>
-                <div style={{ padding: '15px', background: reportData.cashFlow.netCashFlow >= 0 ? '#e8f5e9' : '#ffebee', borderRadius: '5px', textAlign: 'center' }}>
+                <div style={{ padding: '15px', background: (reportData?.cashFlow?.netCashFlow || 0) >= 0 ? '#e8f5e9' : '#ffebee', borderRadius: '5px', textAlign: 'center' }}>
                   <div style={{ fontSize: '14px', color: '#666' }}>Net Cash Flow</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: reportData.cashFlow.netCashFlow >= 0 ? '#2e7d32' : '#d32f2f' }}>
-                    ₹{reportData.cashFlow.netCashFlow.toLocaleString('en-IN')}
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: (reportData?.cashFlow?.netCashFlow || 0) >= 0 ? '#2e7d32' : '#d32f2f' }}>
+                    ₹{(reportData?.cashFlow?.netCashFlow || 0).toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
@@ -376,11 +376,11 @@ export default function ReportsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                 <div style={{ padding: '15px', background: '#fff3e0', borderRadius: '5px' }}>
                   <div style={{ fontSize: '14px', color: '#666' }}>Total Outstanding</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.emiTracking.totalOutstanding.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.emiTracking?.totalOutstanding || 0).toLocaleString('en-IN')}</div>
                 </div>
                 <div style={{ padding: '15px', background: '#e8f5e9', borderRadius: '5px' }}>
                   <div style={{ fontSize: '14px', color: '#666' }}>Received in Period</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{reportData.emiTracking.receivedInPeriod.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>₹{(reportData?.emiTracking?.receivedInPeriod || 0).toLocaleString('en-IN')}</div>
                 </div>
               </div>
             </div>

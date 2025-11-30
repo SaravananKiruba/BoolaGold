@@ -44,6 +44,8 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -149,6 +151,16 @@ export default function ProductsPage() {
   const closePriceBreakdown = () => {
     setPriceBreakdown(null);
     setSelectedProduct(null);
+  };
+
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setShowFormModal(true);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setShowFormModal(true);
   };
 
   return (
@@ -286,7 +298,7 @@ export default function ProductsPage() {
             >
               {recalculating ? 'Recalculating...' : '🔄 Recalculate Prices'}
             </button>
-            <button className="button">+ Add Product</button>
+            <button className="button" onClick={handleAddProduct}>+ Add Product</button>
           </div>
         </div>
 
@@ -414,11 +426,12 @@ export default function ProductsPage() {
                         Price 💰
                       </button>
                       <button
+                        onClick={() => handleEditProduct(product)}
                         style={{
                           padding: '4px 12px',
                           background: 'transparent',
-                          border: '1px solid #666',
-                          color: '#666',
+                          border: '1px solid #28a745',
+                          color: '#28a745',
                           borderRadius: '4px',
                           cursor: 'pointer',
                           fontSize: '12px',
@@ -607,6 +620,416 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
+
+      {/* Product Form Modal */}
+      {showFormModal && (
+        <ProductFormModal
+          product={editingProduct}
+          onClose={() => setShowFormModal(false)}
+          onSuccess={() => {
+            setShowFormModal(false);
+            fetchProducts();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Product Form Modal Component
+function ProductFormModal({ product, onClose, onSuccess }: {
+  product: Product | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: product?.name || '',
+    metalType: product?.metalType || 'GOLD',
+    purity: product?.purity || '22K',
+    grossWeight: product?.grossWeight?.toString() || '',
+    netWeight: product?.netWeight?.toString() || '',
+    barcode: product?.barcode || '',
+    huid: product?.huid || '',
+    tagNumber: product?.tagNumber || '',
+    wastagePercent: product?.wastagePercent?.toString() || '',
+    makingCharges: product?.makingCharges?.toString() || '',
+    stoneValue: product?.stoneValue?.toString() || '',
+    collectionName: product?.collectionName || '',
+    supplierId: product?.supplier?.id || '',
+    isActive: product?.isActive ?? true,
+    isCustomOrder: product?.isCustomOrder ?? false,
+  });
+
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [errors, setErrors] = useState<any>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await fetch('/api/suppliers?isActive=true');
+      const result = await response.json();
+      if (result.success) {
+        setSuppliers(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+    setSubmitting(true);
+
+    try {
+      const payload = {
+        name: formData.name,
+        metalType: formData.metalType,
+        purity: formData.purity,
+        grossWeight: parseFloat(formData.grossWeight),
+        netWeight: parseFloat(formData.netWeight),
+        barcode: formData.barcode,
+        huid: formData.huid || undefined,
+        tagNumber: formData.tagNumber || undefined,
+        wastagePercent: parseFloat(formData.wastagePercent) || 0,
+        makingCharges: parseFloat(formData.makingCharges) || 0,
+        stoneValue: formData.stoneValue ? parseFloat(formData.stoneValue) : undefined,
+        collectionName: formData.collectionName || undefined,
+        supplierId: formData.supplierId || undefined,
+        isActive: formData.isActive,
+        isCustomOrder: formData.isCustomOrder,
+      };
+
+      const url = product ? `/api/products/${product.id}` : '/api/products';
+      const method = product ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(product ? 'Product updated successfully!' : 'Product created successfully!');
+        onSuccess();
+      } else {
+        if (result.error?.errors) {
+          const errorMap: any = {};
+          result.error.errors.forEach((err: any) => {
+            errorMap[err.path?.[0] || 'general'] = err.message;
+          });
+          setErrors(errorMap);
+        } else {
+          alert(result.error?.message || 'Failed to save product');
+        }
+      }
+    } catch (error: any) {
+      alert('Error: ' + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: '20px',
+      overflow: 'auto',
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        padding: '30px',
+        maxWidth: '900px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'auto',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0 }}>{product ? 'Edit Product' : 'Add New Product'}</h2>
+          <button onClick={onClose} style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            color: '#666',
+          }}>×</button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
+            Basic Information
+          </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Product Name <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                placeholder="e.g., Gold Necklace 22K"
+              />
+              {errors.name && <span style={{ color: 'red', fontSize: '12px' }}>{errors.name}</span>}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Metal Type <span style={{ color: 'red' }}>*</span>
+              </label>
+              <select
+                required
+                value={formData.metalType}
+                onChange={(e) => setFormData({ ...formData, metalType: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              >
+                <option value="GOLD">Gold</option>
+                <option value="SILVER">Silver</option>
+                <option value="PLATINUM">Platinum</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Purity <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.purity}
+                onChange={(e) => setFormData({ ...formData, purity: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                placeholder="e.g., 22K, 18K, 999"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Gross Weight (g) <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="number"
+                step="0.001"
+                required
+                value={formData.grossWeight}
+                onChange={(e) => setFormData({ ...formData, grossWeight: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Net Weight (g) <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="number"
+                step="0.001"
+                required
+                value={formData.netWeight}
+                onChange={(e) => setFormData({ ...formData, netWeight: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Wastage (%) <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.wastagePercent}
+                onChange={(e) => setFormData({ ...formData, wastagePercent: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Making Charges (₹) <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.makingCharges}
+                onChange={(e) => setFormData({ ...formData, makingCharges: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Stone Value (₹)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.stoneValue}
+                onChange={(e) => setFormData({ ...formData, stoneValue: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+          </div>
+
+          <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
+            Identifiers
+          </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Barcode <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                placeholder="Unique barcode"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                HUID
+              </label>
+              <input
+                type="text"
+                value={formData.huid}
+                onChange={(e) => setFormData({ ...formData, huid: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                placeholder="Hallmark Unique ID"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Tag Number
+              </label>
+              <input
+                type="text"
+                value={formData.tagNumber}
+                onChange={(e) => setFormData({ ...formData, tagNumber: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Collection Name
+              </label>
+              <input
+                type="text"
+                value={formData.collectionName}
+                onChange={(e) => setFormData({ ...formData, collectionName: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+          </div>
+
+          <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
+            Additional Details
+          </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                Supplier
+              </label>
+              <select
+                value={formData.supplierId}
+                onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              >
+                <option value="">-- Select Supplier --</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '28px' }}>
+              <label style={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  style={{ marginRight: '8px' }}
+                />
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>Active Product</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.isCustomOrder}
+                  onChange={(e) => setFormData({ ...formData, isCustomOrder: e.target.checked })}
+                  style={{ marginRight: '8px' }}
+                />
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>Custom Order</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                flex: 1,
+                padding: '10px 20px',
+                background: submitting ? '#ccc' : '#0070f3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              {submitting ? 'Saving...' : (product ? 'Update Product' : 'Create Product')}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                flex: 1,
+                padding: '10px 20px',
+                background: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -154,22 +154,6 @@ export default function SalesOrdersPage() {
           </table>
         )}
       </div>
-
-      <div className="card" style={{ background: '#f8f9fa' }}>
-        <h3 style={{ marginTop: 0 }}>API Endpoint</h3>
-        <p style={{ fontSize: '14px', color: '#666' }}>
-          <strong>GET</strong> <code>/api/sales-orders</code> - List all sales orders with filters
-        </p>
-        <p style={{ fontSize: '14px', color: '#666' }}>
-          <strong>POST</strong> <code>/api/sales-orders</code> - Create new order (validates stock, creates transaction)
-        </p>
-        <p style={{ fontSize: '14px', color: '#666' }}>
-          <strong>GET</strong> <code>/api/sales-orders/[id]</code> - Get order details with line items
-        </p>
-        <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
-          <strong>Note:</strong> Creating an order automatically: validates stock availability (FIFO), marks items as SOLD, creates income transaction, and updates customer history.
-        </p>
-      </div>
     </div>
   );
 }
