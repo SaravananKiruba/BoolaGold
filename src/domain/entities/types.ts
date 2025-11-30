@@ -68,6 +68,7 @@ export interface Product {
   collectionName?: string | null;
   design?: string | null;
   size?: string | null;
+  supplierId?: string | null;
   reorderLevel: number;
   isActive: boolean;
   isCustomOrder: boolean;

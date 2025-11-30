@@ -8,10 +8,16 @@ import { MetalType } from '@/domain/entities/types';
 
 export interface ProductFilters {
   search?: string;
+  barcode?: string;
+  huid?: string;
+  tagNumber?: string;
   metalType?: MetalType;
   purity?: string;
   collectionName?: string;
+  supplierId?: string;
+  stockStatus?: string; // AVAILABLE, RESERVED, SOLD
   isActive?: boolean;
+  isCustomOrder?: boolean;
   lowStock?: boolean;
 }
 
@@ -75,7 +81,21 @@ export class ProductRepository {
         { barcode: { contains: filters.search } },
         { huid: { contains: filters.search } },
         { tagNumber: { contains: filters.search } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+        { collectionName: { contains: filters.search, mode: 'insensitive' } },
       ];
+    }
+
+    if (filters.barcode) {
+      where.barcode = { contains: filters.barcode };
+    }
+
+    if (filters.huid) {
+      where.huid = { contains: filters.huid };
+    }
+
+    if (filters.tagNumber) {
+      where.tagNumber = { contains: filters.tagNumber };
     }
 
     if (filters.metalType) {
@@ -90,8 +110,31 @@ export class ProductRepository {
       where.collectionName = { contains: filters.collectionName, mode: 'insensitive' };
     }
 
+    if (filters.supplierId) {
+      where.supplierId = filters.supplierId;
+    }
+
     if (filters.isActive !== undefined) {
       where.isActive = filters.isActive;
+    }
+
+    if (filters.isCustomOrder !== undefined) {
+      where.isCustomOrder = filters.isCustomOrder;
+    }
+
+    // Stock status filter
+    if (filters.stockStatus) {
+      where.stockItems = {
+        some: {
+          status: filters.stockStatus as any,
+          deletedAt: null,
+        },
+      };
+    }
+
+    // Low stock filter
+    if (filters.lowStock) {
+      // This will be handled in post-processing
     }
 
     const [products, totalCount] = await Promise.all([
@@ -101,6 +144,7 @@ export class ProductRepository {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
+          supplier: true,
           rateUsed: true,
           _count: {
             select: {
@@ -117,7 +161,15 @@ export class ProductRepository {
       prisma.product.count({ where }),
     ]);
 
-    return createPaginatedResponse(products, page, pageSize, totalCount);
+    // Apply low stock filter if needed
+    let filteredProducts = products;
+    if (filters.lowStock) {
+      filteredProducts = products.filter(
+        (product) => product._count.stockItems <= product.reorderLevel
+      );
+    }
+
+    return createPaginatedResponse(filteredProducts, page, pageSize, totalCount);
   }
 
   /**

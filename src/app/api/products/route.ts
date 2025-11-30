@@ -32,6 +32,7 @@ const createProductSchema = z.object({
   collectionName: z.string().max(100).optional(),
   design: z.string().max(200).optional(),
   size: z.string().max(50).optional(),
+  supplierId: z.string().uuid().optional(),
   reorderLevel: z.number().int().positive().default(1),
   isActive: z.boolean().default(true),
   isCustomOrder: z.boolean().default(false),
@@ -51,11 +52,22 @@ export async function GET(request: NextRequest) {
     // Parse filters
     const filters: any = {
       search: searchParams.get('search') || undefined,
+      barcode: searchParams.get('barcode') || undefined,
+      huid: searchParams.get('huid') || undefined,
+      tagNumber: searchParams.get('tagNumber') || undefined,
       metalType: searchParams.get('metalType') as MetalType | undefined,
       purity: searchParams.get('purity') || undefined,
       collectionName: searchParams.get('collectionName') || undefined,
+      supplierId: searchParams.get('supplierId') || undefined,
+      stockStatus: searchParams.get('stockStatus') || undefined,
       isActive: searchParams.get('isActive')
         ? searchParams.get('isActive') === 'true'
+        : undefined,
+      isCustomOrder: searchParams.get('isCustomOrder')
+        ? searchParams.get('isCustomOrder') === 'true'
+        : undefined,
+      lowStock: searchParams.get('lowStock')
+        ? searchParams.get('lowStock') === 'true'
         : undefined,
     };
 
@@ -144,6 +156,7 @@ export async function POST(request: NextRequest) {
       collectionName: data.collectionName || null,
       design: data.design || null,
       size: data.size || null,
+      supplierId: data.supplierId || null,
       reorderLevel: data.reorderLevel,
       isActive: data.isActive,
       isCustomOrder: data.isCustomOrder,

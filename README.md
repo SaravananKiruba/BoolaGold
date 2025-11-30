@@ -13,14 +13,37 @@ This system covers **all 30 user stories** across the following modules:
 - Purchase history tracking
 - Advanced search and filtering
 
-### 💍 Product Management (Stories 3-5)
-- Jewelry item registration with complete specifications
-- Metal types: Gold, Silver, Platinum with purity levels
-- Auto-generated barcodes and tag numbers
-- HUID (Hallmark Unique ID) for BIS compliance
-- Automatic price calculation based on rate master
-- Manual price override with reason logging
-- Stone details and making charges
+### 💍 Product Management (Stories 3-5) ✅ FULLY IMPLEMENTED
+- ✅ Jewelry item registration with complete specifications
+- ✅ Metal types: Gold, Silver, Platinum with purity levels (22k, 18k, 24k, etc.)
+- ✅ Gross weight and net weight with 3-decimal precision
+- ✅ Auto-generated barcodes for each product
+- ✅ HUID (Hallmark Unique ID) for BIS compliance
+- ✅ Tag numbers for physical tracking
+- ✅ Complete product descriptions and design information
+- ✅ Making charges (fixed amount) and wastage percentage
+- ✅ Stone details: weight, value, and description
+- ✅ Hallmark number and BIS certification status
+- ✅ Collection name, design, and size information
+- ✅ Supplier selection and tracking
+- ✅ Stock quantity tracking and reorder level alerts
+- ✅ Active/inactive status management
+- ✅ Custom order flag support
+- ✅ **Automatic price calculation** based on metal rate and weight
+  - Effective Weight = Net Weight × (1 + Wastage% / 100)
+  - Metal Amount = Effective Weight × Metal Rate (per gram)
+  - Total Price = Metal Amount + Making Charges + Stone Value
+- ✅ **Price override capability** with reason logging
+- ✅ **Advanced search and filtering**:
+  - Search by product name, barcode, HUID, tag number, description
+  - Filter by metal type, purity, collection name
+  - Filter by supplier
+  - Filter by stock status (Available/Reserved/Sold)
+  - Filter by active status and custom order flag
+  - Low stock alerts
+- ✅ **Price breakdown display** showing complete calculation details
+- ✅ **Bulk price recalculation** based on updated metal rates
+- ✅ Price staleness warnings when rates are outdated
 
 ### 📦 Stock Management (Stories 6-8)
 - Individual item tracking with unique tag IDs and barcodes
@@ -233,18 +256,36 @@ src/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/products` | List all products with stock counts |
+| GET | `/api/products` | List all products with advanced filters and stock counts |
 | POST | `/api/products` | Create new product (auto-calculates price) |
 | GET | `/api/products/[id]` | Get product details with stock summary |
 | PUT | `/api/products/[id]` | Update product (supports price recalculation) |
 | DELETE | `/api/products/[id]` | Soft delete product |
+| GET | `/api/products/[id]/price-breakdown` | Get detailed price calculation breakdown |
+| POST | `/api/products/recalculate-prices` | Bulk recalculate prices based on current rates |
+
+**Query Parameters** (GET `/api/products`):
+- `page` - Page number (default: 1)
+- `pageSize` - Items per page (default: 20)
+- `search` - Search by name, barcode, HUID, tag number, description, collection
+- `barcode` - Filter by specific barcode
+- `huid` - Filter by HUID
+- `tagNumber` - Filter by tag number
+- `metalType` - Filter by GOLD/SILVER/PLATINUM
+- `purity` - Filter by purity (22k, 18k, 24k, etc.)
+- `collectionName` - Filter by collection name
+- `supplierId` - Filter by supplier
+- `stockStatus` - Filter by AVAILABLE/RESERVED/SOLD
+- `isActive` - Filter by active status (true/false)
+- `isCustomOrder` - Filter custom orders (true/false)
+- `lowStock` - Show only low stock products (true)
 
 **Request Body** (POST):
 ```json
 {
   "name": "Gold Necklace - Traditional",
   "metalType": "GOLD",
-  "purity": "22K",
+  "purity": "22k",
   "grossWeight": 25.5,
   "netWeight": 24.0,
   "huid": "HUID22K001",
@@ -254,12 +295,76 @@ src/
   "wastagePercent": 6.0,
   "stoneWeight": 2.5,
   "stoneValue": 5000.00,
+  "stoneDescription": "Natural diamonds, VS quality",
   "hallmarkNumber": "BIS916-001",
   "bisCompliant": true,
   "collectionName": "Wedding Collection",
   "design": "Temple Jewelry",
+  "size": "18 inches",
+  "supplierId": "supplier-uuid-here",
   "reorderLevel": 2,
+  "isActive": true,
+  "isCustomOrder": false,
   "calculatePrice": true
+}
+```
+
+**Response - Price Breakdown** (GET `/api/products/[id]/price-breakdown`):
+```json
+{
+  "success": true,
+  "data": {
+    "product": {
+      "id": "uuid",
+      "name": "Gold Necklace - Traditional",
+      "metalType": "GOLD",
+      "purity": "22k",
+      "grossWeight": 25.5,
+      "netWeight": 24.0,
+      "wastagePercent": 6.0,
+      "makingCharges": 8000.0,
+      "stoneValue": 5000.0
+    },
+    "currentRate": {
+      "id": "rate-uuid",
+      "metalType": "GOLD",
+      "purity": "22k",
+      "ratePerGram": 6500.0,
+      "effectiveDate": "2024-01-15T00:00:00Z",
+      "rateSource": "MANUAL"
+    },
+    "currentPriceCalculation": {
+      "netWeight": 24.0,
+      "wastagePercent": 6.0,
+      "effectiveWeight": 25.44,
+      "metalRatePerGram": 6500.0,
+      "metalAmount": 165360.0,
+      "makingCharges": 8000.0,
+      "stoneValue": 5000.0,
+      "totalPrice": 178360.0
+    },
+    "storedPrice": {
+      "calculatedPrice": 175000.0,
+      "lastPriceUpdate": "2024-01-10T10:00:00Z"
+    },
+    "finalPrice": 178360.0,
+    "priceStatus": {
+      "isOverridden": false,
+      "isOutdated": true,
+      "priceDifference": 3360.0
+    }
+  }
+}
+```
+
+**Request Body - Bulk Recalculate** (POST `/api/products/recalculate-prices`):
+```json
+{
+  "productIds": ["uuid1", "uuid2"],  // Optional: specific products
+  "metalType": "GOLD",                // Optional: filter by metal type
+  "purity": "22k",                    // Optional: filter by purity
+  "collectionName": "Wedding",        // Optional: filter by collection
+  "onlyOutdated": true                // Only recalculate outdated prices
 }
 ```
 

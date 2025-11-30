@@ -85,6 +85,7 @@ model Supplier {
   deletedAt       DateTime?
 
   // Relations
+  products        Product[]
   purchaseOrders  PurchaseOrder[]
 
   @@index([isActive])
@@ -123,6 +124,7 @@ model Product {
   collectionName  String?    @db.VarChar(100)
   design          String?    @db.VarChar(200)
   size            String?    @db.VarChar(50)
+  supplierId      String?
   reorderLevel    Int        @default(1)
   isActive        Boolean    @default(true)
   isCustomOrder   Boolean    @default(false)
@@ -136,6 +138,7 @@ model Product {
   deletedAt       DateTime?
 
   // Relations
+  supplier        Supplier?   @relation(fields: [supplierId], references: [id])
   rateUsed        RateMaster? @relation(fields: [rateUsedId], references: [id])
   stockItems      StockItem[]
   purchaseOrderItems PurchaseOrderItem[]

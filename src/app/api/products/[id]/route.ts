@@ -33,6 +33,7 @@ const updateProductSchema = z.object({
   collectionName: z.string().max(100).optional(),
   design: z.string().max(200).optional(),
   size: z.string().max(50).optional(),
+  supplierId: z.string().uuid().optional().nullable(),
   reorderLevel: z.number().int().positive().optional(),
   isActive: z.boolean().optional(),
   priceOverride: amountSchema.optional(),
@@ -107,6 +108,7 @@ export async function PUT(
     if (data.collectionName !== undefined) updateData.collectionName = data.collectionName || null;
     if (data.design !== undefined) updateData.design = data.design || null;
     if (data.size !== undefined) updateData.size = data.size || null;
+    if (data.supplierId !== undefined) updateData.supplierId = data.supplierId || null;
     if (data.reorderLevel) updateData.reorderLevel = data.reorderLevel;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.priceOverride !== undefined) updateData.priceOverride = data.priceOverride || null;
