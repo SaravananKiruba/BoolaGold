@@ -60,3 +60,22 @@ export function unauthorizedResponse(): ApiResponse {
     },
   };
 }
+
+/**
+ * Handle API errors and return appropriate response
+ */
+export function handleApiError(error: unknown) {
+  console.error('API Error:', error);
+  
+  if (error instanceof Error) {
+    return Response.json(
+      errorResponse(error.message, 'INTERNAL_ERROR'),
+      { status: 500 }
+    );
+  }
+  
+  return Response.json(
+    errorResponse('An unexpected error occurred', 'INTERNAL_ERROR'),
+    { status: 500 }
+  );
+}

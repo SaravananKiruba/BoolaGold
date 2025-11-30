@@ -144,3 +144,10 @@ export async function logError(
     severity: AuditSeverity.ERROR,
   });
 }
+
+/**
+ * Generic audit log function
+ */
+export async function logAudit(input: AuditLogInput): Promise<void> {
+  return createAuditLog(input);
+}

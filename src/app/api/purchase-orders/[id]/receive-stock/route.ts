@@ -1,0 +1,180 @@
+// Stock Receipt API - Receive stock from purchase order
+
+import { NextRequest, NextResponse } from 'next/server';
+import { purchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
+import { stockItemRepository } from '@/repositories/stockItemRepository';
+import { productRepository } from '@/repositories/productRepository';
+import { handleApiError, successResponse } from '@/utils/response';
+import { generateBatchTagIds, generateStockBarcode } from '@/utils/barcode';
+import { logAudit } from '@/utils/audit';
+import { MetalType, AuditAction, AuditModule } from '@/domain/entities/types';
+
+/**
+ * POST /api/purchase-orders/[id]/receive-stock
+ * Receive stock items against a purchase order
+ * 
+ * User Story 7: Stock Receipt from Purchase Order
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+    const purchaseOrderId = params.id;
+
+    const {
+      items, // Array of items to receive
+      receivedBy,
+    } = body;
+
+    /*
+     * items structure:
+     * [{
+     *   purchaseOrderItemId: string,
+     *   productId: string,
+     *   quantityToReceive: number,
+     *   receiptDetails: [{
+     *     purchaseCost: number,
+     *     sellingPrice: number,
+     *   }]
+     * }]
+     */
+
+    if (!items || items.length === 0) {
+      return NextResponse.json(
+        { error: 'Items to receive are required' },
+        { status: 400 }
+      );
+    }
+
+    // Get purchase order
+    const purchaseOrder = await purchaseOrderRepository.findById(purchaseOrderId);
+    if (!purchaseOrder) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
+    // Process each item
+    const receiptItems = [];
+
+    for (const item of items) {
+      const { purchaseOrderItemId, productId, quantityToReceive, receiptDetails } = item;
+
+      if (quantityToReceive <= 0) {
+        return NextResponse.json(
+          { error: `Invalid quantity for item ${productId}` },
+          { status: 400 }
+        );
+      }
+
+      // Get product details for tag/barcode generation
+      const product = await productRepository.findById(productId);
+      if (!product) {
+        return NextResponse.json(
+          { error: `Product ${productId} not found` },
+          { status: 404 }
+        );
+      }
+
+      // Check if quantity exceeds pending quantity
+      const poItem = purchaseOrder.items.find((i) => i.id === purchaseOrderItemId);
+      if (!poItem) {
+        return NextResponse.json(
+          { error: `Purchase order item ${purchaseOrderItemId} not found` },
+          { status: 404 }
+        );
+      }
+
+      const pendingQuantity = poItem.quantity - poItem.receivedQuantity;
+      if (quantityToReceive > pendingQuantity) {
+        return NextResponse.json(
+          {
+            error: `Cannot receive ${quantityToReceive} items for ${product.name}. Only ${pendingQuantity} pending.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Generate unique tag IDs and barcodes for each physical item
+      const tagIds = generateBatchTagIds(
+        product.metalType as MetalType,
+        product.purity,
+        quantityToReceive
+      );
+
+      const barcodes = Array.from({ length: quantityToReceive }, (_, i) => {
+        return generateStockBarcode(productId, Date.now() + i);
+      });
+
+      // Create individual stock items
+      const individualItems = [];
+      for (let i = 0; i < quantityToReceive; i++) {
+        const detail = receiptDetails[i] || receiptDetails[0]; // Use first detail as default
+
+        individualItems.push({
+          tagId: tagIds[i],
+          barcode: barcodes[i],
+          purchaseCost: detail.purchaseCost,
+          sellingPrice: detail.sellingPrice,
+          purchaseDate: new Date(),
+        });
+      }
+
+      receiptItems.push({
+        purchaseOrderItemId,
+        productId,
+        quantityToReceive,
+        individualItems,
+      });
+    }
+
+    // Receive stock in transaction
+    const result = await purchaseOrderRepository.receiveStock(
+      purchaseOrderId,
+      receiptItems
+    );
+
+    // Log audit
+    await logAudit({
+      action: AuditAction.CREATE,
+      module: AuditModule.STOCK,
+      entityId: purchaseOrderId,
+      afterData: {
+        purchaseOrderId,
+        itemsReceived: receiptItems.length,
+        totalQuantity: receiptItems.reduce((sum, item) => sum + item.quantityToReceive, 0),
+        receivedBy,
+      },
+    });
+
+    return successResponse({
+      message: 'Stock received successfully',
+      purchaseOrder: result.purchaseOrder,
+      stockItemsCreated: result.stockItems.length,
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * GET /api/purchase-orders/[id]/items-to-receive
+ * Get items pending receipt for a purchase order
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const purchaseOrderId = params.id;
+
+    const itemsToReceive = await purchaseOrderRepository.getItemsToReceive(purchaseOrderId);
+
+    return successResponse({
+      purchaseOrderId,
+      items: itemsToReceive,
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

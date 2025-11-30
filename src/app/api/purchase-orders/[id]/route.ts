@@ -1,0 +1,136 @@
+// Purchase Order API - Get, Update, Delete by ID
+
+import { NextRequest, NextResponse } from 'next/server';
+import { purchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
+import { PurchaseOrderStatus, PaymentStatus } from '@/domain/entities/types';
+import { handleApiError, successResponse } from '@/utils/response';
+import { logAudit } from '@/utils/audit';
+import { AuditAction, AuditModule } from '@/domain/entities/types';
+
+/**
+ * GET /api/purchase-orders/[id]
+ * Get a specific purchase order
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const purchaseOrder = await purchaseOrderRepository.findById(params.id);
+
+    if (!purchaseOrder) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
+    return successResponse(purchaseOrder);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * PATCH /api/purchase-orders/[id]
+ * Update a purchase order
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+    const { id } = params;
+
+    // Get existing purchase order
+    const existing = await purchaseOrderRepository.findById(id);
+    if (!existing) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
+    // Prepare update data
+    const updateData: any = {};
+
+    if (body.expectedDeliveryDate !== undefined) {
+      updateData.expectedDeliveryDate = body.expectedDeliveryDate
+        ? new Date(body.expectedDeliveryDate)
+        : null;
+    }
+
+    if (body.actualDeliveryDate !== undefined) {
+      updateData.actualDeliveryDate = body.actualDeliveryDate
+        ? new Date(body.actualDeliveryDate)
+        : null;
+    }
+
+    if (body.status !== undefined) {
+      updateData.status = body.status as PurchaseOrderStatus;
+    }
+
+    if (body.paymentStatus !== undefined) {
+      updateData.paymentStatus = body.paymentStatus as PaymentStatus;
+    }
+
+    if (body.discountAmount !== undefined) {
+      updateData.discountAmount = body.discountAmount;
+      // Recalculate total if discount changed
+      const itemsTotal = existing.items.reduce((sum, item) => {
+        return sum + Number(item.quantity) * Number(item.unitPrice);
+      }, 0);
+      updateData.totalAmount = itemsTotal - body.discountAmount;
+    }
+
+    if (body.notes !== undefined) {
+      updateData.notes = body.notes;
+    }
+
+    if (body.referenceNumber !== undefined) {
+      updateData.referenceNumber = body.referenceNumber;
+    }
+
+    const updated = await purchaseOrderRepository.update(id, updateData);
+
+    // Log audit
+    await logAudit({
+      action: AuditAction.UPDATE,
+      module: AuditModule.PURCHASE_ORDERS,
+      entityId: id,
+      beforeData: existing,
+      afterData: updated,
+    });
+
+    return successResponse(updated);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * DELETE /api/purchase-orders/[id]
+ * Soft delete a purchase order
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+
+    const existing = await purchaseOrderRepository.findById(id);
+    if (!existing) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
+    await purchaseOrderRepository.softDelete(id);
+
+    // Log audit
+    await logAudit({
+      action: AuditAction.DELETE,
+      module: AuditModule.PURCHASE_ORDERS,
+      entityId: id,
+      beforeData: existing,
+    });
+
+    return successResponse({ message: 'Purchase order deleted successfully' });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

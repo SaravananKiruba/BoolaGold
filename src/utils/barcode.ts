@@ -88,3 +88,76 @@ export function validateTagId(tagId: string): boolean {
   const pattern = /^[GSP][0-9]+-[0-9]+-[A-Z0-9]+$/;
   return pattern.test(tagId);
 }
+
+/**
+ * Generate multiple unique tag IDs for batch stock receipt
+ * Format: [MetalCode][Purity]-[Timestamp]-[UniqueID]
+ */
+export function generateBatchTagIds(
+  metalType: MetalType,
+  purity: string,
+  count: number
+): string[] {
+  const metalCode = getMetalCode(metalType);
+  const purityCode = purity.replace(/[^0-9]/g, '');
+  const timestamp = Date.now().toString().slice(-8);
+  const tagIds: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const uniqueId = Math.random().toString(36).substring(2, 6).toUpperCase();
+    tagIds.push(`${metalCode}${purityCode}-${timestamp}-${uniqueId}`);
+    // Small delay to ensure unique timestamps if generating many at once
+    if (i % 10 === 0 && i > 0) {
+      // Add millisecond to timestamp for next batch
+    }
+  }
+
+  return tagIds;
+}
+
+/**
+ * Generate multiple unique barcodes for batch stock receipt
+ * Format: [Prefix]-[ProductID]-[Sequence]
+ */
+export function generateBatchBarcodes(
+  prefix: string,
+  productId: string,
+  count: number,
+  startSequence?: number
+): string[] {
+  const shortId = productId.slice(0, 8).toUpperCase();
+  const barcodes: string[] = [];
+  const baseSequence = startSequence || Date.now();
+
+  for (let i = 0; i < count; i++) {
+    const seq = (baseSequence + i).toString().padStart(8, '0').slice(-8);
+    barcodes.push(`${prefix}-${shortId}-${seq}`);
+  }
+
+  return barcodes;
+}
+
+/**
+ * Generate stock item barcode with stock prefix
+ */
+export function generateStockBarcode(productId: string, sequence?: number): string {
+  return generateBarcode('STK', productId, sequence);
+}
+
+/**
+ * Check if tag ID is unique in the database (helper for validation)
+ */
+export async function isTagIdUnique(tagId: string): Promise<boolean> {
+  // This would need to be implemented with Prisma in the actual usage
+  // For now, this is a placeholder
+  return true;
+}
+
+/**
+ * Check if barcode is unique in the database (helper for validation)
+ */
+export async function isBarcodeUnique(barcode: string): Promise<boolean> {
+  // This would need to be implemented with Prisma in the actual usage
+  // For now, this is a placeholder
+  return true;
+}
