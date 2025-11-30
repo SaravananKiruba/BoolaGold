@@ -1,0 +1,108 @@
+// Transaction API Route - GET by ID, PATCH update, DELETE soft delete
+// GET /api/transactions/[id] - Get transaction details
+// PATCH /api/transactions/[id] - Update transaction
+// DELETE /api/transactions/[id] - Soft delete transaction
+
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { transactionRepository } from '@/repositories/transactionRepository';
+import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
+import { amountSchema } from '@/utils/validation';
+import { TransactionStatus, PaymentMethod, AuditModule } from '@/domain/entities/types';
+import { logUpdate, logDelete } from '@/utils/audit';
+
+const updateTransactionSchema = z.object({
+  amount: amountSchema.optional(),
+  paymentMode: z.nativeEnum(PaymentMethod).optional(),
+  description: z.string().optional(),
+  referenceNumber: z.string().optional(),
+  status: z.nativeEnum(TransactionStatus).optional(),
+  metalWeight: z.number().positive().optional(),
+  metalRatePerGram: z.number().positive().optional(),
+});
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const transaction = await transactionRepository.findById(params.id);
+
+    if (!transaction) {
+      return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
+    }
+
+    return NextResponse.json(successResponse(transaction));
+  } catch (error: any) {
+    console.error('Error fetching transaction:', error);
+    return NextResponse.json(errorResponse(error.message), { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+
+    // Validate input
+    const validation = updateTransactionSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(validationErrorResponse(validation.error.errors), { status: 400 });
+    }
+
+    // Check if transaction exists
+    const existingTransaction = await transactionRepository.findById(params.id);
+    if (!existingTransaction) {
+      return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
+    }
+
+    const data = validation.data;
+
+    // Recalculate metal cost if metal purchase and weight or rate changed
+    let updateData: any = { ...data };
+    if (existingTransaction.transactionType === 'METAL_PURCHASE') {
+      const newWeight = data.metalWeight || Number(existingTransaction.metalWeight);
+      const newRate = data.metalRatePerGram || Number(existingTransaction.metalRatePerGram);
+      if (data.metalWeight || data.metalRatePerGram) {
+        updateData.metalCost = newWeight * newRate;
+      }
+    }
+
+    // Update transaction
+    const transaction = await transactionRepository.update(params.id, updateData);
+
+    // Log the update
+    await logUpdate(AuditModule.TRANSACTIONS, params.id, existingTransaction, transaction);
+
+    return NextResponse.json(successResponse(transaction));
+  } catch (error: any) {
+    console.error('Error updating transaction:', error);
+    return NextResponse.json(errorResponse(error.message), { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Check if transaction exists
+    const existingTransaction = await transactionRepository.findById(params.id);
+    if (!existingTransaction) {
+      return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
+    }
+
+    // Soft delete
+    await transactionRepository.softDelete(params.id);
+
+    // Log the deletion
+    await logDelete(AuditModule.TRANSACTIONS, params.id, existingTransaction);
+
+    return NextResponse.json(successResponse({ message: 'Transaction deleted successfully' }));
+  } catch (error: any) {
+    console.error('Error deleting transaction:', error);
+    return NextResponse.json(errorResponse(error.message), { status: 500 });
+  }
+}

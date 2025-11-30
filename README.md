@@ -65,22 +65,37 @@ This system covers **all 30 user stories** across the following modules:
 - Automatic stock item generation on receipt
 - Supplier payment management
 
-### 💰 Sales Order Management (Stories 12-14, 26)
-- Invoice generation with auto-numbering
-- Stock validation before sale
-- FIFO-based item selection
-- Discount management
-- Multiple payment methods
-- Automatic transaction creation
-- Order types: Retail, Wholesale, Custom, Exchange
+### 💰 Sales Order Management (Stories 12-14, 26) ✅ FULLY IMPLEMENTED
+- ✅ Invoice generation with auto-numbering (INV-YYYYMMDD-XXXX)
+- ✅ Stock validation before sale (prevents overselling)
+- ✅ FIFO-based item selection (oldest stock first)
+- ✅ Discount management (flat amount)
+- ✅ Multiple payment methods (Cash/Card/UPI/EMI/Bank Transfer)
+- ✅ Automatic transaction creation (income entries)
+- ✅ Order types: Retail, Wholesale, Custom, Exchange
+- ✅ Order status tracking: Pending, Completed, Cancelled
+- ✅ Stock reservation for pending orders
+- ✅ Auto-release stock on order cancellation
+- ✅ Payment status tracking (Pending/Partial/Paid)
+- ✅ Order search and filtering by customer, date, status, payment method
+- ✅ Complete order cancellation with stock release
 
-### 💵 Financial Management (Stories 15-17, 25)
-- Complete transaction recording
-- Income and expense tracking
-- Metal purchase tracking with weight/rate details
-- Payment collection
-- EMI payment tracking with installments
-- Profit & loss statements
+### 💵 Financial Management (Stories 15-17, 25) ✅ FULLY IMPLEMENTED
+- ✅ Complete transaction recording with all transaction types
+- ✅ Transaction types: Income, Expense, EMI, Metal Purchase, Gold Scheme, Adjustment
+- ✅ Income and expense tracking by category
+- ✅ Metal purchase tracking with weight/rate details (weight, purity, rate per gram)
+- ✅ Payment collection against sales orders
+- ✅ Partial payment support
+- ✅ EMI payment tracking with installments
+- ✅ Installment payment recording
+- ✅ Overdue installment tracking and alerts
+- ✅ Upcoming installment notifications
+- ✅ Customer EMI summary
+- ✅ Financial dashboard with income/expense/net income
+- ✅ Transaction search and filtering
+- ✅ Payment method tracking
+- ✅ Reference number management
 
 ### 📊 Rate Master (Stories 18-19)
 - Daily gold/silver/platinum rate management
@@ -88,11 +103,19 @@ This system covers **all 30 user stories** across the following modules:
 - Bulk product price updates
 - Rate history and sources
 
-### 💳 EMI Management (Story 16)
-- EMI plan creation with interest calculation
-- Installment tracking
-- Payment collection per installment
-- Overdue alerts
+### 💳 EMI Management (Story 16) ✅ FULLY IMPLEMENTED
+- ✅ EMI plan creation with interest calculation
+- ✅ Multiple installment support (configurable)
+- ✅ Installment tracking with due dates
+- ✅ Payment collection per installment
+- ✅ Partial installment payment support
+- ✅ Overdue alerts and status management
+- ✅ Automatic next installment date calculation
+- ✅ Remaining amount tracking
+- ✅ Installment status: Pending, Paid, Overdue
+- ✅ Customer-wise EMI summary
+- ✅ Upcoming installment notifications (7-day window)
+- ✅ Overdue marking (automated/manual)
 
 ### 📈 Reports & Analytics (Stories 20-25)
 - Dashboard with key metrics
@@ -360,14 +383,6 @@ src/
 **Request Body - Bulk Recalculate** (POST `/api/products/recalculate-prices`):
 ```json
 {
-  "productIds": ["uuid1", "uuid2"],  // Optional: specific products
-  "metalType": "GOLD",                // Optional: filter by metal type
-  "purity": "22k",                    // Optional: filter by purity
-  "collectionName": "Wedding",        // Optional: filter by collection
-  "onlyOutdated": true                // Only recalculate outdated prices
-}
-```
-
 ### Sales Order Management
 
 | Method | Endpoint | Description |
@@ -375,6 +390,22 @@ src/
 | GET | `/api/sales-orders` | List all sales orders with filters |
 | POST | `/api/sales-orders` | Create new order (validates stock, creates transaction) |
 | GET | `/api/sales-orders/[id]` | Get order details with line items |
+| PATCH | `/api/sales-orders/[id]` | Update order (cancel, etc.) |
+| DELETE | `/api/sales-orders/[id]` | Cancel and soft delete order |
+| POST | `/api/sales-orders/[id]/complete` | Complete pending order |
+| GET | `/api/sales-orders/[id]/payments` | Get all payments for order |
+| POST | `/api/sales-orders/[id]/payments` | Record payment against order |
+
+**Query Parameters** (GET):
+- `page` - Page number (default: 1)
+- `pageSize` - Items per page (default: 20)
+- `search` - Search by invoice number, customer name/phone
+- `customerId` - Filter by customer
+- `status` - Filter by PENDING/COMPLETED/CANCELLED
+- `paymentStatus` - Filter by PENDING/PARTIAL/PAID
+- `orderType` - Filter by RETAIL/WHOLESALE/CUSTOM/EXCHANGE
+- `startDate` - Filter by order date start
+- `endDate` - Filter by order date end
 
 **Request Body** (POST):
 ```json
@@ -391,7 +422,147 @@ src/
   "paymentMethod": "UPI",
   "orderType": "RETAIL",
   "notes": "First purchase discount",
-  "paymentAmount": 160000.00
+  "paymentAmount": 160000.00,
+  "createAsPending": false
+}
+```
+
+**Request Body - Record Payment** (POST `/api/sales-orders/[id]/payments`):
+```json
+{
+  "amount": 50000.00,
+  "paymentMethod": "CASH",
+  "referenceNumber": "UTR123456",
+  "notes": "Second installment"
+}
+```
+
+**Automated Actions on Order Creation:**
+1. Validates stock availability (FIFO)
+2. Marks stock items as SOLD (or RESERVED if pending)
+3. Creates income transaction (for completed orders)
+4. Updates customer purchase history
+5. Generates invoice number (INV-YYYYMMDD-XXXX)
+6. Calculates payment status
+7. Supports partial payments
+
+**Order Cancellation:**
+- Releases all stock items back to AVAILABLE
+- Updates order status to CANCELLED
+- Soft deletes the order
+- Logs audit trail
+
+### Transaction Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/transactions` | List all transactions with filters |
+| POST | `/api/transactions` | Create new transaction |
+| GET | `/api/transactions/[id]` | Get transaction details |
+| PATCH | `/api/transactions/[id]` | Update transaction |
+| DELETE | `/api/transactions/[id]` | Soft delete transaction |
+| GET | `/api/transactions/summary` | Get financial dashboard summary |
+
+**Query Parameters** (GET):
+- `page` - Page number
+- `pageSize` - Items per page
+- `search` - Search by reference, description, customer
+- `transactionType` - Filter by INCOME/EXPENSE/EMI/METAL_PURCHASE/GOLD_SCHEME/ADJUSTMENT
+- `category` - Filter by SALES/PURCHASE/OPERATIONAL/OTHER
+- `status` - Filter by COMPLETED/PENDING/FAILED
+- `customerId` - Filter by customer
+- `salesOrderId` - Filter by sales order
+- `paymentMode` - Filter by payment method
+- `startDate` - Filter by transaction date start
+- `endDate` - Filter by transaction date end
+
+**Request Body** (POST):
+```json
+{
+  "transactionDate": "2024-01-15T10:30:00Z",
+  "transactionType": "METAL_PURCHASE",
+  "amount": 156000.00,
+  "paymentMode": "BANK_TRANSFER",
+  "category": "PURCHASE",
+  "description": "Gold purchase from supplier",
+  "referenceNumber": "REF-2024-001",
+  "customerId": "uuid-optional",
+  "salesOrderId": "uuid-optional",
+  "status": "COMPLETED",
+  "currency": "INR",
+  "metalType": "GOLD",
+  "metalPurity": "24k",
+  "metalWeight": 24.0,
+  "metalRatePerGram": 6500.0,
+  "createdBy": "user-id"
+}
+```
+
+### EMI Payment Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/emi-payments` | List all EMI payments |
+| POST | `/api/emi-payments` | Create new EMI plan |
+| GET | `/api/emi-payments/[id]` | Get EMI details with installments |
+| DELETE | `/api/emi-payments/[id]` | Soft delete EMI plan |
+| POST | `/api/emi-payments/[id]/pay-installment` | Record installment payment |
+| GET | `/api/emi-payments/overdue` | Get all overdue EMIs |
+| POST | `/api/emi-payments/overdue/mark` | Mark overdue installments |
+| GET | `/api/emi-payments/upcoming` | Get upcoming installments |
+
+**Query Parameters** (GET):
+- `page` - Page number
+- `pageSize` - Items per page
+- `customerId` - Filter by customer
+- `status` - Filter by PENDING/PAID/OVERDUE
+- `overdue` - Show only overdue (true/false)
+
+**Query Parameters** (GET `/api/emi-payments/upcoming`):
+- `days` - Number of days to look ahead (default: 7)
+
+**Request Body** (POST):
+```json
+{
+  "customerId": "uuid-here",
+  "salesOrderId": "uuid-optional",
+  "totalAmount": 150000.00,
+  "interestRate": 12.0,
+  "numberOfInstallments": 12,
+  "installmentAmount": 13200.00,
+  "emiStartDate": "2024-02-01T00:00:00Z"
+}
+```
+
+**Request Body - Pay Installment** (POST `/api/emi-payments/[id]/pay-installment`):
+```json
+{
+  "installmentId": "installment-uuid",
+  "amount": 13200.00,
+  "paymentMode": "UPI",
+  "referenceNumber": "UPI123456"
+}
+```
+
+### Stock Reservation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/stock/reserve?action=reserve` | Reserve stock items |
+| POST | `/api/stock/reserve?action=release` | Release reserved stock items |
+
+**Request Body - Reserve**:
+```json
+{
+  "stockItemIds": ["uuid1", "uuid2", "uuid3"],
+  "reservationNote": "Reserved for customer inquiry"
+}
+```
+
+**Request Body - Release**:
+```json
+{
+  "stockItemIds": ["uuid1", "uuid2", "uuid3"]
 }
 ```
 

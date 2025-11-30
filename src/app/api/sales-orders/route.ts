@@ -27,6 +27,7 @@ const createSalesOrderSchema = z.object({
   orderType: z.nativeEnum(OrderType).default(OrderType.RETAIL),
   notes: z.string().optional(),
   paymentAmount: amountSchema.optional(),
+  createAsPending: z.boolean().default(false), // If true, create as PENDING and only RESERVE stock
 });
 
 export async function GET(request: NextRequest) {
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine payment status
+    // Determine payment status and order status
     const paidAmount = data.paymentAmount || 0;
     let paymentStatus: 'PENDING' | 'PARTIAL' | 'PAID' = 'PENDING';
     if (paidAmount >= finalAmount) {
@@ -132,6 +133,10 @@ export async function POST(request: NextRequest) {
     } else if (paidAmount > 0) {
       paymentStatus = 'PARTIAL';
     }
+
+    // Determine order status based on createAsPending flag
+    const orderStatus = data.createAsPending ? 'PENDING' : 'COMPLETED';
+    const stockStatus = data.createAsPending ? 'RESERVED' : 'SOLD';
 
     // Create sales order with transaction
     const salesOrder = await prisma.$transaction(async (tx) => {
@@ -146,7 +151,7 @@ export async function POST(request: NextRequest) {
           paidAmount,
           paymentMethod: data.paymentMethod,
           orderType: data.orderType,
-          status: 'COMPLETED', // Mark as completed immediately
+          status: orderStatus,
           paymentStatus,
           notes: data.notes || null,
           orderDate: new Date(),
@@ -173,34 +178,36 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update stock items to SOLD status
+      // Update stock items status (RESERVED for pending, SOLD for completed)
       for (const line of order.lines) {
         await tx.stockItem.update({
           where: { id: line.stockItemId },
           data: {
-            status: 'SOLD',
-            saleDate: new Date(),
+            status: stockStatus,
+            saleDate: stockStatus === 'SOLD' ? new Date() : null,
             salesOrderLineId: line.id,
           },
         });
       }
 
-      // Create income transaction
-      await tx.transaction.create({
-        data: {
-          transactionDate: new Date(),
-          transactionType: TransactionType.INCOME,
-          amount: finalAmount,
-          paymentMode: data.paymentMethod,
-          category: TransactionCategory.SALES,
-          description: `Sales Order ${invoiceNumber}`,
-          referenceNumber: invoiceNumber,
-          customerId: data.customerId,
-          salesOrderId: order.id,
-          status: 'COMPLETED',
-          currency: 'INR',
-        },
-      });
+      // Create income transaction only for completed orders
+      if (orderStatus === 'COMPLETED') {
+        await tx.transaction.create({
+          data: {
+            transactionDate: new Date(),
+            transactionType: TransactionType.INCOME,
+            amount: finalAmount,
+            paymentMode: data.paymentMethod,
+            category: TransactionCategory.SALES,
+            description: `Sales Order ${invoiceNumber}`,
+            referenceNumber: invoiceNumber,
+            customerId: data.customerId,
+            salesOrderId: order.id,
+            status: 'COMPLETED',
+            currency: 'INR',
+          },
+        });
+      }
 
       // Create payment record if amount paid
       if (paidAmount > 0) {
