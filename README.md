@@ -97,11 +97,52 @@ This system covers **all 30 user stories** across the following modules:
 - ✅ Payment method tracking
 - ✅ Reference number management
 
-### 📊 Rate Master (Stories 18-19)
-- Daily gold/silver/platinum rate management
-- Purity-wise rate tracking
-- Bulk product price updates
-- Rate history and sources
+### 📊 Rate Master (Stories 18-19) ✅ FULLY IMPLEMENTED
+- ✅ Daily gold/silver/platinum rate management
+- ✅ Metal type selection: Gold, Silver, Platinum
+- ✅ Purity-wise rate tracking (22K, 18K, 24K, 925, etc.)
+- ✅ Rate per gram (positive decimal values)
+- ✅ Effective date and time tracking
+- ✅ Valid until date (optional expiration)
+- ✅ Rate source tracking: Market/Manual/API
+- ✅ Active/inactive status management
+- ✅ User tracking: Created by and Updated by fields
+- ✅ Optional default making charge percentage
+- ✅ **Rate history viewing** with complete audit trail
+  - View all historical rates for any metal type and purity
+  - Pagination support for large histories
+  - Filter by date range, source, and status
+- ✅ **Current rate indicator** per metal & purity combination
+  - Automatically identifies the most recent active rate
+  - Dashboard view of all current rates
+  - Quick access to rate history
+- ✅ **Bulk product price updates** based on new rates (User Story 19)
+  - Select products to update by filters:
+    - Metal type and purity
+    - Collection name
+    - Specific product IDs
+  - Automatic price recalculation using:
+    - Net weight from product
+    - Wastage percentage
+    - Effective weight calculation
+    - New metal rate per gram
+    - Making charges (preserved from product)
+    - Stone value (unchanged)
+  - **Preview mode** showing old vs new prices
+  - Price difference and percentage change calculation
+  - Confirm bulk update with one click
+  - Last price update date tracking on each product
+  - **Rate change impact logging**:
+    - Who performed the update
+    - When it was performed
+    - Which rate master was used
+    - Count of products updated
+  - **Exception handling**:
+    - Skip items with custom/fixed price flag
+    - Show list of skipped items with reasons
+    - Continue processing remaining products
+- ✅ Rate statistics and analytics
+- ✅ Automatic rate deactivation when new rate is activated
 
 ### 💳 EMI Management (Story 16) ✅ FULLY IMPLEMENTED
 - ✅ EMI plan creation with interest calculation
@@ -565,6 +606,134 @@ src/
   "stockItemIds": ["uuid1", "uuid2", "uuid3"]
 }
 ```
+
+### Rate Master Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/rate-master` | List all rates with filters and pagination |
+| POST | `/api/rate-master` | Create new rate master entry |
+| GET | `/api/rate-master/[id]` | Get specific rate master details |
+| PUT | `/api/rate-master/[id]` | Update rate master entry |
+| DELETE | `/api/rate-master/[id]` | Delete rate master entry |
+| GET | `/api/rate-master/current` | Get all current active rates |
+| GET | `/api/rate-master/history/[metalType]/[purity]` | Get rate history for specific metal & purity |
+| POST | `/api/rate-master/bulk-update-prices` | Bulk update product prices based on new rate |
+
+**Query Parameters** (GET `/api/rate-master`):
+- `page` - Page number (default: 1)
+- `pageSize` - Items per page (default: 20)
+- `metalType` - Filter by GOLD/SILVER/PLATINUM
+- `purity` - Filter by purity (22K, 18K, 24K, 925, etc.)
+- `rateSource` - Filter by MARKET/MANUAL/API
+- `isActive` - Filter by active status (true/false)
+- `effectiveDateFrom` - Filter by effective date start
+- `effectiveDateTo` - Filter by effective date end
+
+**Request Body** (POST `/api/rate-master`):
+```json
+{
+  "metalType": "GOLD",
+  "purity": "22K",
+  "ratePerGram": 6500.00,
+  "effectiveDate": "2024-01-15T09:00:00Z",
+  "validUntil": "2024-01-15T23:59:59Z",
+  "rateSource": "MANUAL",
+  "isActive": true,
+  "defaultMakingChargePercent": 10.0,
+  "createdBy": "admin-user"
+}
+```
+
+**Request Body** (PUT `/api/rate-master/[id]`):
+```json
+{
+  "ratePerGram": 6550.00,
+  "isActive": true,
+  "validUntil": "2024-01-16T23:59:59Z",
+  "updatedBy": "admin-user"
+}
+```
+
+**Request Body - Bulk Price Update** (POST `/api/rate-master/bulk-update-prices`):
+```json
+{
+  "rateId": "rate-master-uuid",
+  "productFilters": {
+    "metalType": "GOLD",
+    "purity": "22K",
+    "collectionName": "Bridal Collection",
+    "productIds": ["uuid1", "uuid2"]
+  },
+  "skipCustomPrices": true,
+  "preview": true,
+  "performedBy": "admin-user"
+}
+```
+
+**Response - Bulk Price Update Preview**:
+```json
+{
+  "success": true,
+  "data": {
+    "preview": true,
+    "totalProducts": 25,
+    "productsToUpdate": 23,
+    "productsSkipped": 2,
+    "priceChanges": [
+      {
+        "productId": "uuid",
+        "productName": "Gold Necklace",
+        "barcode": "PRD-001",
+        "metalType": "GOLD",
+        "purity": "22K",
+        "netWeight": 24.0,
+        "wastagePercent": 6.0,
+        "effectiveWeight": 25.44,
+        "oldRate": 6500.00,
+        "newRate": 6550.00,
+        "oldPrice": 178360.00,
+        "newPrice": 179632.00,
+        "priceDifference": 1272.00,
+        "percentageChange": 0.71,
+        "makingCharges": 8000.00,
+        "stoneValue": 5000.00
+      }
+    ],
+    "skippedProducts": [
+      {
+        "id": "uuid",
+        "name": "Special Order Ring",
+        "barcode": "PRD-002",
+        "reason": "Has custom price override"
+      }
+    ],
+    "rateMaster": {
+      "id": "rate-uuid",
+      "metalType": "GOLD",
+      "purity": "22K",
+      "ratePerGram": 6550.00,
+      "effectiveDate": "2024-01-15T09:00:00Z"
+    }
+  }
+}
+```
+
+**Automated Actions on Rate Master Creation:**
+1. Validates date logic (validUntil must be after effectiveDate)
+2. Deactivates old rates for same metal type and purity when new rate is set as active
+3. Logs the rate creation in audit trail
+4. Makes rate available for product price calculations immediately
+
+**Automated Actions on Bulk Price Update:**
+1. Filters products by specified criteria
+2. Skips products with custom price overrides (if configured)
+3. Recalculates prices using current product weights, wastage, making charges
+4. Preserves stone values (unchanged by rate updates)
+5. Shows preview before actual update
+6. Updates lastPriceUpdate timestamp on each product
+7. Links products to the rate master used
+8. Logs the bulk update operation with complete details
 
 **Automated Actions on Order Creation:**
 1. Validates stock availability (FIFO)
