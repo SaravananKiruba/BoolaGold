@@ -529,341 +529,336 @@ export default function RateMasterPage() {
 
         {/* Add Rate Modal */}
         {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col animate-slideUp">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-yellow-500 via-yellow-600 to-amber-600 text-white px-8 py-6">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h2 className="text-3xl font-extrabold mb-2 tracking-tight">Add New Rate</h2>
-                  <p className="text-yellow-50 text-sm">Set metal rates for pricing calculations</p>
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col animate-slideUp">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-yellow-500 via-yellow-600 to-amber-600 text-white px-8 py-6">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h2 className="text-3xl font-extrabold mb-2 tracking-tight">Add New Rate</h2>
+                    <p className="text-yellow-50 text-sm">Set metal rates for pricing calculations</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      resetForm();
+                    }}
+                    className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 text-2xl font-bold"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    resetForm();
-                  }}
-                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 text-2xl font-bold"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
               </div>
-            </div>
 
-            {/* Form Content */}
-            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-gray-50 to-white">
+              {/* Form Content */}
+              <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-gray-50 to-white flex flex-col">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Primary Info Section */}
+                  <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <span className="text-2xl">💰</span>
+                      Primary Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                          Metal Type <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={formData.metalType}
+                            onChange={(e) => handleFormChange('metalType', e.target.value)}
+                            className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-semibold bg-white hover:border-gray-400 transition appearance-none cursor-pointer"
+                            required
+                          >
+                            <option value="GOLD">Gold</option>
+                            <option value="SILVER">Silver</option>
+                            <option value="PLATINUM">Platinum</option>
+                          </select>
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Primary Info Section */}
-                <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">💰</span>
-                    Primary Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        Metal Type <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={formData.metalType}
-                          onChange={(e) => handleFormChange('metalType', e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-semibold bg-white hover:border-gray-400 transition appearance-none cursor-pointer"
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                          Purity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.purity}
+                          onChange={(e) => handleFormChange('purity', e.target.value)}
+                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
+                          placeholder="22K"
                           required
-                        >
-                          <option value="GOLD">Gold</option>
-                          <option value="SILVER">Silver</option>
-                          <option value="PLATINUM">Platinum</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
+                        />
+                        <p className="text-xs text-gray-500 mt-1">e.g., 22K, 18K, 24K, 999</p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                          Rate per Gram (₹) <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xl">₹</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={formData.ratePerGram}
+                            onChange={(e) => handleFormChange('ratePerGram', e.target.value)}
+                            className="w-full border-2 border-gray-300 rounded-xl pl-10 pr-4 py-4 text-2xl font-bold focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition text-gray-900"
+                            placeholder="5500.00"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                          Default Making Charge (%)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={formData.defaultMakingChargePercent}
+                            onChange={(e) => handleFormChange('defaultMakingChargePercent', e.target.value)}
+                            className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
+                            placeholder="10.00"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Used for price suggestions</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                          Rate Source <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={formData.rateSource}
+                            onChange={(e) => handleFormChange('rateSource', e.target.value)}
+                            className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-medium bg-white hover:border-gray-400 transition appearance-none cursor-pointer"
+                            required
+                          >
+                            <option value="MANUAL">Manual Entry</option>
+                            <option value="MARKET">Market Rate</option>
+                            <option value="API">API Integration</option>
+                          </select>
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  </div>
 
+                  {/* Date & Validity Section */}
+                  <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <span className="text-2xl">📅</span>
+                      Date & Validity
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                          Effective Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={formData.effectiveDate}
+                          onChange={(e) => handleFormChange('effectiveDate', e.target.value)}
+                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">When this rate becomes active</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                          Valid Until (Optional)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={formData.validUntil}
+                          onChange={(e) => handleFormChange('validUntil', e.target.value)}
+                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Leave blank for no expiry</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Info */}
+                  <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <span className="text-2xl">👤</span>
+                      Additional Information
+                    </h3>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        Purity <span className="text-red-500">*</span>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Created By
                       </label>
                       <input
                         type="text"
-                        value={formData.purity}
-                        onChange={(e) => handleFormChange('purity', e.target.value)}
+                        value={formData.createdBy}
+                        onChange={(e) => handleFormChange('createdBy', e.target.value)}
                         className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                        placeholder="22K"
-                        required
+                        placeholder="User name"
                       />
-                      <p className="text-xs text-gray-500 mt-1">e.g., 22K, 18K, 24K, 999</p>
+                      <p className="text-xs text-gray-500 mt-1">Track who created this rate</p>
                     </div>
+                  </div>
 
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        Rate per Gram (₹) <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xl">₹</span>
+                  {/* Active Status */}
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 pt-1">
                         <input
-                          type="number"
-                          step="0.01"
-                          value={formData.ratePerGram}
-                          onChange={(e) => handleFormChange('ratePerGram', e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-xl pl-10 pr-4 py-4 text-2xl font-bold focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition text-gray-900"
-                          placeholder="5500.00"
-                          required
+                          type="checkbox"
+                          id="isActive"
+                          checked={formData.isActive}
+                          onChange={(e) => handleFormChange('isActive', e.target.checked)}
+                          className="w-6 h-6 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded cursor-pointer"
                         />
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Default Making Charge (%)
+                      <label htmlFor="isActive" className="flex-1 cursor-pointer">
+                        <span className="font-bold text-gray-900 text-base block mb-1">Set as Active Rate</span>
+                        <p className="text-sm text-gray-700">
+                          This will automatically deactivate other rates for this metal type and purity combination
+                        </p>
                       </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={formData.defaultMakingChargePercent}
-                          onChange={(e) => handleFormChange('defaultMakingChargePercent', e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                          placeholder="10.00"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Used for price suggestions</p>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        Rate Source <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={formData.rateSource}
-                          onChange={(e) => handleFormChange('rateSource', e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-medium bg-white hover:border-gray-400 transition appearance-none cursor-pointer"
-                          required
-                        >
-                          <option value="MANUAL">Manual Entry</option>
-                          <option value="MARKET">Market Rate</option>
-                          <option value="API">API Integration</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  {/* Footer Actions */}
+                  <div className="bg-gray-50 px-8 py-5 border-t border-gray-200 flex justify-end gap-4 -mx-8 -mb-8 mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false);
+                        resetForm();
+                      }}
+                      className="px-8 py-3.5 border-2 border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-100 hover:border-gray-400 transition-all duration-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-10 py-3.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-amber-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+                    >
+                      {loading ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                        </div>
-                      </div>
-                    </div>
+                          Creating...
+                        </span>
+                      ) : (
+                        'Create Rate'
+                      )}
+                    </button>
                   </div>
-                </div>
-
-                {/* Date & Validity Section */}
-                <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">📅</span>
-                    Date & Validity
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        Effective Date <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={formData.effectiveDate}
-                        onChange={(e) => handleFormChange('effectiveDate', e.target.value)}
-                        className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">When this rate becomes active</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Valid Until (Optional)
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={formData.validUntil}
-                        onChange={(e) => handleFormChange('validUntil', e.target.value)}
-                        className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Leave blank for no expiry</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Info */}
-                <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">👤</span>
-                    Additional Information
-                  </h3>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Created By
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.createdBy}
-                      onChange={(e) => handleFormChange('createdBy', e.target.value)}
-                      className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                      placeholder="User name"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Track who created this rate</p>
-                  </div>
-                </div>
-
-                {/* Active Status */}
-                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-2xl p-5 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 pt-1">
-                      <input
-                        type="checkbox"
-                        id="isActive"
-                        checked={formData.isActive}
-                        onChange={(e) => handleFormChange('isActive', e.target.checked)}
-                        className="w-6 h-6 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded cursor-pointer"
-                      />
-                    </div>
-                    <label htmlFor="isActive" className="flex-1 cursor-pointer">
-                      <span className="font-bold text-gray-900 text-base block mb-1">Set as Active Rate</span>
-                      <p className="text-sm text-gray-700">
-                        This will automatically deactivate other rates for this metal type and purity combination
-                      </p>
-                    </label>
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="bg-gray-50 px-8 py-5 border-t border-gray-200 flex justify-end gap-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddModal(false);
-                  resetForm();
-                }}
-                className="px-8 py-3.5 border-2 border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-100 hover:border-gray-400 transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="px-10 py-3.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-amber-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Creating...
-                  </span>
-                ) : (
-                  'Create Rate'
-                )}
-              </button>
-            </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
         )}
 
         {/* History Modal */}
         {showHistoryModal && selectedRate && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-3xl font-bold">
-                    Rate History
-                  </h2>
-                  <p className="text-indigo-100 text-lg mt-1">
-                    {selectedRate.metalType} {selectedRate.purity}
-                  </p>
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-3xl font-bold">Rate History</h2>
+                    <p className="text-indigo-100 text-lg mt-1">
+                      {selectedRate.metalType} {selectedRate.purity}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowHistoryModal(false)}
+                    className="text-white hover:text-indigo-100 text-3xl font-light transition"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowHistoryModal(false)}
-                  className="text-white hover:text-indigo-100 text-3xl font-light transition"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
               </div>
-            </div>
 
-            <div className="overflow-y-auto flex-1 p-8">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gradient-to-r from-indigo-100 to-purple-100 sticky top-0">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Effective Date</th>
-                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Rate/Gram</th>
-                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Source</th>
-                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created By</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {historyData.length === 0 ? (
+              <div className="overflow-y-auto flex-1 p-8">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-indigo-100 to-purple-100 sticky top-0">
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center">
-                          <div className="text-gray-400">
-                            <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <p className="text-gray-600 font-medium">No history available</p>
-                          </div>
-                        </td>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Effective Date</th>
+                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Rate/Gram</th>
+                        <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Source</th>
+                        <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created By</th>
                       </tr>
-                    ) : (
-                      historyData.map((rate) => (
-                        <tr key={rate.id} className="hover:bg-indigo-50 transition">
-                          <td className="px-6 py-4 text-sm font-medium text-gray-700">{formatDate(rate.effectiveDate)}</td>
-                          <td className="px-6 py-4 text-sm text-right font-bold text-indigo-600">
-                            {formatCurrency(rate.ratePerGram)}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                              rate.rateSource === 'API' ? 'bg-blue-100 text-blue-700' :
-                              rate.rateSource === 'MARKET' ? 'bg-purple-100 text-purple-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {rate.rateSource}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span
-                              className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
-                                rate.isActive
-                                  ? 'bg-green-100 text-green-700 border border-green-300'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}
-                            >
-                              {rate.isActive ? 'ACTIVE' : 'INACTIVE'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-700">
-                            {rate.createdBy || <span className="text-gray-400 italic">System</span>}
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {historyData.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-12 text-center">
+                            <div className="text-gray-400">
+                              <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <p className="text-gray-600 font-medium">No history available</p>
+                            </div>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        historyData.map((rate) => (
+                          <tr key={rate.id} className="hover:bg-indigo-50 transition">
+                            <td className="px-6 py-4 text-sm font-medium text-gray-700">{formatDate(rate.effectiveDate)}</td>
+                            <td className="px-6 py-4 text-sm text-right font-bold text-indigo-600">
+                              {formatCurrency(rate.ratePerGram)}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                                rate.rateSource === 'API' ? 'bg-blue-100 text-blue-700' :
+                                rate.rateSource === 'MARKET' ? 'bg-purple-100 text-purple-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {rate.rateSource}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span
+                                className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
+                                  rate.isActive
+                                    ? 'bg-green-100 text-green-700 border border-green-300'
+                                    : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                {rate.isActive ? 'ACTIVE' : 'INACTIVE'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              {rate.createdBy || <span className="text-gray-400 italic">System</span>}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         )}
       </div>
     </div>
