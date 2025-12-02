@@ -92,7 +92,9 @@ const config = defineConfig({
   },
 });
 
-const theme = createSystem(defaultConfig, config);
+export const system = createSystem(defaultConfig, config);
+
+export default system;
 
 /*
 // Note: Component customization in Chakra UI v3 uses a different approach
@@ -199,5 +201,3 @@ const componentsConfig = {
   },
 };
 */
-
-export default theme;

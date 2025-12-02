@@ -1,19 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * Rate Master Page - Modern Implementation
+ * Manages metal rates with comprehensive error handling and better UX
+ */
 
+import { useState, useEffect, useCallback } from 'react';
+
+// Simple toast notification function
+const showToast = (title: string, description: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  // You can replace this with a proper toast library later
+  const emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+  console.log(`${emoji} ${title}: ${description}`);
+  // Temporary: using console.log instead of alert to not block UI
+};
+
+// Types
 interface RateMaster {
   id: string;
   metalType: string;
   purity: string;
   ratePerGram: number;
   effectiveDate: string;
-  validUntil?: string;
+  validUntil?: string | null;
   rateSource: string;
   isActive: boolean;
-  defaultMakingChargePercent?: number;
-  createdBy?: string;
-  updatedBy?: string;
+  defaultMakingChargePercent?: number | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,17 +51,28 @@ interface RateFormData {
   createdBy: string;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: { message: string };
+  meta?: any;
+}
+
 export default function RateMasterPage() {
+  // State Management
   const [rates, setRates] = useState<RateMaster[]>([]);
   const [currentRates, setCurrentRates] = useState<RateMaster[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // UI State
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyData, setHistoryData] = useState<RateMaster[]>([]);
   const [selectedRate, setSelectedRate] = useState<{ metalType: string; purity: string } | null>(null);
   
+  // Filters
   const [filters, setFilters] = useState<Filters>({
     metalType: '',
     purity: '',
@@ -55,6 +80,7 @@ export default function RateMasterPage() {
     isActive: '',
   });
 
+  // Form Data
   const [formData, setFormData] = useState<RateFormData>({
     metalType: 'GOLD',
     purity: '22K',
@@ -67,48 +93,64 @@ export default function RateMasterPage() {
     createdBy: '',
   });
 
-  useEffect(() => {
-    fetchCurrentRates();
-    fetchRates();
-  }, []);
-
-  const fetchCurrentRates = async () => {
+  // Fetch Current Rates
+  const fetchCurrentRates = useCallback(async () => {
     try {
       const response = await fetch('/api/rate-master/current');
-      const result = await response.json();
+      const result: ApiResponse<RateMaster[]> = await response.json();
 
-      if (result.success) {
+      if (result.success && result.data) {
         setCurrentRates(result.data);
+      } else {
+        console.error('Failed to fetch current rates:', result.error?.message);
       }
     } catch (err: any) {
       console.error('Error fetching current rates:', err);
     }
-  };
+  }, []);
 
-  const fetchRates = async () => {
+  // Fetch All Rates
+  const fetchRates = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
       
+      const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
 
       const response = await fetch(`/api/rate-master?${params.toString()}`);
-      const result = await response.json();
+      const result: ApiResponse<RateMaster[]> = await response.json();
 
-      if (result.success) {
+      if (result.success && result.data) {
         setRates(result.data);
       } else {
-        setError(result.error?.message || 'Failed to fetch rates');
+        showToast(
+          'Error',
+          result.error?.message || 'Failed to fetch rates',
+          'error'
+        );
       }
     } catch (err: any) {
-      setError(err.message);
+      showToast(
+        'Error',
+        err.message || 'An unexpected error occurred',
+        'error'
+        
+        
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
+  // Initial Load
+  useEffect(() => {
+    fetchCurrentRates();
+    fetchRates();
+  }, [fetchCurrentRates, fetchRates]);
+
+  // Form Handlers
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -125,21 +167,60 @@ export default function RateMasterPage() {
       rateSource: '',
       isActive: '',
     });
+    setTimeout(fetchRates, 0);
   };
 
   const handleFormChange = (key: keyof RateFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const validateForm = (): string | null => {
+    if (!formData.ratePerGram || parseFloat(formData.ratePerGram) <= 0) {
+      return 'Please enter a valid rate per gram';
+    }
+
+    if (!formData.effectiveDate) {
+      return 'Please select an effective date';
+    }
+
+    if (formData.validUntil) {
+      const effective = new Date(formData.effectiveDate);
+      const validUntil = new Date(formData.validUntil);
+      if (validUntil <= effective) {
+        return 'Valid until date must be after effective date';
+      }
+    }
+
+    if (formData.defaultMakingChargePercent) {
+      const percent = parseFloat(formData.defaultMakingChargePercent);
+      if (percent < 0 || percent > 100) {
+        return 'Making charge percent must be between 0 and 100';
+      }
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate
+    const validationError = validateForm();
+    if (validationError) {
+      showToast(
+        'Validation Error',
+        validationError,
+        'warning'
+      );
+      return;
+    }
+
     try {
-      setLoading(true);
+      setSubmitting(true);
 
       const payload = {
         metalType: formData.metalType,
-        purity: formData.purity,
+        purity: formData.purity.trim(),
         ratePerGram: parseFloat(formData.ratePerGram),
         effectiveDate: formData.effectiveDate,
         validUntil: formData.validUntil || undefined,
@@ -148,7 +229,7 @@ export default function RateMasterPage() {
         defaultMakingChargePercent: formData.defaultMakingChargePercent 
           ? parseFloat(formData.defaultMakingChargePercent) 
           : undefined,
-        createdBy: formData.createdBy || undefined,
+        createdBy: formData.createdBy.trim() || undefined,
       };
 
       const response = await fetch('/api/rate-master', {
@@ -157,21 +238,35 @@ export default function RateMasterPage() {
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      const result: ApiResponse<RateMaster> = await response.json();
 
       if (result.success) {
-        alert('Rate created successfully!');
+        showToast(
+          'Success',
+          'Rate created successfully!',
+          'success'
+        );
         setShowAddModal(false);
+        resetForm();
         fetchCurrentRates();
         fetchRates();
-        resetForm();
       } else {
-        alert(result.error?.message || 'Failed to create rate');
+        showToast(
+          'Error',
+          result.error?.message || 'Failed to create rate',
+          'error'
+        );
       }
     } catch (err: any) {
-      alert(err.message);
+      showToast(
+        'Error',
+        err.message || 'An unexpected error occurred',
+        'error'
+        
+        
+      );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -193,17 +288,27 @@ export default function RateMasterPage() {
     try {
       setLoading(true);
       const response = await fetch(`/api/rate-master/history/${metalType}/${purity}`);
-      const result = await response.json();
+      const result: ApiResponse<RateMaster[]> = await response.json();
 
-      if (result.success) {
+      if (result.success && result.data) {
         setHistoryData(result.data);
         setSelectedRate({ metalType, purity });
         setShowHistoryModal(true);
       } else {
-        alert(result.error?.message || 'Failed to fetch history');
+        showToast(
+          'Error',
+          result.error?.message || 'Failed to fetch history',
+          'error'
+        );
       }
     } catch (err: any) {
-      alert(err.message);
+      showToast(
+        'Error',
+        err.message || 'An unexpected error occurred',
+        'error'
+        
+        
+      );
     } finally {
       setLoading(false);
     }
@@ -211,25 +316,44 @@ export default function RateMasterPage() {
 
   const toggleActiveStatus = async (id: string, currentStatus: boolean) => {
     try {
+      setSubmitting(true);
       const response = await fetch(`/api/rate-master/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
 
-      const result = await response.json();
+      const result: ApiResponse<RateMaster> = await response.json();
 
       if (result.success) {
+        showToast(
+          'Success',
+          `Rate ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+          'success'
+        );
         fetchCurrentRates();
         fetchRates();
       } else {
-        alert(result.error?.message || 'Failed to update status');
+        showToast(
+          'Error',
+          result.error?.message || 'Failed to update status',
+          'error'
+        );
       }
     } catch (err: any) {
-      alert(err.message);
+      showToast(
+        'Error',
+        err.message || 'An unexpected error occurred',
+        'error'
+        
+        
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  // Utility Functions
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-IN', {
       year: 'numeric',
@@ -244,116 +368,116 @@ export default function RateMasterPage() {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Rate Master</h1>
-            <p className="text-gray-600">Manage metal rates and pricing</p>
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold shadow-md transition flex items-center gap-2"
-          >
-            <span className="text-xl">+</span>
-            Add New Rate
+    <div className="container">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">💰 Rate Master</h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '15px' }}>Manage metal rates & pricing</p>
+        </div>
+        <div className="nav-actions" style={{ gap: '16px' }}>
+          <a href="/rate-master/bulk-update" className="button button-gold" style={{ textDecoration: 'none', padding: '12px 24px', fontSize: '15px' }}>
+            📊 Bulk Update
+          </a>
+          <button onClick={() => setShowAddModal(true)} className="button" style={{ padding: '12px 24px', fontSize: '15px' }}>
+            ➕ Add Rate
           </button>
         </div>
+      </div>
 
-        {loading && rates.length === 0 && (
-          <div className="flex justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading rates...</p>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-lg mb-6 shadow-sm">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <span>{error}</span>
-            </div>
+        {/* Loading State */}
+        {loading && rates.length === 0 && currentRates.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div className="spinner" style={{ margin: '0 auto' }}></div>
+            <p style={{ color: 'var(--color-text-secondary)', marginTop: '16px' }}>Loading rates...</p>
           </div>
         )}
 
         {/* Current Rates Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Current Active Rates</h2>
-            <a 
-              href="/rate-master/bulk-update"
-              className="text-indigo-600 hover:text-indigo-700 font-medium text-sm flex items-center gap-1"
+        <div className="card" style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 'clamp(1.5rem, 3vw, 1.75rem)' }}>✨ Active Rates</h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--color-text-secondary)' }}>Current metal pricing</p>
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="button button-outline"
+              style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 500 }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Bulk Update Prices
-            </a>
+              {showFilters ? '🔽 Hide Filters' : '🔼 Show Filters'}
+            </button>
           </div>
           
           {currentRates.length === 0 && !loading ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-gray-400 mb-4">
-                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Active Rates</h3>
-              <p className="text-gray-600 mb-4">Get started by adding your first metal rate</p>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold"
-              >
-                Add Rate
+            <div style={{
+              background: 'var(--color-bg-secondary)',
+              border: '2px dashed var(--color-border)',
+              borderRadius: '12px',
+              padding: 'clamp(24px, 4vw, 40px)',
+              textAlign: 'center',
+            }}>
+              <h3 style={{ marginBottom: '8px', fontSize: '18px' }}>No Active Rates</h3>
+              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '20px', fontSize: '14px' }}>
+                Add your first metal rate to get started
+              </p>
+              <button onClick={() => setShowAddModal(true)} className="button" style={{ padding: '12px 28px', fontSize: '15px' }}>
+                ➕ Add First Rate
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid-4">
               {currentRates.map((rate) => (
-                <div key={rate.id} className="bg-gradient-to-br from-yellow-50 via-yellow-100 to-yellow-50 border-2 border-yellow-300 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-                  <div className="flex justify-between items-start mb-3">
+                <div key={rate.id} className="card animate-fadeIn" style={{
+                  background: 'linear-gradient(135deg, var(--color-card-bg), var(--color-bg-secondary))',
+                  padding: '24px',
+                  transition: 'all 0.3s ease',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800">{rate.metalType}</h3>
-                      <p className="text-sm text-gray-600 font-medium">{rate.purity}</p>
-                    </div>
-                    <span className="bg-green-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow">
-                      ACTIVE
-                    </span>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-4">
-                    {formatCurrency(rate.ratePerGram)}
-                    <span className="text-lg text-gray-600 font-normal">/g</span>
-                  </div>
-                  <div className="text-xs text-gray-700 space-y-1 mb-4 bg-white bg-opacity-50 rounded p-3">
-                    <p className="flex items-center gap-2">
-                      <span className="font-semibold">Source:</span> {rate.rateSource}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="font-semibold">Effective:</span> {formatDate(rate.effectiveDate)}
-                    </p>
-                    {rate.defaultMakingChargePercent && (
-                      <p className="flex items-center gap-2">
-                        <span className="font-semibold">Making:</span> {rate.defaultMakingChargePercent}%
+                      <h3 style={{ fontSize: '20px', margin: 0, marginBottom: '4px' }}>{rate.metalType}</h3>
+                      <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500, margin: 0 }}>
+                        {rate.purity}
                       </p>
+                    </div>
+                    <span className="badge badge-success">Active</span>
+                  </div>
+                  <div style={{
+                    fontSize: 'clamp(24px, 4vw, 32px)',
+                    fontWeight: 700,
+                    marginBottom: '16px',
+                    fontFamily: "'Playfair Display', serif",
+                    background: 'linear-gradient(135deg, var(--color-primary), var(--color-gold))',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}>
+                    {formatCurrency(rate.ratePerGram)}
+                    <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 'normal', marginLeft: '4px' }}>/g</span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span>Source:</span>
+                      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{rate.rateSource}</span>
+                    </div>
+                    {rate.defaultMakingChargePercent && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Making:</span>
+                        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{rate.defaultMakingChargePercent}%</span>
+                      </div>
                     )}
                   </div>
                   <button
                     onClick={() => viewHistory(rate.metalType, rate.purity)}
-                    className="w-full bg-white hover:bg-gray-50 text-indigo-600 font-semibold px-4 py-2 rounded-lg border border-indigo-200 transition flex items-center justify-center gap-2"
+                    className="button button-outline"
+                    style={{ width: '100%', padding: '10px 16px', fontSize: '14px', fontWeight: 500 }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    View History
+                    📋 View History
                   </button>
                 </div>
               ))}
@@ -362,31 +486,45 @@ export default function RateMasterPage() {
         </div>
 
         {/* All Rates Section */}
-        <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200">
-          <div className="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-800">All Rates</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="bg-white hover:bg-gray-50 text-gray-700 px-5 py-2 rounded-lg font-medium shadow-sm border border-gray-300 transition flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
-              </button>
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 'clamp(1.5rem, 3vw, 1.75rem)' }}>📊 All Rates</h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--color-text-secondary)' }}>Complete rate history</p>
             </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="button button-outline"
+              style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 500 }}
+            >
+              {showFilters ? '🔽 Hide Filters' : '🔼 Show Filters'}
+            </button>
           </div>
 
+          {/* Filters Panel */}
           {showFilters && (
-            <div className="px-6 py-5 bg-gray-50 border-b border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="animate-slideDown" style={{
+              background: 'linear-gradient(135deg, var(--color-bg-secondary), var(--color-card-bg))',
+              borderRadius: '16px',
+              padding: 'clamp(20px, 3vw, 28px)',
+              marginBottom: '24px',
+              border: '1px solid var(--color-border)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '18px',
+                marginBottom: '20px',
+              }}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Metal Type</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    Metal Type
+                  </label>
                   <select
                     value={filters.metalType}
                     onChange={(e) => handleFilterChange('metalType', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="select"
                   >
                     <option value="">All Metals</option>
                     <option value="GOLD">Gold</option>
@@ -396,22 +534,26 @@ export default function RateMasterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Purity</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    Purity
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g., 22K, 18K"
                     value={filters.purity}
                     onChange={(e) => handleFilterChange('purity', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="input"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rate Source</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    Rate Source
+                  </label>
                   <select
                     value={filters.rateSource}
                     onChange={(e) => handleFilterChange('rateSource', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="select"
                   >
                     <option value="">All Sources</option>
                     <option value="MARKET">Market</option>
@@ -421,11 +563,13 @@ export default function RateMasterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    Status
+                  </label>
                   <select
                     value={filters.isActive}
                     onChange={(e) => handleFilterChange('isActive', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="select"
                   >
                     <option value="">All Status</option>
                     <option value="true">Active</option>
@@ -434,94 +578,139 @@ export default function RateMasterPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-5">
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <button
                   onClick={applyFilters}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2.5 rounded-lg font-semibold shadow-md transition"
+                  disabled={loading}
+                  className="button"
+                  style={{ padding: '12px 28px', fontSize: '15px', fontWeight: 500 }}
                 >
-                  Apply Filters
+                  ✓ Apply Filters
                 </button>
                 <button
-                  onClick={() => {
-                    clearFilters();
-                    fetchRates();
-                  }}
-                  className="bg-white hover:bg-gray-50 text-gray-700 px-8 py-2.5 rounded-lg font-semibold border border-gray-300 shadow-sm transition"
+                  onClick={clearFilters}
+                  disabled={loading}
+                  className="button button-outline"
+                  style={{ padding: '12px 28px', fontSize: '15px', fontWeight: 500 }}
                 >
-                  Clear
+                  ✕ Clear Filters
                 </button>
               </div>
             </div>
           )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-indigo-100 to-purple-100">
+          {/* Rates Table */}
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Metal Type</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Purity</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Rate/Gram</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Effective Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Valid Until</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Source</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                  <th>Metal</th>
+                  <th>Purity</th>
+                  <th style={{ textAlign: 'right' }}>Rate/Gram</th>
+                  <th>Effective</th>
+                  <th>Valid Until</th>
+                  <th style={{ textAlign: 'center' }}>Source</th>
+                  <th style={{ textAlign: 'center' }}>Status</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {rates.map((rate) => (
-                  <tr key={rate.id} className="hover:bg-indigo-50 transition">
-                    <td className="px-6 py-4 text-sm font-bold text-gray-900">{rate.metalType}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{rate.purity}</td>
-                    <td className="px-6 py-4 text-sm text-right font-bold text-indigo-600">
-                      {formatCurrency(rate.ratePerGram)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{formatDate(rate.effectiveDate)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {rate.validUntil ? formatDate(rate.validUntil) : (
-                        <span className="text-gray-400 italic">No expiry</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                        rate.rateSource === 'API' ? 'bg-blue-100 text-blue-700' :
-                        rate.rateSource === 'MARKET' ? 'bg-purple-100 text-purple-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {rate.rateSource}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
-                          rate.isActive
-                            ? 'bg-green-100 text-green-700 border border-green-300'
-                            : 'bg-red-100 text-red-700 border border-red-300'
-                        }`}
-                      >
-                        {rate.isActive ? 'ACTIVE' : 'INACTIVE'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex justify-center gap-3">
-                        <button
-                          onClick={() => toggleActiveStatus(rate.id, rate.isActive)}
-                          className={`text-sm font-semibold hover:underline ${
-                            rate.isActive ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-                          }`}
-                        >
-                          {rate.isActive ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button
-                          onClick={() => viewHistory(rate.metalType, rate.purity)}
-                          className="text-indigo-600 hover:text-indigo-700 text-sm font-semibold hover:underline"
-                        >
-                          History
-                        </button>
-                      </div>
+              <tbody>
+                {rates.length === 0 && !loading ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
+                      <p style={{ marginBottom: '8px', fontSize: '15px' }}>No rates found</p>
+                      <p style={{ fontSize: '13px' }}>Try adjusting your filters</p>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  rates.map((rate) => (
+                    <tr key={rate.id}>
+                      <td style={{ fontWeight: 600 }}>{rate.metalType}</td>
+                      <td style={{ fontWeight: 500 }}>{rate.purity}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)' }}>
+                        {formatCurrency(rate.ratePerGram)}
+                      </td>
+                      <td style={{ fontSize: '14px' }}>{formatDate(rate.effectiveDate)}</td>
+                      <td style={{ fontSize: '14px' }}>
+                        {rate.validUntil ? formatDate(rate.validUntil) : (
+                          <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>No expiry</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={
+                          rate.rateSource === 'API' ? 'badge badge-info' :
+                          rate.rateSource === 'MARKET' ? 'badge badge-warning' :
+                          'badge'
+                        } style={{ background: rate.rateSource === 'MANUAL' ? 'var(--color-bg-secondary)' : undefined }}>
+                          {rate.rateSource}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={rate.isActive ? 'badge badge-success' : 'badge badge-error'}>
+                          {rate.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => toggleActiveStatus(rate.id, rate.isActive)}
+                            disabled={submitting}
+                            style={{
+                              padding: '6px 16px',
+                              background: 'transparent',
+                              border: `2px solid ${rate.isActive ? '#ef4444' : '#00b894'}`,
+                              color: rate.isActive ? '#ef4444' : '#00b894',
+                              borderRadius: '8px',
+                              cursor: submitting ? 'not-allowed' : 'pointer',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              opacity: submitting ? 0.5 : 1,
+                              transition: 'all 0.2s ease',
+                            }}
+                            onMouseOver={(e) => {
+                              if (!submitting) {
+                                e.currentTarget.style.background = rate.isActive ? '#ef4444' : '#00b894';
+                                e.currentTarget.style.color = 'white';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (!submitting) {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = rate.isActive ? '#ef4444' : '#00b894';
+                              }
+                            }}
+                          >
+                            {rate.isActive ? '❌ Deactivate' : '✔ Activate'}
+                          </button>
+                          <button
+                            onClick={() => viewHistory(rate.metalType, rate.purity)}
+                            style={{
+                              padding: '6px 16px',
+                              background: 'transparent',
+                              border: '2px solid var(--color-primary)',
+                              color: 'var(--color-primary)',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              transition: 'all 0.2s ease',
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.background = 'var(--color-primary)';
+                              e.currentTarget.style.color = 'white';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = 'var(--color-primary)';
+                            }}
+                          >
+                            📋 History
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -529,338 +718,350 @@ export default function RateMasterPage() {
 
         {/* Add Rate Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col animate-slideUp">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-yellow-500 via-yellow-600 to-amber-600 text-white px-8 py-6">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h2 className="text-3xl font-extrabold mb-2 tracking-tight">Add New Rate</h2>
-                    <p className="text-yellow-50 text-sm">Set metal rates for pricing calculations</p>
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+            padding: '20px',
+            overflow: 'auto',
+            backdropFilter: 'blur(4px)',
+          }}>
+            <div className="card animate-slideUp" style={{
+              maxWidth: '800px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              margin: 'auto',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Add New Rate</h2>
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    resetForm();
+                  }}
+                  style={{
+                    background: 'var(--color-bg-secondary)',
+                    border: 'none',
+                    fontSize: '28px',
+                    cursor: 'pointer',
+                    color: 'var(--color-text-secondary)',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'var(--transition)',
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-border)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                {/* Basic Information */}
+                <h3 style={{
+                  borderBottom: '2px solid var(--color-primary)',
+                  paddingBottom: '10px',
+                  marginBottom: '20px',
+                  color: 'var(--color-text-primary)',
+                }}>
+                  Basic Information
+                </h3>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '18px',
+                  marginBottom: '24px',
+                }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Metal Type <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <select
+                      value={formData.metalType}
+                      onChange={(e) => handleFormChange('metalType', e.target.value)}
+                      className="select"
+                      required
+                    >
+                      <option value="GOLD">Gold</option>
+                      <option value="SILVER">Silver</option>
+                      <option value="PLATINUM">Platinum</option>
+                    </select>
                   </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Purity <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.purity}
+                      onChange={(e) => handleFormChange('purity', e.target.value)}
+                      className="input"
+                      placeholder="22K, 18K, 24K, 999"
+                      required
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Rate per Gram (₹) <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.ratePerGram}
+                      onChange={(e) => handleFormChange('ratePerGram', e.target.value)}
+                      className="input"
+                      placeholder="5500.00"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Making Charge (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.defaultMakingChargePercent}
+                      onChange={(e) => handleFormChange('defaultMakingChargePercent', e.target.value)}
+                      className="input"
+                      placeholder="10.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Rate Source <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <select
+                      value={formData.rateSource}
+                      onChange={(e) => handleFormChange('rateSource', e.target.value)}
+                      className="select"
+                      required
+                    >
+                      <option value="MANUAL">Manual Entry</option>
+                      <option value="MARKET">Market Rate</option>
+                      <option value="API">API Integration</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Effective Date <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formData.effectiveDate}
+                      onChange={(e) => handleFormChange('effectiveDate', e.target.value)}
+                      className="input"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Valid Until (Optional)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formData.validUntil}
+                      onChange={(e) => handleFormChange('validUntil', e.target.value)}
+                      className="input"
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      Created By
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.createdBy}
+                      onChange={(e) => handleFormChange('createdBy', e.target.value)}
+                      className="input"
+                      placeholder="User name"
+                      maxLength={100}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2', marginTop: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '12px', background: 'var(--color-bg-secondary)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.isActive}
+                        onChange={(e) => handleFormChange('isActive', e.target.checked)}
+                        style={{
+                          marginRight: '12px',
+                          width: '20px',
+                          height: '20px',
+                          cursor: 'pointer',
+                          accentColor: 'var(--color-primary)',
+                        }}
+                      />
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text-primary)' }}>Set as Active Rate</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '16px', marginTop: '28px', flexWrap: 'wrap' }}>
                   <button
+                    type="submit"
+                    disabled={submitting}
+                    className="button"
+                    style={{ flex: '1 1 200px', padding: '14px 24px', fontSize: '15px', fontWeight: 600 }}
+                  >
+                    {submitting ? '⏳ Creating...' : '✔ Create Rate'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setShowAddModal(false);
                       resetForm();
                     }}
-                    className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 text-2xl font-bold"
-                    aria-label="Close"
+                    className="button button-outline"
+                    style={{ flex: '1 1 200px', padding: '14px 24px', fontSize: '15px', fontWeight: 600 }}
                   >
-                    ×
+                    ✕ Cancel
                   </button>
                 </div>
-              </div>
-
-              {/* Form Content */}
-              <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-gray-50 to-white flex flex-col">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Primary Info Section */}
-                  <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <span className="text-2xl">💰</span>
-                      Primary Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                          Metal Type <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <select
-                            value={formData.metalType}
-                            onChange={(e) => handleFormChange('metalType', e.target.value)}
-                            className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-semibold bg-white hover:border-gray-400 transition appearance-none cursor-pointer"
-                            required
-                          >
-                            <option value="GOLD">Gold</option>
-                            <option value="SILVER">Silver</option>
-                            <option value="PLATINUM">Platinum</option>
-                          </select>
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                          Purity <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.purity}
-                          onChange={(e) => handleFormChange('purity', e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                          placeholder="22K"
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">e.g., 22K, 18K, 24K, 999</p>
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                          Rate per Gram (₹) <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xl">₹</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={formData.ratePerGram}
-                            onChange={(e) => handleFormChange('ratePerGram', e.target.value)}
-                            className="w-full border-2 border-gray-300 rounded-xl pl-10 pr-4 py-4 text-2xl font-bold focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition text-gray-900"
-                            placeholder="5500.00"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                          Default Making Charge (%)
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={formData.defaultMakingChargePercent}
-                            onChange={(e) => handleFormChange('defaultMakingChargePercent', e.target.value)}
-                            className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                            placeholder="10.00"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Used for price suggestions</p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                          Rate Source <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <select
-                            value={formData.rateSource}
-                            onChange={(e) => handleFormChange('rateSource', e.target.value)}
-                            className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-medium bg-white hover:border-gray-400 transition appearance-none cursor-pointer"
-                            required
-                          >
-                            <option value="MANUAL">Manual Entry</option>
-                            <option value="MARKET">Market Rate</option>
-                            <option value="API">API Integration</option>
-                          </select>
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Date & Validity Section */}
-                  <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <span className="text-2xl">📅</span>
-                      Date & Validity
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                          Effective Date <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={formData.effectiveDate}
-                          onChange={(e) => handleFormChange('effectiveDate', e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">When this rate becomes active</p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                          Valid Until (Optional)
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={formData.validUntil}
-                          onChange={(e) => handleFormChange('validUntil', e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Leave blank for no expiry</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Additional Info */}
-                  <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <span className="text-2xl">👤</span>
-                      Additional Information
-                    </h3>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Created By
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.createdBy}
-                        onChange={(e) => handleFormChange('createdBy', e.target.value)}
-                        className="w-full border-2 border-gray-300 rounded-xl px-4 py-3.5 text-base focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 hover:border-gray-400 transition"
-                        placeholder="User name"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Track who created this rate</p>
-                    </div>
-                  </div>
-
-                  {/* Active Status */}
-                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 pt-1">
-                        <input
-                          type="checkbox"
-                          id="isActive"
-                          checked={formData.isActive}
-                          onChange={(e) => handleFormChange('isActive', e.target.checked)}
-                          className="w-6 h-6 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded cursor-pointer"
-                        />
-                      </div>
-                      <label htmlFor="isActive" className="flex-1 cursor-pointer">
-                        <span className="font-bold text-gray-900 text-base block mb-1">Set as Active Rate</span>
-                        <p className="text-sm text-gray-700">
-                          This will automatically deactivate other rates for this metal type and purity combination
-                        </p>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Footer Actions */}
-                  <div className="bg-gray-50 px-8 py-5 border-t border-gray-200 flex justify-end gap-4 -mx-8 -mb-8 mt-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddModal(false);
-                        resetForm();
-                      }}
-                      className="px-8 py-3.5 border-2 border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-100 hover:border-gray-400 transition-all duration-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="px-10 py-3.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-amber-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-                    >
-                      {loading ? (
-                        <span className="flex items-center gap-2">
-                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Creating...
-                        </span>
-                      ) : (
-                        'Create Rate'
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
+              </form>
             </div>
           </div>
         )}
 
         {/* History Modal */}
         {showHistoryModal && selectedRate && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-3xl font-bold">Rate History</h2>
-                    <p className="text-indigo-100 text-lg mt-1">
-                      {selectedRate.metalType} {selectedRate.purity}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowHistoryModal(false)}
-                    className="text-white hover:text-indigo-100 text-3xl font-light transition"
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+            padding: '20px',
+            overflow: 'auto',
+            backdropFilter: 'blur(4px)',
+          }}>
+            <div className="card animate-slideUp" style={{
+              maxWidth: '1000px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              margin: 'auto',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Rate History</h2>
+                  <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '15px' }}>
+                    {selectedRate.metalType} - {selectedRate.purity}
+                  </p>
                 </div>
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  style={{
+                    background: 'var(--color-bg-secondary)',
+                    border: 'none',
+                    fontSize: '28px',
+                    cursor: 'pointer',
+                    color: 'var(--color-text-secondary)',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'var(--transition)',
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-border)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
+                >
+                  ×
+                </button>
               </div>
 
-              <div className="overflow-y-auto flex-1 p-8">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gradient-to-r from-indigo-100 to-purple-100 sticky top-0">
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Effective Date</th>
+                      <th style={{ textAlign: 'right' }}>Rate/Gram</th>
+                      <th style={{ textAlign: 'center' }}>Source</th>
+                      <th style={{ textAlign: 'center' }}>Status</th>
+                      <th>Created By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyData.length === 0 ? (
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Effective Date</th>
-                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Rate/Gram</th>
-                        <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Source</th>
-                        <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created By</th>
+                        <td colSpan={5} style={{ padding: '40px 0', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                          No history available
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
-                      {historyData.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center">
-                            <div className="text-gray-400">
-                              <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <p className="text-gray-600 font-medium">No history available</p>
-                            </div>
+                    ) : (
+                      historyData.map((rate) => (
+                        <tr key={rate.id}>
+                          <td style={{ fontSize: '14px' }}>{formatDate(rate.effectiveDate)}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)' }}>
+                            {formatCurrency(rate.ratePerGram)}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={
+                              rate.rateSource === 'API' ? 'badge badge-info' :
+                              rate.rateSource === 'MARKET' ? 'badge badge-warning' :
+                              'badge'
+                            } style={{ background: rate.rateSource === 'MANUAL' ? 'var(--color-bg-secondary)' : undefined }}>
+                              {rate.rateSource}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={rate.isActive ? 'badge badge-success' : 'badge'}>
+                              {rate.isActive ? 'ACTIVE' : 'INACTIVE'}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '14px' }}>
+                            {rate.createdBy || 'System'}
                           </td>
                         </tr>
-                      ) : (
-                        historyData.map((rate) => (
-                          <tr key={rate.id} className="hover:bg-indigo-50 transition">
-                            <td className="px-6 py-4 text-sm font-medium text-gray-700">{formatDate(rate.effectiveDate)}</td>
-                            <td className="px-6 py-4 text-sm text-right font-bold text-indigo-600">
-                              {formatCurrency(rate.ratePerGram)}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                                rate.rateSource === 'API' ? 'bg-blue-100 text-blue-700' :
-                                rate.rateSource === 'MARKET' ? 'bg-purple-100 text-purple-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {rate.rateSource}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span
-                                className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
-                                  rate.isActive
-                                    ? 'bg-green-100 text-green-700 border border-green-300'
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                {rate.isActive ? 'ACTIVE' : 'INACTIVE'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-700">
-                              {rate.createdBy || <span className="text-gray-400 italic">System</span>}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
+
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="button"
+                style={{ marginTop: '24px', width: '100%', padding: '14px', fontSize: '15px', fontWeight: 600 }}
+              >
+                ✕ Close
+              </button>
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }
+

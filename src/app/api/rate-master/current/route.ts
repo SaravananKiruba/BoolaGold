@@ -1,5 +1,5 @@
-// Rate Master Current Rates API
-// GET /api/rate-master/current/all - Get all current active rates
+// Rate Master Current Rates API - Robust Implementation
+// GET /api/rate-master/current - Get all current active rates
 
 import { NextRequest, NextResponse } from 'next/server';
 import { rateMasterRepository } from '@/repositories/rateMasterRepository';
@@ -9,9 +9,22 @@ export async function GET(request: NextRequest) {
   try {
     const currentRates = await rateMasterRepository.getAllCurrentRates();
 
-    return NextResponse.json(successResponse(currentRates), { status: 200 });
+    // Add metadata about the rates
+    const metadata = {
+      totalRates: currentRates.length,
+      metalTypes: [...new Set(currentRates.map(r => r.metalType))],
+      timestamp: new Date().toISOString(),
+    };
+
+    return NextResponse.json(
+      successResponse(currentRates, 'Current rates fetched successfully', metadata), 
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error('Error fetching current rates:', error);
-    return NextResponse.json(errorResponse(error.message), { status: 500 });
+    return NextResponse.json(
+      errorResponse(error.message || 'Failed to fetch current rates'),
+      { status: 500 }
+    );
   }
 }

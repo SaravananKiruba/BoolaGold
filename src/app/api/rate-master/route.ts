@@ -1,4 +1,4 @@
-// Rate Master API Route - GET all rates, POST create rate
+// Rate Master API Route - Robust Implementation
 // GET /api/rate-master - List all rates with filters and pagination
 // POST /api/rate-master - Create a new rate master entry
 
@@ -10,41 +10,84 @@ import { MetalType, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
 
 const createRateMasterSchema = z.object({
-  metalType: z.nativeEnum(MetalType),
-  purity: z.string().min(1).max(20),
-  ratePerGram: z.number().positive(),
-  effectiveDate: z.string().datetime().or(z.date()),
-  validUntil: z.string().datetime().or(z.date()).optional(),
-  rateSource: z.enum(['MARKET', 'MANUAL', 'API']).default('MANUAL'),
+  metalType: z.nativeEnum(MetalType, { 
+    errorMap: () => ({ message: 'Metal type must be GOLD, SILVER, or PLATINUM' }) 
+  }),
+  purity: z.string()
+    .min(1, 'Purity is required')
+    .max(20, 'Purity must not exceed 20 characters')
+    .trim(),
+  ratePerGram: z.number({ required_error: 'Rate per gram is required' })
+    .positive('Rate per gram must be a positive number')
+    .finite('Rate per gram must be a valid number'),
+  effectiveDate: z.union([
+    z.string().datetime(), // Full ISO string with timezone
+    z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format'), // datetime-local format
+    z.date()
+  ]),
+  validUntil: z.union([
+    z.string().datetime(), // Full ISO string with timezone
+    z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format'), // datetime-local format
+    z.date()
+  ]).optional().nullable(),
+  rateSource: z.enum(['MARKET', 'MANUAL', 'API'], {
+    errorMap: () => ({ message: 'Rate source must be MARKET, MANUAL, or API' })
+  }).default('MANUAL'),
   isActive: z.boolean().default(true),
-  defaultMakingChargePercent: z.number().min(0).max(100).optional(),
-  createdBy: z.string().max(100).optional(),
+  defaultMakingChargePercent: z.number()
+    .min(0, 'Making charge percent must be at least 0')
+    .max(100, 'Making charge percent cannot exceed 100')
+    .optional()
+    .nullable(),
+  createdBy: z.string().max(100, 'Created by must not exceed 100 characters').optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
 
-    // Parse pagination
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
+    // Parse and validate pagination
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20')));
 
-    // Parse filters
-    const filters: any = {
-      metalType: searchParams.get('metalType') as MetalType | undefined,
-      purity: searchParams.get('purity') || undefined,
-      rateSource: searchParams.get('rateSource') as 'MARKET' | 'MANUAL' | 'API' | undefined,
-      isActive: searchParams.get('isActive')
-        ? searchParams.get('isActive') === 'true'
-        : undefined,
-    };
-
-    // Date range filters
-    if (searchParams.get('effectiveDateFrom')) {
-      filters.effectiveDateFrom = new Date(searchParams.get('effectiveDateFrom')!);
+    // Parse filters with proper type checking
+    const filters: any = {};
+    
+    const metalType = searchParams.get('metalType');
+    if (metalType && Object.values(MetalType).includes(metalType as MetalType)) {
+      filters.metalType = metalType as MetalType;
     }
-    if (searchParams.get('effectiveDateTo')) {
-      filters.effectiveDateTo = new Date(searchParams.get('effectiveDateTo')!);
+
+    const purity = searchParams.get('purity');
+    if (purity) {
+      filters.purity = purity.trim();
+    }
+
+    const rateSource = searchParams.get('rateSource');
+    if (rateSource && ['MARKET', 'MANUAL', 'API'].includes(rateSource)) {
+      filters.rateSource = rateSource as 'MARKET' | 'MANUAL' | 'API';
+    }
+
+    const isActive = searchParams.get('isActive');
+    if (isActive !== null) {
+      filters.isActive = isActive === 'true';
+    }
+
+    // Date range filters with validation
+    const effectiveDateFrom = searchParams.get('effectiveDateFrom');
+    if (effectiveDateFrom) {
+      const date = new Date(effectiveDateFrom);
+      if (!isNaN(date.getTime())) {
+        filters.effectiveDateFrom = date;
+      }
+    }
+
+    const effectiveDateTo = searchParams.get('effectiveDateTo');
+    if (effectiveDateTo) {
+      const date = new Date(effectiveDateTo);
+      if (!isNaN(date.getTime())) {
+        filters.effectiveDateTo = date;
+      }
     }
 
     const result = await rateMasterRepository.findAll(filters, { page, pageSize });
@@ -52,7 +95,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error: any) {
     console.error('Error fetching rate masters:', error);
-    return NextResponse.json(errorResponse(error.message), { status: 500 });
+    return NextResponse.json(
+      errorResponse(error.message || 'Failed to fetch rate masters'),
+      { status: 500 }
+    );
   }
 }
 
@@ -73,42 +119,64 @@ export async function POST(request: NextRequest) {
       ? new Date(data.effectiveDate) 
       : data.effectiveDate;
     
-    const validUntil = data.validUntil 
-      ? (typeof data.validUntil === 'string' ? new Date(data.validUntil) : data.validUntil)
-      : null;
-
-    // Validate date logic
-    if (validUntil && validUntil <= effectiveDate) {
+    // Validate effective date
+    if (isNaN(effectiveDate.getTime())) {
       return NextResponse.json(
-        errorResponse('Valid until date must be after effective date'),
+        errorResponse('Invalid effective date'),
         { status: 400 }
       );
     }
 
-    // If this is set as active, deactivate other rates for the same metal type and purity
-    if (data.isActive) {
-      await rateMasterRepository.deactivateOldRates(data.metalType, data.purity);
+    let validUntil: Date | null = null;
+    if (data.validUntil) {
+      validUntil = typeof data.validUntil === 'string' 
+        ? new Date(data.validUntil) 
+        : data.validUntil;
+      
+      // Validate valid until date
+      if (isNaN(validUntil.getTime())) {
+        return NextResponse.json(
+          errorResponse('Invalid valid until date'),
+          { status: 400 }
+        );
+      }
+
+      // Validate date logic
+      if (validUntil <= effectiveDate) {
+        return NextResponse.json(
+          errorResponse('Valid until date must be after effective date'),
+          { status: 400 }
+        );
+      }
     }
 
-    // Create rate master
+    // Create rate master with transaction support (handled in repository)
     const rateMaster = await rateMasterRepository.create({
       metalType: data.metalType,
-      purity: data.purity,
+      purity: data.purity.trim(),
       ratePerGram: data.ratePerGram,
       effectiveDate,
       validUntil,
       rateSource: data.rateSource,
       isActive: data.isActive,
       defaultMakingChargePercent: data.defaultMakingChargePercent || null,
-      createdBy: data.createdBy || null,
+      createdBy: data.createdBy ? data.createdBy.trim() : null,
     });
 
     // Log the creation
-    await logCreate(AuditModule.RATE_MASTER, rateMaster.id, rateMaster);
+    try {
+      await logCreate(AuditModule.RATE_MASTER, rateMaster.id, rateMaster);
+    } catch (auditError) {
+      console.error('Audit log failed:', auditError);
+      // Don't fail the request if audit logging fails
+    }
 
-    return NextResponse.json(successResponse(rateMaster), { status: 201 });
+    return NextResponse.json(successResponse(rateMaster, 'Rate master created successfully'), { status: 201 });
   } catch (error: any) {
     console.error('Error creating rate master:', error);
-    return NextResponse.json(errorResponse(error.message), { status: 500 });
+    return NextResponse.json(
+      errorResponse(error.message || 'Failed to create rate master'),
+      { status: 500 }
+    );
   }
 }
