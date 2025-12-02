@@ -242,6 +242,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
 }) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [formData, setFormData] = useState({
     supplierId: '',
     expectedDeliveryDate: '',
@@ -274,18 +275,28 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       }
     } catch (error) {
       console.error('Error fetching suppliers:', error);
+      setFormError('Failed to load suppliers');
     }
   };
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products?isActive=true');
+      setLoadingProducts(true);
+      const response = await fetch('/api/products?isActive=true&pageSize=1000');
       const result = await response.json();
-      if (result.success && result.data) {
-        setProducts(result.data.data || []);
+      if (result.success) {
+        // Handle both paginated and non-paginated responses
+        const productData = result.data?.data || result.data || [];
+        setProducts(productData);
+        console.log('Loaded products:', productData.length);
+      } else {
+        setFormError('Failed to load products: ' + (result.error?.message || 'Unknown error'));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching products:', error);
+      setFormError('Failed to load products: ' + error.message);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -516,21 +527,41 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
             Order Items
           </h3>
 
+          {loadingProducts && (
+            <div style={{ padding: '15px', background: '#e3f2fd', borderRadius: '4px', marginBottom: '15px' }}>
+              Loading products...
+            </div>
+          )}
+
+          {!loadingProducts && products.length === 0 && (
+            <div style={{ padding: '15px', background: '#fff3cd', borderRadius: '4px', marginBottom: '15px' }}>
+              ⚠️ No active products found. Please add products first.
+            </div>
+          )}
+
           <div style={{ background: '#f5f5f5', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                  Product
+                  Product {loadingProducts && '(Loading...)'}
                 </label>
                 <select
                   value={currentItem.productId}
                   onChange={(e) => setCurrentItem({ ...currentItem, productId: e.target.value })}
-                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  disabled={loadingProducts || products.length === 0}
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    border: '1px solid #ddd', 
+                    borderRadius: '4px',
+                    cursor: (loadingProducts || products.length === 0) ? 'not-allowed' : 'pointer',
+                    background: (loadingProducts || products.length === 0) ? '#f5f5f5' : 'white'
+                  }}
                 >
                   <option value="">-- Select Product --</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
-                      {product.name} ({product.metalType} {product.purity})
+                      {product.name} ({product.metalType} {product.purity}) - {product.netWeight}g
                     </option>
                   ))}
                 </select>
