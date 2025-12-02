@@ -77,12 +77,12 @@ export class ProductRepository {
     // Apply filters
     if (filters.search) {
       where.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
+        { name: { contains: filters.search } },
         { barcode: { contains: filters.search } },
         { huid: { contains: filters.search } },
         { tagNumber: { contains: filters.search } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
-        { collectionName: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search } },
+        { collectionName: { contains: filters.search } },
       ];
     }
 
@@ -107,7 +107,7 @@ export class ProductRepository {
     }
 
     if (filters.collectionName) {
-      where.collectionName = { contains: filters.collectionName, mode: 'insensitive' };
+      where.collectionName = { contains: filters.collectionName };
     }
 
     if (filters.supplierId) {
