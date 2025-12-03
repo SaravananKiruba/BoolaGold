@@ -69,6 +69,12 @@ export default function SalesOrdersPage() {
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  
+  // Search states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<StockItem[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -77,9 +83,30 @@ export default function SalesOrdersPage() {
   useEffect(() => {
     if (showCreateForm) {
       fetchCustomers();
-      fetchAvailableStock();
     }
   }, [showCreateForm]);
+  
+  // Debounced search
+  useEffect(() => {
+    if (searchDebounce) {
+      clearTimeout(searchDebounce);
+    }
+    
+    if (searchQuery.trim().length >= 2) {
+      const timeout = setTimeout(() => {
+        searchStock(searchQuery);
+      }, 300);
+      setSearchDebounce(timeout);
+    } else {
+      setSearchResults([]);
+    }
+    
+    return () => {
+      if (searchDebounce) {
+        clearTimeout(searchDebounce);
+      }
+    };
+  }, [searchQuery]);
 
   const fetchOrders = async () => {
     try {
@@ -114,18 +141,32 @@ export default function SalesOrdersPage() {
     }
   };
 
-  const fetchAvailableStock = async () => {
+  const searchStock = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
     try {
-      const response = await fetch('/api/stock?status=AVAILABLE&pageSize=100');
+      setSearching(true);
+      console.log('[Sales Order] Searching for:', query);
+      const response = await fetch(`/api/stock/search?q=${encodeURIComponent(query)}&status=AVAILABLE&limit=20`);
       const result = await response.json();
+      
+      console.log('[Sales Order] Search response:', result);
+      
       if (result.success && Array.isArray(result.data)) {
-        setAvailableStock(result.data);
+        setSearchResults(result.data);
+        console.log('[Sales Order] Found items:', result.data.length);
       } else {
-        setAvailableStock([]);
+        setSearchResults([]);
+        console.warn('[Sales Order] No results or invalid response:', result);
       }
     } catch (err) {
-      console.error('Failed to fetch stock:', err);
-      setAvailableStock([]);
+      console.error('[Sales Order] Failed to search stock:', err);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -227,6 +268,8 @@ export default function SalesOrdersPage() {
     setOrderType('RETAIL');
     setNotes('');
     setCreateError(null);
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
   return (
@@ -401,113 +444,281 @@ export default function SalesOrdersPage() {
               </select>
             </div>
 
-            {/* Available Stock Items */}
+            {/* Search and Add Items */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 500 }}>
-                Add Items to Order
+                🔍 Search or Scan Items to Add
               </label>
-              <div style={{ border: '1px solid #ddd', borderRadius: '4px', maxHeight: '200px', overflowY: 'auto' }}>
-                {!Array.isArray(availableStock) || availableStock.length === 0 ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                    No available stock items found
-                  </div>
-                ) : (
-                  availableStock.map(item => (
-                    <div 
-                      key={item.id}
-                      style={{ 
-                        padding: '10px', 
-                        borderBottom: '1px solid #eee',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{item.product.name}</div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                          {item.product.metalType} {item.product.purity} | 
-                          Weight: {item.product.netWeight}g | 
-                          Tag: {item.tagId}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 500 }}>₹{Number(item.sellingPrice).toLocaleString('en-IN')}</div>
-                        <button
-                          onClick={() => addOrderLine(item)}
-                          disabled={orderLines.find(l => l.stockItemId === item.id) !== undefined}
-                          style={{ 
-                            padding: '4px 12px', 
-                            background: '#0070f3', 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            marginTop: '5px'
-                          }}
-                        >
-                          {orderLines.find(l => l.stockItemId === item.id) ? 'Added' : 'Add'}
-                        </button>
-                      </div>
-                    </div>
-                  ))
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={async (e) => {
+                    // Handle Enter key for quick barcode/tag scan
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      e.preventDefault();
+                      try {
+                        const response = await fetch(`/api/barcode/scan?code=${encodeURIComponent(searchQuery.trim())}`);
+                        const result = await response.json();
+                        if (result.success && result.data.stockItem) {
+                          const item: StockItem = {
+                            id: result.data.stockItem.id,
+                            tagId: result.data.stockItem.tagId,
+                            barcode: result.data.stockItem.barcode,
+                            sellingPrice: result.data.stockItem.sellingPrice,
+                            status: result.data.stockItem.status,
+                            product: result.data.product
+                          };
+                          if (item.status === 'AVAILABLE') {
+                            addOrderLine(item);
+                            setSearchQuery('');
+                            setSearchResults([]);
+                          } else {
+                            alert(`Item ${item.tagId} is not available (Status: ${item.status})`);
+                          }
+                        } else {
+                          // Fall back to search
+                          searchStock(searchQuery);
+                        }
+                      } catch (err) {
+                        console.error('Scan error:', err);
+                      }
+                    }
+                  }}
+                  placeholder="Search by product name, tag ID, or barcode (Press Enter for exact scan)..."
+                  style={{ 
+                    flex: 1,
+                    padding: '12px', 
+                    border: '2px solid #0070f3', 
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}
+                    style={{
+                      padding: '12px 20px',
+                      background: '#ff4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontWeight: 500
+                    }}
+                  >
+                    Clear
+                  </button>
                 )}
               </div>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                💡 Tip: Type and press Enter for exact barcode/tag lookup, or wait 0.3s for search results
+              </div>
+              
+              {searching && (
+                <div style={{ padding: '15px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+                  Searching...
+                </div>
+              )}
+              
+              {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                <div style={{ padding: '15px', textAlign: 'center', color: '#999', fontSize: '14px' }}>
+                  No items found for "{searchQuery}"
+                </div>
+              )}
+              
+              {!searching && searchQuery.trim().length > 0 && searchQuery.trim().length < 2 && (
+                <div style={{ padding: '15px', textAlign: 'center', color: '#999', fontSize: '14px' }}>
+                  Type at least 2 characters to search
+                </div>
+              )}
+              
+              {searchResults.length > 0 && (
+                <div style={{ 
+                  border: '1px solid #ddd', 
+                  borderRadius: '4px', 
+                  maxHeight: '300px', 
+                  overflowY: 'auto',
+                  marginTop: '10px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}>
+                  {searchResults.map(item => {
+                    const isAdded = orderLines.find(l => l.stockItemId === item.id) !== undefined;
+                    return (
+                      <div 
+                        key={item.id}
+                        style={{ 
+                          padding: '12px', 
+                          borderBottom: '1px solid #eee',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          background: isAdded ? '#f0f8ff' : 'white',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>
+                            {item.product.name}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#666', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                            <span>
+                              <strong>Metal:</strong> {item.product.metalType} {item.product.purity}
+                            </span>
+                            <span>
+                              <strong>Weight:</strong> {item.product.netWeight}g
+                            </span>
+                            <span>
+                              <strong>Tag:</strong> {item.tagId}
+                            </span>
+                            {item.barcode && (
+                              <span>
+                                <strong>Barcode:</strong> {item.barcode}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', marginLeft: '15px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '16px', color: '#27ae60', marginBottom: '6px' }}>
+                            ₹{Number(item.sellingPrice).toLocaleString('en-IN')}
+                          </div>
+                          <button
+                            onClick={() => {
+                              addOrderLine(item);
+                              setSearchQuery('');
+                              setSearchResults([]);
+                            }}
+                            disabled={isAdded}
+                            style={{ 
+                              padding: '6px 16px', 
+                              background: isAdded ? '#ccc' : '#0070f3', 
+                              color: 'white', 
+                              border: 'none', 
+                              borderRadius: '4px',
+                              cursor: isAdded ? 'not-allowed' : 'pointer',
+                              fontSize: '13px',
+                              fontWeight: 500
+                            }}
+                          >
+                            {isAdded ? '✓ Added' : '+ Add'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Order Lines */}
             {orderLines.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 500 }}>
-                  Order Items ({orderLines.length})
-                </label>
-                <table style={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px' }}>
-                  <thead>
-                    <tr style={{ background: '#f5f5f5' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Item</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Price</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Qty</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Total</th>
-                      <th style={{ padding: '8px' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orderLines.map(line => (
-                      <tr key={line.stockItemId}>
-                        <td style={{ padding: '8px' }}>
-                          <div>{line.stockItem?.product.name}</div>
-                          <div style={{ fontSize: '11px', color: '#666' }}>
-                            {line.stockItem?.tagId}
-                          </div>
-                        </td>
-                        <td style={{ padding: '8px', textAlign: 'right' }}>
-                          ₹{line.unitPrice.toLocaleString('en-IN')}
-                        </td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>{line.quantity}</td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 500 }}>
-                          ₹{(line.unitPrice * line.quantity).toLocaleString('en-IN')}
-                        </td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <button
-                            onClick={() => removeOrderLine(line.stockItemId)}
-                            style={{ 
-                              background: '#ff4444', 
-                              color: 'white', 
-                              border: 'none', 
-                              borderRadius: '4px',
-                              padding: '4px 8px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </td>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginBottom: '10px'
+                }}>
+                  <label style={{ fontWeight: 600, fontSize: '15px' }}>
+                    🛒 Selected Items ({orderLines.length})
+                  </label>
+                  <button
+                    onClick={() => setOrderLines([])}
+                    style={{
+                      padding: '4px 12px',
+                      background: '#ff6b6b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div style={{ 
+                  border: '1px solid #ddd', 
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'linear-gradient(to bottom, #f8f9fa, #e9ecef)' }}>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: 600 }}>Item Details</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6', fontWeight: 600 }}>Price</th>
+                        <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #dee2e6', fontWeight: 600 }}>Qty</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6', fontWeight: 600 }}>Total</th>
+                        <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #dee2e6', fontWeight: 600 }}></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {orderLines.map((line, index) => (
+                        <tr 
+                          key={line.stockItemId}
+                          style={{ 
+                            background: index % 2 === 0 ? 'white' : '#f8f9fa',
+                            borderBottom: '1px solid #e9ecef'
+                          }}
+                        >
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+                              {line.stockItem?.product.name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#666', display: 'flex', gap: '10px' }}>
+                              <span>📌 {line.stockItem?.tagId}</span>
+                              {line.stockItem?.product.metalType && (
+                                <span>🔸 {line.stockItem.product.metalType} {line.stockItem.product.purity}</span>
+                              )}
+                              {line.stockItem?.product.netWeight && (
+                                <span>⚖️ {line.stockItem.product.netWeight}g</span>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
+                            ₹{line.unitPrice.toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <span style={{
+                              background: '#e3f2fd',
+                              padding: '4px 12px',
+                              borderRadius: '12px',
+                              fontWeight: 500
+                            }}>
+                              {line.quantity}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, fontSize: '15px', color: '#27ae60' }}>
+                            ₹{(line.unitPrice * line.quantity).toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => removeOrderLine(line.stockItemId)}
+                              style={{ 
+                                background: '#ff4444', 
+                                color: 'white', 
+                                border: 'none', 
+                                borderRadius: '4px',
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 500
+                              }}
+                            >
+                              🗑️ Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
