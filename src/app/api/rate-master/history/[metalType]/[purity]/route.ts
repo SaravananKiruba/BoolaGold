@@ -41,7 +41,7 @@ export async function GET(
     );
 
     return NextResponse.json(
-      successResponse(result.data, 'Rate history fetched successfully', result.meta), 
+      successResponse(result.data, result.meta), 
       { status: 200 }
     );
   } catch (error: any) {

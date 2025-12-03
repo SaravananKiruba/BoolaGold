@@ -1,7 +1,5 @@
 // API Response Utilities
 
-import { NextResponse } from 'next/server';
-
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;

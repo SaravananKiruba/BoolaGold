@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { emiPaymentRepository } from '@/repositories/emiPaymentRepository';
 import { successResponse, errorResponse } from '@/utils/response';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const overdueEmis = await emiPaymentRepository.getOverdueEmis();
 

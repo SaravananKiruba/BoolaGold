@@ -31,9 +31,9 @@ export function buildSearchFilter(
 ): Prisma.StringFilter[] | undefined {
   if (!searchTerm || fields.length === 0) return undefined;
 
+  // MySQL doesn't support QueryMode, case-insensitive search is default
   return fields.map(() => ({
     contains: searchTerm,
-    mode: 'insensitive' as Prisma.QueryMode,
   }));
 }
 

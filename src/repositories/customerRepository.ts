@@ -70,9 +70,9 @@ export class CustomerRepository {
     // Apply filters
     if (filters.search) {
       where.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
+        { name: { contains: filters.search } },
         { phone: { contains: filters.search } },
-        { email: { contains: filters.search, mode: 'insensitive' } },
+        { email: { contains: filters.search } },
       ];
     }
 
@@ -201,7 +201,7 @@ export class CustomerRepository {
     ]);
 
     const pendingAmount =
-      (pendingPayments._sum.finalAmount || 0) - (pendingPayments._sum.paidAmount || 0);
+      Number(pendingPayments._sum.finalAmount || 0) - Number(pendingPayments._sum.paidAmount || 0);
 
     return {
       totalOrders,

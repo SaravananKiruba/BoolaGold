@@ -58,26 +58,26 @@ export async function GET(
       items: salesOrder.lines.map((line) => ({
         lineNumber: line.id,
         product: {
-          name: line.stockItem.product.name,
-          metalType: line.stockItem.product.metalType,
-          purity: line.stockItem.product.purity,
-          grossWeight: Number(line.stockItem.product.grossWeight),
-          netWeight: Number(line.stockItem.product.netWeight),
-          stoneWeight: line.stockItem.product.stoneWeight
+          name: line.stockItem?.product.name || '',
+          metalType: line.stockItem?.product.metalType || '',
+          purity: line.stockItem?.product.purity || '',
+          grossWeight: Number(line.stockItem?.product.grossWeight || 0),
+          netWeight: Number(line.stockItem?.product.netWeight || 0),
+          stoneWeight: line.stockItem?.product.stoneWeight
             ? Number(line.stockItem.product.stoneWeight)
             : null,
-          stoneValue: line.stockItem.product.stoneValue
+          stoneValue: line.stockItem?.product.stoneValue
             ? Number(line.stockItem.product.stoneValue)
             : null,
-          makingCharges: Number(line.stockItem.product.makingCharges),
-          wastagePercent: Number(line.stockItem.product.wastagePercent),
-          huid: line.stockItem.product.huid,
-          hallmarkNumber: line.stockItem.product.hallmarkNumber,
-          tagNumber: line.stockItem.product.tagNumber,
+          makingCharges: Number(line.stockItem?.product.makingCharges || 0),
+          wastagePercent: Number(line.stockItem?.product.wastagePercent || 0),
+          huid: line.stockItem?.product.huid || '',
+          hallmarkNumber: line.stockItem?.product.hallmarkNumber || '',
+          tagNumber: line.stockItem?.product.tagNumber || '',
         },
         stockItem: {
-          tagId: line.stockItem.tagId,
-          barcode: line.stockItem.barcode,
+          tagId: line.stockItem?.tagId || '',
+          barcode: line.stockItem?.barcode || '',
         },
         quantity: line.quantity,
         unitPrice: Number(line.unitPrice),

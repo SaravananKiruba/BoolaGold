@@ -101,7 +101,7 @@ export class SalesOrderRepository {
     if (filters.search) {
       where.OR = [
         { invoiceNumber: { contains: filters.search } },
-        { customer: { name: { contains: filters.search, mode: 'insensitive' } } },
+        { customer: { name: { contains: filters.search } } },
         { customer: { phone: { contains: filters.search } } },
       ];
     }

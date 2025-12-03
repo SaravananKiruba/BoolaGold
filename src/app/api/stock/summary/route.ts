@@ -1,6 +1,6 @@
 // Stock Summary API - Get overall inventory summary
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { stockItemRepository } from '@/repositories/stockItemRepository';
 import { productRepository } from '@/repositories/productRepository';
 import { handleApiError, successResponse } from '@/utils/response';
@@ -11,7 +11,7 @@ import { handleApiError, successResponse } from '@/utils/response';
  * 
  * User Story 8: Stock Availability Check - Stock summary and total inventory value
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Get inventory value based on purchase cost
     const purchaseValue = await stockItemRepository.getInventoryValue('purchase');
