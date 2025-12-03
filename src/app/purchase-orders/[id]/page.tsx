@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import RecordPaymentModal from './RecordPaymentModal';
 
 interface PurchaseOrder {
   id: string;
@@ -79,6 +80,7 @@ export default function PurchaseOrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showReceiveStock, setShowReceiveStock] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -238,6 +240,24 @@ export default function PurchaseOrderDetailPage() {
                 }}
               >
                 📦 Receive Stock
+              </button>
+            )}
+            {purchaseOrder.paymentStatus !== 'PAID' && (
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                disabled={actionLoading}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                }}
+              >
+                💳 Record Payment
               </button>
             )}
             <button
@@ -426,6 +446,76 @@ export default function PurchaseOrderDetailPage() {
         </div>
       </div>
 
+      {/* Payments History */}
+      {purchaseOrder.payments && purchaseOrder.payments.length > 0 && (
+        <div className="card" style={{ marginTop: '20px' }}>
+          <h3 style={{ marginTop: 0, borderBottom: '2px solid #f59e0b', paddingBottom: '10px' }}>
+            💳 Payment History ({purchaseOrder.payments.length})
+          </h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Payment Method</th>
+                  <th>Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchaseOrder.payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td>{new Date(payment.paymentDate).toLocaleDateString('en-IN')}</td>
+                    <td style={{ fontWeight: 500, color: '#28a745' }}>
+                      ₹{Number(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>{payment.paymentMethod}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                      {payment.referenceNumber || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Payments History */}
+      {purchaseOrder.payments && purchaseOrder.payments.length > 0 && (
+        <div className="card" style={{ marginTop: '20px' }}>
+          <h3 style={{ marginTop: 0, borderBottom: '2px solid #f59e0b', paddingBottom: '10px' }}>
+            💳 Payment History ({purchaseOrder.payments.length})
+          </h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Payment Method</th>
+                  <th>Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchaseOrder.payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td>{new Date(payment.paymentDate).toLocaleDateString('en-IN')}</td>
+                    <td style={{ fontWeight: 500, color: '#28a745' }}>
+                      ₹{Number(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>{payment.paymentMethod}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                      {payment.referenceNumber || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Stock Items Generated */}
       {purchaseOrder.stockItems && purchaseOrder.stockItems.length > 0 && (
         <div className="card" style={{ marginTop: '20px' }}>
@@ -494,6 +584,18 @@ export default function PurchaseOrderDetailPage() {
           onClose={() => setShowReceiveStock(false)}
           onSuccess={() => {
             setShowReceiveStock(false);
+            fetchPurchaseOrder();
+          }}
+        />
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <RecordPaymentModal
+          purchaseOrder={purchaseOrder}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setShowPaymentModal(false);
             fetchPurchaseOrder();
           }}
         />

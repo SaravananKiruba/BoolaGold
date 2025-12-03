@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import RecordSalesPaymentModal from './RecordSalesPaymentModal';
 
 interface SalesOrder {
   id: string;
@@ -64,6 +65,7 @@ export default function SalesOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -223,6 +225,24 @@ export default function SalesOrderDetailPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {salesOrder.paymentStatus !== 'PAID' && salesOrder.status !== 'CANCELLED' && (
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                disabled={actionLoading}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                }}
+              >
+                💳 Record Payment
+              </button>
+            )}
             <button
               onClick={handlePrintInvoice}
               style={{
@@ -488,6 +508,18 @@ export default function SalesOrderDetailPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <RecordSalesPaymentModal
+          salesOrder={salesOrder}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            fetchSalesOrder();
+          }}
+        />
       )}
     </div>
   );

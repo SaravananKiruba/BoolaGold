@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     const orderStatus = data.createAsPending ? 'PENDING' : 'COMPLETED';
     const stockStatus = data.createAsPending ? 'RESERVED' : 'SOLD';
 
-    // Create sales order with transaction
+    // Create sales order with transaction (increased timeout for complex operations)
     const salesOrder = await prisma.$transaction(async (tx) => {
       // Create sales order
       const order = await tx.salesOrder.create({
@@ -223,6 +223,9 @@ export async function POST(request: NextRequest) {
       }
 
       return order;
+    }, {
+      maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
+      timeout: 15000, // Maximum time for transaction execution (15 seconds)
     });
 
     // Log the creation

@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
       }
 
       if (!stockItem) {
-        return NextResponse.json(successResponse([]), { status: 200 });
+        return NextResponse.json(successResponse({ stockItem: null }), { status: 200 });
       }
 
-      return NextResponse.json(successResponse([stockItem]), { status: 200 });
+      return NextResponse.json(successResponse({ stockItem }), { status: 200 });
     }
 
     // General search query

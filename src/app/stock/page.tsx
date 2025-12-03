@@ -23,6 +23,7 @@ export default function StockPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResult, setSearchResult] = useState<any>(null);
+  const [searchPerformed, setSearchPerformed] = useState(false);
 
   useEffect(() => {
     fetchSummary();
@@ -45,32 +46,42 @@ export default function StockPage() {
   };
 
   const handleSearch = async () => {
-    if (!searchTerm) return;
+    if (!searchTerm.trim()) {
+      alert('Please enter a Tag ID or Barcode to search');
+      return;
+    }
 
     try {
+      setSearchResult(null); // Clear previous results
+      setSearchPerformed(true);
+      
       // Try searching by tag ID first, then barcode
-      const tagResponse = await fetch(`/api/stock/search?tagId=${searchTerm}`);
+      const tagResponse = await fetch(`/api/stock/search?tagId=${encodeURIComponent(searchTerm.trim())}`);
+      
       if (tagResponse.ok) {
         const result = await tagResponse.json();
-        if (result.success) {
+        if (result.success && result.data.stockItem) {
           setSearchResult(result.data.stockItem);
           return;
         }
       }
 
-      const barcodeResponse = await fetch(`/api/stock/search?barcode=${searchTerm}`);
+      // If not found by tag, try barcode
+      const barcodeResponse = await fetch(`/api/stock/search?barcode=${encodeURIComponent(searchTerm.trim())}`);
+      
       if (barcodeResponse.ok) {
         const result = await barcodeResponse.json();
-        if (result.success) {
+        if (result.success && result.data.stockItem) {
           setSearchResult(result.data.stockItem);
           return;
         }
       }
 
-      setSearchResult(null);
-      alert('Stock item not found');
+      // Not found
+      alert('Stock item not found. Please check the Tag ID or Barcode and try again.');
     } catch (error) {
       console.error('Search failed:', error);
+      alert('Search failed. Please try again.');
     }
   };
 
@@ -87,7 +98,13 @@ export default function StockPage() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              if (!e.target.value.trim()) {
+                setSearchResult(null);
+                setSearchPerformed(false);
+              }
+            }}
             placeholder="Enter Tag ID or Barcode"
             style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -99,6 +116,12 @@ export default function StockPage() {
             Search
           </button>
         </div>
+
+        {searchPerformed && !searchResult && (
+          <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #ffc107', borderRadius: '4px', background: '#fff9e6', color: '#856404' }}>
+            No stock item found. Please verify the Tag ID or Barcode.
+          </div>
+        )}
 
         {searchResult && (
           <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px', background: '#f8f9fa' }}>
