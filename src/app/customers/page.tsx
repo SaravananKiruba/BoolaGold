@@ -604,7 +604,7 @@ function CustomerDetailModal({ customer, onClose }: { customer: CustomerDetails;
                       {new Date(order.orderDate).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                      {order.lines.map(line => line.stockItem.product.name).join(', ')}
+                      {order.lines?.map(line => line.stockItem.product.name).join(', ') || 'N/A'}
                     </td>
                     <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'right' }}>
                       ₹{order.finalAmount.toLocaleString()}
