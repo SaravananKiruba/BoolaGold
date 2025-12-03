@@ -4,10 +4,7 @@
       "main": true
     }
   },
-  "buildCommand": "prisma generate && npm run build",
+  "buildCommand": "npx prisma generate && npm run build",
   "outputDirectory": ".next",
-  "framework": "nextjs",
-  "env": {
-    "SKIP_ENV_VALIDATION": "1"
-  }
+  "framework": "nextjs"
 }
