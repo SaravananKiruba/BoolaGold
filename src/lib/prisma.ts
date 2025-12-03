@@ -2,17 +2,15 @@
 
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient | undefined };
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-// Only create Prisma client if DATABASE_URL is available
+// Create Prisma client (will use DATABASE_URL from environment)
 export const prisma =
   globalForPrisma.prisma ||
-  (process.env.DATABASE_URL
-    ? new PrismaClient({
-        log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-      })
-    : undefined);
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
 
-if (process.env.NODE_ENV !== 'production' && prisma) globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export default prisma;
