@@ -431,11 +431,31 @@ tbody tr:hover {
   }
   
   table {
-    font-size: 14px;
+    font-size: 13px;
   }
   
   th, td {
-    padding: 12px 8px;
+    padding: 10px 6px;
+    white-space: nowrap;
+  }
+  
+  /* Responsive table wrapper */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  
+  /* Modal improvements for mobile */
+  .modal-content {
+    border-radius: 8px 8px 0 0 !important;
+    max-height: 95vh !important;
+  }
+  
+  /* Form grid improvements */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents zoom on iOS */
   }
 }
 

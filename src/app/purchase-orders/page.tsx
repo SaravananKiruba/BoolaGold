@@ -38,6 +38,8 @@ interface OrderItem {
   quantity: number;
   unitPrice: string;
   expectedWeight: string;
+  purchaseCost?: string;
+  sellingPrice?: string;
 }
 
 export default function PurchaseOrdersPage() {
@@ -202,17 +204,22 @@ export default function PurchaseOrdersPage() {
                     )}
                   </td>
                   <td>
-                    <button style={{ 
-                      padding: '4px 12px', 
-                      background: 'transparent', 
-                      border: '1px solid #0070f3', 
-                      color: '#0070f3', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}>
+                    <Link 
+                      href={`/purchase-orders/${order.id}`}
+                      style={{ 
+                        display: 'inline-block',
+                        padding: '4px 12px', 
+                        background: 'transparent', 
+                        border: '1px solid #0070f3', 
+                        color: '#0070f3', 
+                        borderRadius: '4px', 
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        textDecoration: 'none'
+                      }}
+                    >
                       View
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -250,6 +257,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
     discountAmount: '',
     referenceNumber: '',
     notes: '',
+    autoReceiveStock: false, // NEW: Auto-generate stock items
   });
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [currentItem, setCurrentItem] = useState({
@@ -257,6 +265,8 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
     quantity: '1',
     unitPrice: '',
     expectedWeight: '',
+    purchaseCost: '',
+    sellingPrice: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -306,6 +316,14 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       return;
     }
 
+    // If auto-receive is enabled, validate pricing fields
+    if (formData.autoReceiveStock) {
+      if (!currentItem.purchaseCost || !currentItem.sellingPrice) {
+        alert('Purchase cost and selling price are required when auto-generating stock items');
+        return;
+      }
+    }
+
     const product = products.find(p => p.id === currentItem.productId);
     if (!product) return;
 
@@ -315,6 +333,8 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       quantity: parseInt(currentItem.quantity),
       unitPrice: currentItem.unitPrice,
       expectedWeight: currentItem.expectedWeight,
+      purchaseCost: currentItem.purchaseCost,
+      sellingPrice: currentItem.sellingPrice,
     };
 
     setOrderItems([...orderItems, newItem]);
@@ -323,6 +343,8 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       quantity: '1',
       unitPrice: '',
       expectedWeight: '',
+      purchaseCost: '',
+      sellingPrice: '',
     });
   };
 
@@ -362,11 +384,14 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
         discountAmount: parseFloat(formData.discountAmount) || 0,
         referenceNumber: formData.referenceNumber || undefined,
         notes: formData.notes || undefined,
+        autoReceiveStock: formData.autoReceiveStock, // NEW: Include auto-receive flag
         items: orderItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: parseFloat(item.unitPrice),
           expectedWeight: item.expectedWeight ? parseFloat(item.expectedWeight) : undefined,
+          purchaseCost: item.purchaseCost ? parseFloat(item.purchaseCost) : parseFloat(item.unitPrice),
+          sellingPrice: item.sellingPrice ? parseFloat(item.sellingPrice) : parseFloat(item.unitPrice),
         })),
       };
 
@@ -381,7 +406,10 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       const result = await response.json();
 
       if (result.success) {
-        alert('Purchase order created successfully! Order #: ' + result.data.orderNumber);
+        const message = formData.autoReceiveStock 
+          ? `Purchase order created successfully! Order #: ${result.data.orderNumber}\n${result.data.stockItemsCreated} stock items generated with unique tags and barcodes.`
+          : `Purchase order created successfully! Order #: ${result.data.orderNumber}`;
+        alert(message);
         onSuccess();
       } else {
         setFormError(result.error?.message || 'Failed to create purchase order');
@@ -405,7 +433,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
-      padding: '20px',
+      padding: 'clamp(10px, 3vw, 20px)',
       overflowY: 'auto'
     }}>
       <div style={{
@@ -415,7 +443,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
         width: '100%',
         maxHeight: '90vh',
         overflowY: 'auto',
-        padding: '30px'
+        padding: 'clamp(16px, 4vw, 30px)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ margin: 0 }}>Create Purchase Order</h2>
@@ -450,7 +478,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
             Order Details
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                 Supplier <span style={{ color: 'red' }}>*</span>
@@ -523,6 +551,28 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
             />
           </div>
 
+          <div style={{ marginBottom: '20px', padding: '15px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+            <label style={{ display: 'flex', alignItems: 'start', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={formData.autoReceiveStock}
+                onChange={(e) => setFormData({ ...formData, autoReceiveStock: e.target.checked })}
+                style={{ marginRight: '10px', marginTop: '3px', cursor: 'pointer', width: '18px', height: '18px' }}
+              />
+              <div>
+                <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '5px' }}>
+                  🏷️ Auto-Generate Stock Items (Direct Purchase)
+                </div>
+                <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.5' }}>
+                  Enable this for <strong>direct purchases</strong> where stock is received immediately.
+                  System will auto-generate unique <strong>Tag IDs and Barcodes</strong> for each physical jewelry piece.
+                  <br />
+                  ⚠️ Requires purchase cost and selling price for each item.
+                </div>
+              </div>
+            </label>
+          </div>
+
           <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
             Order Items
           </h3>
@@ -540,7 +590,14 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
           )}
 
           <div style={{ background: '#f5f5f5', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: formData.autoReceiveStock 
+                ? 'repeat(auto-fit, minmax(120px, 1fr))' 
+                : 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '10px', 
+              alignItems: 'end' 
+            }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                   Product {loadingProducts && '(Loading...)'}
@@ -569,7 +626,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                  Quantity
+                  Qty
                 </label>
                 <input
                   type="number"
@@ -593,6 +650,40 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                   style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
                 />
               </div>
+
+              {formData.autoReceiveStock && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                      Purchase Cost (₹) <span style={{ color: 'red' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={currentItem.purchaseCost}
+                      onChange={(e) => setCurrentItem({ ...currentItem, purchaseCost: e.target.value })}
+                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                      placeholder="Per piece"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                      Selling Price (₹) <span style={{ color: 'red' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={currentItem.sellingPrice}
+                      onChange={(e) => setCurrentItem({ ...currentItem, sellingPrice: e.target.value })}
+                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                      placeholder="Per piece"
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
@@ -620,21 +711,30 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                   borderRadius: '4px',
                   cursor: 'pointer',
                   fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  minWidth: '100px',
+                  gridColumn: formData.autoReceiveStock ? 'span 1' : 'span 1',
                 }}
               >
-                Add Item
+                + Add
               </button>
             </div>
           </div>
 
           {orderItems.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <table className="table">
+            <div style={{ marginBottom: '20px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table className="table" style={{ minWidth: '600px' }}>
                 <thead>
                   <tr>
                     <th>Product</th>
-                    <th>Quantity</th>
+                    <th>Qty</th>
                     <th>Unit Price</th>
+                    {formData.autoReceiveStock && (
+                      <>
+                        <th>Purchase Cost</th>
+                        <th>Selling Price</th>
+                      </>
+                    )}
                     <th>Weight</th>
                     <th>Total</th>
                     <th>Action</th>
@@ -646,6 +746,12 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                       <td>{item.productName}</td>
                       <td>{item.quantity}</td>
                       <td>₹{parseFloat(item.unitPrice).toFixed(2)}</td>
+                      {formData.autoReceiveStock && (
+                        <>
+                          <td>₹{item.purchaseCost ? parseFloat(item.purchaseCost).toFixed(2) : '-'}</td>
+                          <td>₹{item.sellingPrice ? parseFloat(item.sellingPrice).toFixed(2) : '-'}</td>
+                        </>
+                      )}
                       <td>{item.expectedWeight ? `${item.expectedWeight}g` : '-'}</td>
                       <td style={{ fontWeight: 500 }}>
                         ₹{(item.quantity * parseFloat(item.unitPrice)).toFixed(2)}
@@ -671,6 +777,11 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                   ))}
                 </tbody>
               </table>
+              {formData.autoReceiveStock && (
+                <div style={{ fontSize: '12px', color: '#28a745', marginTop: '10px', padding: '10px', background: '#d5f4e6', borderRadius: '4px' }}>
+                  ✓ <strong>{orderItems.reduce((sum, item) => sum + item.quantity, 0)} stock items</strong> will be auto-generated with unique Tag IDs and Barcodes
+                </div>
+              )}
             </div>
           )}
 
@@ -713,12 +824,13 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               type="submit"
               disabled={submitting || orderItems.length === 0}
               style={{
                 flex: 1,
+                minWidth: '150px',
                 padding: '12px 20px',
                 background: (submitting || orderItems.length === 0) ? '#ccc' : '#0070f3',
                 color: 'white',
@@ -726,16 +838,17 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                 borderRadius: '4px',
                 cursor: (submitting || orderItems.length === 0) ? 'not-allowed' : 'pointer',
                 fontWeight: 500,
-                fontSize: '16px',
+                fontSize: 'clamp(14px, 2vw, 16px)',
               }}
             >
-              {submitting ? 'Creating Order...' : 'Create Purchase Order'}
+              {submitting ? 'Creating...' : 'Create Order'}
             </button>
             <button
               type="button"
               onClick={onClose}
               style={{
                 flex: 1,
+                minWidth: '120px',
                 padding: '12px 20px',
                 background: '#6c757d',
                 color: 'white',
@@ -743,7 +856,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontWeight: 500,
-                fontSize: '16px',
+                fontSize: 'clamp(14px, 2vw, 16px)',
               }}
             >
               Cancel

@@ -355,9 +355,11 @@ export default function ProductsPage() {
                       </div>
                     </td>
                     <td style={{ fontSize: '11px', fontFamily: 'monospace' }}>
-                      <div>📊 {product.barcode}</div>
-                      {product.huid && <div>🏅 {product.huid}</div>}
-                      {product.tagNumber && <div>🏷️ {product.tagNumber}</div>}
+                      <div title="Product Barcode (Design Template)">📦 {product.barcode}</div>
+                      {product.huid && <div title="BIS Hallmark ID">🏅 {product.huid}</div>}
+                      <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>
+                        Stock tags auto-generated
+                      </div>
                     </td>
                     <td>
                       {product.priceOverride ? (
@@ -650,7 +652,6 @@ function ProductFormModal({ product, onClose, onSuccess }: {
     netWeight: product?.netWeight?.toString() || '',
     barcode: product?.barcode || '',
     huid: product?.huid || '',
-    tagNumber: product?.tagNumber || '',
     wastagePercent: product?.wastagePercent?.toString() || '',
     makingCharges: product?.makingCharges?.toString() || '',
     stoneValue: product?.stoneValue?.toString() || '',
@@ -663,10 +664,59 @@ function ProductFormModal({ product, onClose, onSuccess }: {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [errors, setErrors] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetchSuppliers();
   }, []);
+
+  const generateBarcode = async () => {
+    if (!formData.metalType || !formData.purity) {
+      alert('Please select Metal Type and Purity first');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      // Generate based on metal type and purity
+      const metal = formData.metalType;
+      const purity = formData.purity.replace(/[^0-9A-Z]/gi, '');
+      
+      // Try to get next sequential number by checking existing products
+      const response = await fetch(`/api/products?metalType=${metal}&purity=${formData.purity}&pageSize=1000`);
+      const result = await response.json();
+      
+      let nextNumber = 1;
+      if (result.success && result.data) {
+        const products = result.data.data || result.data;
+        // Find products with similar barcode pattern
+        const pattern = new RegExp(`^${metal}-${purity}-(\\d+)$`);
+        const existingNumbers = products
+          .map((p: any) => {
+            const match = p.barcode?.match(pattern);
+            return match ? parseInt(match[1]) : 0;
+          })
+          .filter((n: number) => n > 0);
+        
+        if (existingNumbers.length > 0) {
+          nextNumber = Math.max(...existingNumbers) + 1;
+        }
+      }
+      
+      const generatedBarcode = `${metal}-${purity}-${nextNumber.toString().padStart(3, '0')}`;
+      setFormData({ ...formData, barcode: generatedBarcode });
+    } catch (error) {
+      console.error('Error generating barcode:', error);
+      // Fallback to timestamp-based
+      const metal = formData.metalType;
+      const purity = formData.purity.replace(/[^0-9A-Z]/gi, '');
+      const timestamp = Date.now().toString().slice(-6);
+      const generatedBarcode = `${metal}-${purity}-${timestamp}`;
+      setFormData({ ...formData, barcode: generatedBarcode });
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const fetchSuppliers = async () => {
     try {
@@ -694,7 +744,6 @@ function ProductFormModal({ product, onClose, onSuccess }: {
         netWeight: parseFloat(formData.netWeight),
         barcode: formData.barcode,
         huid: formData.huid || undefined,
-        tagNumber: formData.tagNumber || undefined,
         wastagePercent: parseFloat(formData.wastagePercent) || 0,
         makingCharges: parseFloat(formData.makingCharges) || 0,
         stoneValue: formData.stoneValue ? parseFloat(formData.stoneValue) : undefined,
@@ -806,6 +855,11 @@ function ProductFormModal({ product, onClose, onSuccess }: {
                 <option value="SILVER">Silver</option>
                 <option value="PLATINUM">Platinum</option>
               </select>
+              {!formData.barcode && (
+                <div style={{ fontSize: '11px', color: '#ff9800', marginTop: '4px' }}>
+                  💡 Select metal & purity, then click Generate
+                </div>
+              )}
             </div>
 
             <div>
@@ -896,47 +950,75 @@ function ProductFormModal({ product, onClose, onSuccess }: {
             Identifiers
           </h3>
 
+          <div style={{ background: '#fff3cd', padding: '12px', borderRadius: '4px', marginBottom: '15px', fontSize: '13px', lineHeight: '1.6' }}>
+            <strong>ℹ️ Note:</strong> This is the <strong>Product Design Template</strong>.
+            <br/>• <strong>Barcode</strong>: Your internal catalog/design code (e.g., GOLD-22K-001)
+            <br/>• <strong>HUID</strong>: If this design is BIS hallmarked
+            <br/>• <strong>Tag IDs & Stock Barcodes</strong>: Auto-generated when you receive stock (one per physical piece)
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                Barcode <span style={{ color: 'red' }}>*</span>
+                Product Barcode <span style={{ color: 'red' }}>*</span>
               </label>
-              <input
-                type="text"
-                required
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                placeholder="Unique barcode"
-              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  required
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  placeholder="e.g., GOLD-22K-001"
+                />
+                <button
+                  type="button"
+                  onClick={generateBarcode}
+                  disabled={generating || !formData.metalType || !formData.purity}
+                  style={{
+                    padding: '8px 12px',
+                    background: (generating || !formData.metalType || !formData.purity) ? '#ccc' : '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: (generating || !formData.metalType || !formData.purity) ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={!formData.metalType || !formData.purity ? "Select metal type and purity first" : "Auto-generate unique barcode"}
+                >
+                  {generating ? '...' : '🔄 Generate'}
+                </button>
+              </div>
+              <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                {formData.metalType && formData.purity ? (
+                  <span>
+                    Will generate like: <code style={{ background: '#f0f0f0', padding: '2px 4px', borderRadius: '2px' }}>
+                      {formData.metalType}-{formData.purity.replace(/[^0-9A-Z]/gi, '')}-001
+                    </code>
+                  </span>
+                ) : (
+                  'Design template identifier. Click Generate for auto-code.'
+                )}
+              </div>
             </div>
 
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                HUID
+                HUID (Hallmark ID)
               </label>
               <input
                 type="text"
                 value={formData.huid}
                 onChange={(e) => setFormData({ ...formData, huid: e.target.value })}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                placeholder="Hallmark Unique ID"
+                placeholder="e.g., ABC123 (if hallmarked)"
               />
+              <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>Only if BIS hallmarked design</div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                Tag Number
-              </label>
-              <input
-                type="text"
-                value={formData.tagNumber}
-                onChange={(e) => setFormData({ ...formData, tagNumber: e.target.value })}
-                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-              />
-            </div>
-
-            <div>
+            <div style={{ gridColumn: 'span 2' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                 Collection Name
               </label>
@@ -945,7 +1027,9 @@ function ProductFormModal({ product, onClose, onSuccess }: {
                 value={formData.collectionName}
                 onChange={(e) => setFormData({ ...formData, collectionName: e.target.value })}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                placeholder="e.g., Bridal Collection, Festival Special"
               />
+              <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>Group related jewelry designs for marketing</div>
             </div>
           </div>
 
