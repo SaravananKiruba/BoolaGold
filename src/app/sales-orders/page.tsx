@@ -365,17 +365,22 @@ export default function SalesOrdersPage() {
                     </span>
                   </td>
                   <td>
-                    <button style={{ 
-                      padding: '4px 12px', 
-                      background: 'transparent', 
-                      border: '1px solid #0070f3', 
-                      color: '#0070f3', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}>
+                    <Link 
+                      href={`/sales-orders/${order.id}`}
+                      style={{ 
+                        padding: '4px 12px', 
+                        background: 'transparent', 
+                        border: '1px solid #0070f3', 
+                        color: '#0070f3', 
+                        borderRadius: '4px', 
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        textDecoration: 'none',
+                        display: 'inline-block'
+                      }}
+                    >
                       View Details
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}

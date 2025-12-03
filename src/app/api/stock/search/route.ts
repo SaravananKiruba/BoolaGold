@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stockItemRepository } from '@/repositories/stockItemRepository';
 import { handleApiError, successResponse } from '@/utils/response';
 import prisma from '@/lib/prisma';
-import { StockStatus } from '@/domain/entities/types';
+import { Prisma, StockStatus } from '@/domain/entities/types';
 
 /**
  * GET /api/stock/search
@@ -54,42 +54,90 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Search across product name, tag ID, and barcode
-    // MySQL collations are typically case-insensitive by default (utf8mb4_general_ci)
+    // Search across product name, tag ID, and barcode using raw SQL for MySQL
     const searchTerm = query.trim();
+    const likePattern = `%${searchTerm}%`;
     
-    // Build where clause for MySQL
-    const whereClause: any = {
-      deletedAt: null,
-      OR: [
-        { tagId: { contains: searchTerm } },
-        { barcode: { contains: searchTerm } },
-        { product: { name: { contains: searchTerm } } },
-        { product: { metalType: { contains: searchTerm } } },
-        { product: { purity: { contains: searchTerm } } },
-      ],
-    };
+    console.log('[Stock Search] Searching for:', searchTerm);
+    
+    // Build SQL query with conditional status filter
+    let sqlQuery = `
+      SELECT 
+        si.id,
+        si.productId,
+        si.tagId,
+        si.barcode,
+        si.purchaseCost,
+        si.sellingPrice,
+        si.status,
+        si.purchaseOrderId,
+        si.purchaseDate,
+        si.saleDate,
+        si.salesOrderLineId,
+        si.createdAt,
+        si.updatedAt,
+        p.id as product_id,
+        p.name as product_name,
+        p.metalType as product_metalType,
+        p.purity as product_purity,
+        p.grossWeight as product_grossWeight,
+        p.netWeight as product_netWeight,
+        p.barcode as product_barcode,
+        p.description as product_description
+      FROM stock_items si
+      INNER JOIN products p ON si.productId = p.id
+      WHERE si.deletedAt IS NULL
+        AND (
+          si.tagId LIKE ?
+          OR si.barcode LIKE ?
+          OR p.name LIKE ?
+          OR p.metalType LIKE ?
+          OR p.purity LIKE ?
+        )`;
+    
+    const params: any[] = [likePattern, likePattern, likePattern, likePattern, likePattern];
     
     if (status) {
-      whereClause.status = status;
+      sqlQuery += ` AND si.status = ?`;
+      params.push(status);
     }
     
-    console.log('[Stock Search] Where clause:', JSON.stringify(whereClause, null, 2));
+    sqlQuery += ` ORDER BY si.purchaseDate DESC LIMIT ?`;
+    params.push(limit);
     
-    const stockItems = await prisma.stockItem.findMany({
-      where: whereClause,
-      include: {
-        product: true,
-      },
-      orderBy: {
-        purchaseDate: 'desc',
-      },
-      take: limit,
-    });
+    // Execute raw query
+    const stockItems: any[] = await prisma.$queryRawUnsafe(sqlQuery, ...params);
+    
+    // Transform the raw result to match the expected structure
+    const transformedItems = stockItems.map((item: any) => ({
+      id: item.id,
+      productId: item.productId,
+      tagId: item.tagId,
+      barcode: item.barcode,
+      purchaseCost: item.purchaseCost,
+      sellingPrice: item.sellingPrice,
+      status: item.status,
+      purchaseOrderId: item.purchaseOrderId,
+      purchaseDate: item.purchaseDate,
+      saleDate: item.saleDate,
+      salesOrderLineId: item.salesOrderLineId,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      product: {
+        id: item.product_id,
+        name: item.product_name,
+        metalType: item.product_metalType,
+        purity: item.product_purity,
+        grossWeight: item.product_grossWeight,
+        netWeight: item.product_netWeight,
+        barcode: item.product_barcode,
+        description: item.product_description,
+      }
+    }));
 
-    console.log(`[Stock Search] Found ${stockItems.length} items for query: "${searchTerm}"`);
+    console.log(`[Stock Search] Found ${transformedItems.length} items for query: "${searchTerm}"`);
 
-    return NextResponse.json(successResponse(stockItems), { status: 200 });
+    return NextResponse.json(successResponse(transformedItems), { status: 200 });
   } catch (error: any) {
     console.error('[Stock Search] Error:', error);
     console.error('[Stock Search] Error stack:', error.stack);
