@@ -23,7 +23,6 @@ export interface StockReceiptItem {
     tagId: string;
     barcode: string;
     purchaseCost: number;
-    sellingPrice: number;
     purchaseDate: Date;
   }[];
 }
@@ -224,7 +223,7 @@ export class PurchaseOrderRepository {
         throw new Error('Purchase order not found');
       }
 
-      // Create stock items for each individual item
+      // Create stock items for each individual item - ONLY purchase cost
       const stockItems = [];
       for (const receiptItem of receiptItems) {
         for (const item of receiptItem.individualItems) {
@@ -233,7 +232,6 @@ export class PurchaseOrderRepository {
             tagId: item.tagId,
             barcode: item.barcode,
             purchaseCost: item.purchaseCost,
-            sellingPrice: item.sellingPrice,
             status: 'AVAILABLE' as const,
             purchaseOrderId: purchaseOrderId,
             purchaseDate: item.purchaseDate,

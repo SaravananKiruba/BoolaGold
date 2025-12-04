@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import RecordPaymentModal from './RecordPaymentModal';
+import { toast, confirmAction } from '@/utils/toast';
 
 interface PurchaseOrder {
   id: string;
@@ -109,7 +110,8 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!confirm(`Change status to ${newStatus}?`)) return;
+    const confirmed = await confirmAction(`Change status to ${newStatus}?`, 'Change Status');
+    if (!confirmed) return;
 
     try {
       setActionLoading(true);
@@ -121,13 +123,13 @@ export default function PurchaseOrderDetailPage() {
 
       const result = await response.json();
       if (result.success) {
-        alert('Status updated successfully');
+        toast.success('Status updated successfully');
         fetchPurchaseOrder();
       } else {
-        alert('Error: ' + (result.error?.message || 'Failed to update'));
+        toast.error('Error: ' + (result.error?.message || 'Failed to update'));
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
       setActionLoading(false);
     }
@@ -481,41 +483,6 @@ export default function PurchaseOrderDetailPage() {
         </div>
       )}
 
-      {/* Payments History */}
-      {purchaseOrder.payments && purchaseOrder.payments.length > 0 && (
-        <div className="card" style={{ marginTop: '20px' }}>
-          <h3 style={{ marginTop: 0, borderBottom: '2px solid #f59e0b', paddingBottom: '10px' }}>
-            💳 Payment History ({purchaseOrder.payments.length})
-          </h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Payment Method</th>
-                  <th>Reference</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchaseOrder.payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td>{new Date(payment.paymentDate).toLocaleDateString('en-IN')}</td>
-                    <td style={{ fontWeight: 500, color: '#28a745' }}>
-                      ₹{Number(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td>{payment.paymentMethod}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                      {payment.referenceNumber || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* Stock Items Generated */}
       {purchaseOrder.stockItems && purchaseOrder.stockItems.length > 0 && (
         <div className="card" style={{ marginTop: '20px' }}>
@@ -531,7 +498,6 @@ export default function PurchaseOrderDetailPage() {
                   <th>Product</th>
                   <th>Status</th>
                   <th>Purchase Cost</th>
-                  <th>Selling Price</th>
                 </tr>
               </thead>
               <tbody>
@@ -556,7 +522,6 @@ export default function PurchaseOrderDetailPage() {
                       </span>
                     </td>
                     <td>₹{Number(stock.purchaseCost).toFixed(2)}</td>
-                    <td>₹{Number(stock.sellingPrice).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -634,7 +599,7 @@ function EditPurchaseOrderModal({ purchaseOrder, onClose, onSuccess }: {
 
       const result = await response.json();
       if (result.success) {
-        alert('Purchase order updated successfully');
+        toast.success('Purchase order updated successfully');
         onSuccess();
       } else {
         setError(result.error?.message || 'Failed to update');
@@ -801,7 +766,6 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
     pendingQty: number;
     quantityToReceive: number;
     purchaseCost: string;
-    sellingPrice: string;
   }>>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -819,7 +783,6 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
         pendingQty: item.quantity - item.receivedQuantity,
         quantityToReceive: item.quantity - item.receivedQuantity,
         purchaseCost: item.unitPrice.toString(),
-        sellingPrice: item.unitPrice.toString(),
       }));
     setReceiptItems(items);
   }, [purchaseOrder]);
@@ -834,10 +797,10 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
       return;
     }
 
-    // Validate all items have pricing
-    const missingPricing = itemsToReceive.some(item => !item.purchaseCost || !item.sellingPrice);
-    if (missingPricing) {
-      setError('Purchase cost and selling price required for all items being received');
+    // Validate all items have purchase cost
+    const missingCost = itemsToReceive.some(item => !item.purchaseCost);
+    if (missingCost) {
+      setError('Purchase cost required for all items being received');
       return;
     }
 
@@ -854,7 +817,6 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
             quantityToReceive: item.quantityToReceive,
             receiptDetails: [{
               purchaseCost: parseFloat(item.purchaseCost),
-              sellingPrice: parseFloat(item.sellingPrice),
             }],
           })),
         }),
@@ -862,7 +824,7 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
 
       const result = await response.json();
       if (result.success) {
-        alert(`Stock received successfully! ${result.data.stockItemsCreated} items generated with unique Tag IDs and Barcodes.`);
+        toast.success(`Stock received successfully! ${result.data.stockItemsCreated} items generated with unique Tag IDs and Barcodes.`, 5000);
         onSuccess();
       } else {
         setError(result.error?.message || 'Failed to receive stock');
@@ -919,7 +881,6 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
                   <th>Pending</th>
                   <th>Receive Now</th>
                   <th>Purchase Cost (₹)</th>
-                  <th>Selling Price (₹)</th>
                 </tr>
               </thead>
               <tbody>
@@ -952,21 +913,6 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
                         onChange={(e) => {
                           const newItems = [...receiptItems];
                           newItems[index].purchaseCost = e.target.value;
-                          setReceiptItems(newItems);
-                        }}
-                        style={{ width: '100px', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
-                        placeholder="Per piece"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.sellingPrice}
-                        onChange={(e) => {
-                          const newItems = [...receiptItems];
-                          newItems[index].sellingPrice = e.target.value;
                           setReceiptItems(newItems);
                         }}
                         style={{ width: '100px', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}

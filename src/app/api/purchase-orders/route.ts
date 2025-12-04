@@ -94,12 +94,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If auto-receiving stock, validate pricing fields
+    // If auto-receiving stock, validate purchase cost
     if (autoReceiveStock) {
-      const missingPricing = items.some((item: any) => !item.purchaseCost || !item.sellingPrice);
-      if (missingPricing) {
+      const missingCost = items.some((item: any) => !item.purchaseCost && !item.unitPrice);
+      if (missingCost) {
         return NextResponse.json(
-          { error: 'Purchase cost and selling price required for all items when auto-receiving stock' },
+          { error: 'Purchase cost required for all items when auto-receiving stock' },
           { status: 400 }
         );
       }
@@ -170,14 +170,14 @@ export async function POST(request: NextRequest) {
           return generateStockBarcode(item.productId, Date.now() + i);
         });
 
-        // Create individual stock items
+        // Create individual stock items - ONLY with purchase cost
+        // Selling price will be calculated at SALES time based on latest rate!
         const individualItems = [];
         for (let i = 0; i < item.quantity; i++) {
           individualItems.push({
             tagId: tagIds[i],
             barcode: barcodes[i],
             purchaseCost: item.purchaseCost || item.unitPrice,
-            sellingPrice: item.sellingPrice || item.unitPrice,
             purchaseDate: new Date(),
           });
         }

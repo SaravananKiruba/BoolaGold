@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast } from '@/utils/toast';
 
 interface Customer {
   id: string;
@@ -68,21 +69,49 @@ export default function CustomersPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
-  // Pagination
+  // Infinite Scroll Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
-    fetchCustomers();
-  }, [searchTerm, filterType, filterStatus, startDate, endDate, currentPage]);
+    // Reset and fetch from beginning when filters change
+    setCurrentPage(1);
+    setCustomers([]);
+    setHasMore(true);
+    fetchCustomers(1, true);
+  }, [searchTerm, filterType, filterStatus, startDate, endDate]);
 
-  const fetchCustomers = async () => {
+  useEffect(() => {
+    // Handle scroll event for infinite loading
+    const handleScroll = () => {
+      if (isLoadingMore || !hasMore) return;
+      
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const pageHeight = document.documentElement.scrollHeight;
+      
+      // Load more when user is 200px from bottom
+      if (scrollPosition >= pageHeight - 200) {
+        loadMoreCustomers();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isLoadingMore, hasMore, currentPage]);
+
+  const fetchCustomers = async (page: number = 1, reset: boolean = false) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       const params = new URLSearchParams();
-      params.append('page', currentPage.toString());
-      params.append('pageSize', '20');
+      params.append('page', page.toString());
+      params.append('pageSize', '10');
       
       if (searchTerm) params.append('search', searchTerm);
       if (filterType) params.append('customerType', filterType);
@@ -94,10 +123,15 @@ export default function CustomersPage() {
       const result = await response.json();
 
       if (result.success) {
-        setCustomers(result.data);
+        if (reset) {
+          setCustomers(result.data);
+        } else {
+          setCustomers(prev => [...prev, ...result.data]);
+        }
         if (result.meta) {
           setTotalPages(result.meta.totalPages);
           setTotalCount(result.meta.totalCount);
+          setHasMore(page < result.meta.totalPages);
         }
       } else {
         setError(result.error?.message || 'Failed to fetch customers');
@@ -106,6 +140,15 @@ export default function CustomersPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMoreCustomers = () => {
+    if (!isLoadingMore && hasMore) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchCustomers(nextPage, false);
     }
   };
 
@@ -119,7 +162,7 @@ export default function CustomersPage() {
         setShowDetailModal(true);
       }
     } catch (err: any) {
-      alert('Failed to load customer details');
+      toast.error('Failed to load customer details');
     }
   };
 
@@ -129,7 +172,6 @@ export default function CustomersPage() {
     setFilterStatus('');
     setStartDate('');
     setEndDate('');
-    setCurrentPage(1);
   };
 
   const handleAddCustomer = () => {
@@ -271,11 +313,9 @@ export default function CustomersPage() {
                 <tr>
                   <th>Name</th>
                   <th>Phone</th>
-                  <th>Email</th>
                   <th>Type</th>
                   <th>Status</th>
                   <th>Total Orders</th>
-                  <th>Registered</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -284,7 +324,6 @@ export default function CustomersPage() {
                   <tr key={customer.id}>
                     <td style={{ fontWeight: 500 }}>{customer.name}</td>
                     <td>{customer.phone}</td>
-                    <td>{customer.email || '-'}</td>
                     <td>
                       <span style={{ 
                         padding: '4px 8px', 
@@ -307,7 +346,6 @@ export default function CustomersPage() {
                       </span>
                     </td>
                     <td>{customer._count?.salesOrders || 0}</td>
-                    <td>{new Date(customer.registrationDate).toLocaleDateString()}</td>
                     <td>
                       <button 
                         onClick={() => fetchCustomerDetails(customer.id)}
@@ -343,38 +381,21 @@ export default function CustomersPage() {
             </table>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '8px 16px',
-                    background: currentPage === 1 ? '#f5f5f5' : '#0070f3',
-                    color: currentPage === 1 ? '#999' : 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  Previous
-                </button>
-                <span>Page {currentPage} of {totalPages}</span>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '8px 16px',
-                    background: currentPage === totalPages ? '#f5f5f5' : '#0070f3',
-                    color: currentPage === totalPages ? '#999' : 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  Next
-                </button>
+            {/* Infinite Scroll Indicators */}
+            {isLoadingMore && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+                <div className="spinner" style={{ width: '30px', height: '30px' }} />
+                <span style={{ marginLeft: '10px', color: '#666' }}>Loading more customers...</span>
+              </div>
+            )}
+            {!hasMore && customers.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#666', fontSize: '14px' }}>
+                ✓ All {totalCount} customers loaded
+              </div>
+            )}
+            {hasMore && !isLoadingMore && customers.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#999', fontSize: '14px' }}>
+                Scroll down to load more... ({customers.length} of {totalCount})
               </div>
             )}
           </>
@@ -673,7 +694,7 @@ function CustomerFormModal({ customer, onClose, onSuccess }: {
       const result = await response.json();
 
       if (result.success) {
-        alert(customer ? 'Customer updated successfully!' : 'Customer created successfully!');
+        toast.success(customer ? 'Customer updated successfully!' : 'Customer created successfully!');
         onSuccess();
       } else {
         if (result.error?.errors) {
@@ -683,11 +704,11 @@ function CustomerFormModal({ customer, onClose, onSuccess }: {
           });
           setErrors(errorMap);
         } else {
-          alert(result.error?.message || 'Failed to save customer');
+          toast.error(result.error?.message || 'Failed to save customer');
         }
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }

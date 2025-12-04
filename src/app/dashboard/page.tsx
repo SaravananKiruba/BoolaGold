@@ -144,7 +144,7 @@ export default function DashboardPage() {
         </p>
         {metrics && (
           <p style={{ margin: '12px 0 0 0', fontSize: '0.95rem' }}>
-            💡 {metrics.insights}
+            💡 {metrics.todayOrders} order{metrics.todayOrders !== 1 ? 's' : ''} today
           </p>
         )}
       </div>
@@ -192,22 +192,6 @@ export default function DashboardPage() {
             <div className="metric-card">
               <div className="metric-value">{metrics.totalOrders}</div>
               <div className="metric-label">🛒 Total Orders</div>
-            </div>
-
-            <div className="metric-card">
-              <div className="metric-value">₹{(metrics.totalRevenue / 1000).toFixed(1)}K</div>
-              <div className="metric-label">💰 Total Revenue</div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                ₹{metrics.totalRevenue.toLocaleString('en-IN')}
-              </div>
-            </div>
-
-            <div className="metric-card">
-              <div className="metric-value">₹{(metrics.averageOrderValue / 1000).toFixed(1)}K</div>
-              <div className="metric-label">📊 Avg Order Value</div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                ₹{metrics.averageOrderValue.toLocaleString('en-IN')}
-              </div>
             </div>
 
             <div className="metric-card">

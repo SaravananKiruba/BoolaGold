@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Build insights text
-    const insights = `${todayOrders} order${todayOrders !== 1 ? 's' : ''} today, revenue ₹${todayRevenue.toFixed(2)}`;
+    const insights = `${todayOrders} order${todayOrders !== 1 ? 's' : ''} today`;
 
     // Payment status breakdown
     const paymentStatusBreakdown = await prisma.salesOrder.groupBy({

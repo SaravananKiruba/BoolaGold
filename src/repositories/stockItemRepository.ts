@@ -184,18 +184,16 @@ export class StockItemRepository {
   }
 
   /**
-   * Get inventory value
+   * Get inventory value (based on purchase cost)
    */
-  async getInventoryValue(basedOn: 'purchase' | 'selling' = 'purchase') {
-    const field = basedOn === 'purchase' ? 'purchaseCost' : 'sellingPrice';
-
+  async getInventoryValue() {
     const result = await prisma.stockItem.aggregate({
       where: {
         status: { in: ['AVAILABLE', 'RESERVED'] },
         deletedAt: null,
       },
       _sum: {
-        [field]: true,
+        purchaseCost: true,
       },
       _count: {
         id: true,
@@ -203,7 +201,7 @@ export class StockItemRepository {
     });
 
     return {
-      totalValue: result._sum[field] || 0,
+      totalValue: result._sum.purchaseCost || 0,
       totalItems: result._count.id,
     };
   }
@@ -223,7 +221,6 @@ export class StockItemRepository {
       },
       _sum: {
         purchaseCost: true,
-        sellingPrice: true,
       },
     });
 

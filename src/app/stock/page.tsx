@@ -46,8 +46,8 @@ export default function StockPage() {
   };
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      alert('Please enter a Tag ID or Barcode to search');
+    if (!searchValue.trim()) {
+      toast.warning('Please enter a Tag ID or Barcode to search');
       return;
     }
 
@@ -78,10 +78,10 @@ export default function StockPage() {
       }
 
       // Not found
-      alert('Stock item not found. Please check the Tag ID or Barcode and try again.');
+      toast.error('Stock item not found. Please check the Tag ID or Barcode and try again.');
     } catch (error) {
       console.error('Search failed:', error);
-      alert('Search failed. Please try again.');
+      toast.error('Search failed. Please try again.');
     }
   };
 
@@ -134,9 +134,12 @@ export default function StockPage() {
                 searchResult.status === 'RESERVED' ? 'text-yellow-600' :
                 'text-red-600'
               }`}>{searchResult.status}</span></div>
-              <div>Selling Price: ₹{Number(searchResult.sellingPrice).toLocaleString()}</div>
+              <div>Purchase Cost: ₹{Number(searchResult.purchaseCost).toLocaleString()}</div>
               <div>Net Weight: {searchResult.product.netWeight}g</div>
               <div>Purity: {searchResult.product.purity}</div>
+            </div>
+            <div style={{ marginTop: '10px', padding: '8px', background: '#e3f2fd', borderRadius: '4px', fontSize: '12px', color: '#1565c0' }}>
+              💡 Selling price calculated dynamically at checkout using current market rates
             </div>
           </div>
         )}
@@ -146,30 +149,28 @@ export default function StockPage() {
         <p>Loading stock summary...</p>
       ) : summary && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '20px' }}>
             <div className="card">
-              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Total Items</div>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Total Items in Stock</div>
               <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{summary.totalInventory.items}</div>
+              <div style={{ fontSize: '11px', color: '#999', marginTop: '5px' }}>Available & Reserved</div>
             </div>
 
             <div className="card">
-              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Purchase Value</div>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Total Purchase Value</div>
               <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
                 ₹{Number(summary.totalInventory.purchaseValue).toLocaleString('en-IN')}
               </div>
+              <div style={{ fontSize: '11px', color: '#999', marginTop: '5px' }}>Total investment in inventory</div>
             </div>
 
-            <div className="card">
-              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Selling Value</div>
-              <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-                ₹{Number(summary.totalInventory.sellingValue).toLocaleString('en-IN')}
+            <div className="card" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+              <div style={{ fontSize: '14px', marginBottom: '5px', opacity: 0.9 }}>💰 Dynamic Pricing</div>
+              <div style={{ fontSize: '16px', fontWeight: 500 }}>
+                Selling prices calculated at checkout
               </div>
-            </div>
-
-            <div className="card">
-              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Potential Profit</div>
-              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#00b894' }}>
-                ₹{Number(summary.totalInventory.potentialProfit).toLocaleString('en-IN')}
+              <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.8' }}>
+                Using current market rates
               </div>
             </div>
           </div>
