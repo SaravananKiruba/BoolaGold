@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       purity: item.product.purity,
       netWeight: `${Number(item.product.netWeight).toFixed(3)}g`,
       grossWeight: `${Number(item.product.grossWeight).toFixed(3)}g`,
-      price: `₹${Number(item.sellingPrice).toFixed(2)}`,
+      purchaseCost: `₹${Number(item.purchaseCost).toFixed(2)}`,
       huid: item.product.huid || null,
       hallmarkNumber: item.product.hallmarkNumber || null,
       // Label template data
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         line1: item.product.name,
         line2: `${item.product.metalType} ${item.product.purity}`,
         line3: `Wt: ${Number(item.product.netWeight).toFixed(3)}g`,
-        line4: `₹${Number(item.sellingPrice).toFixed(2)}`,
+        line4: `Tag: ${item.tagId}`,
         barcode: item.barcode,
         tagId: item.tagId,
         huid: item.product.huid || '',

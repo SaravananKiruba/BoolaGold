@@ -42,20 +42,19 @@ export async function GET(request: NextRequest) {
 
     const valueSummary = {
       availablePurchaseCost: 0,
-      availableSellingPrice: 0,
       reservedPurchaseCost: 0,
-      reservedSellingPrice: 0,
+      // Note: Selling prices are calculated dynamically at checkout, not stored
     };
 
     summary.forEach((item) => {
       if (item.status === 'AVAILABLE') {
         statusCounts.available = item._count.id;
         valueSummary.availablePurchaseCost = Number(item._sum.purchaseCost || 0);
-        valueSummary.availableSellingPrice = Number(item._sum.sellingPrice || 0);
+        // Selling prices are calculated dynamically, not stored
       } else if (item.status === 'RESERVED') {
         statusCounts.reserved = item._count.id;
         valueSummary.reservedPurchaseCost = Number(item._sum.purchaseCost || 0);
-        valueSummary.reservedSellingPrice = Number(item._sum.sellingPrice || 0);
+        // Selling prices are calculated dynamically, not stored
       } else if (item.status === 'SOLD') {
         statusCounts.sold = item._count.id;
       }
@@ -87,7 +86,6 @@ export async function GET(request: NextRequest) {
         netWeight: product.netWeight,
         purity: product.purity,
         purchaseCost: item.purchaseCost,
-        sellingPrice: item.sellingPrice,
         purchaseDate: item.purchaseDate,
       })),
     }), { status: 200 });

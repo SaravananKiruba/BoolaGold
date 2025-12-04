@@ -118,7 +118,7 @@ export default function SalesOrderDetailPage() {
       const result = await response.json();
       if (result.success) {
         toast.success('Order cancelled successfully');
-        fetchOrder();
+        fetchSalesOrder();
       } else {
         toast.error('Error: ' + (result.error?.message || 'Failed to cancel order'));
       }

@@ -116,7 +116,6 @@ export async function GET(request: NextRequest) {
         barcode: stockItem.barcode,
         status: stockItem.status,
         purchaseCost: Number(stockItem.purchaseCost),
-        sellingPrice: Number(stockItem.sellingPrice),
         purchaseDate: stockItem.purchaseDate,
         saleDate: stockItem.saleDate,
       },
@@ -228,7 +227,7 @@ export async function POST(request: NextRequest) {
           tagId: item.tagId,
           barcode: item.barcode,
           status: item.status,
-          sellingPrice: Number(item.sellingPrice),
+          purchaseCost: Number(item.purchaseCost),
           product: {
             id: item.product.id,
             name: item.product.name,

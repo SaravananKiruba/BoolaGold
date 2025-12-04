@@ -25,7 +25,6 @@ export async function GET(
       barcode: stockItem.barcode,
       status: stockItem.status,
       purchaseCost: stockItem.purchaseCost,
-      sellingPrice: stockItem.sellingPrice,
       purchaseDate: stockItem.purchaseDate,
       saleDate: stockItem.saleDate,
       product: stockItem.product,

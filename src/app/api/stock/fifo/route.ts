@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stockItemRepository } from '@/repositories/stockItemRepository';
 import { productRepository } from '@/repositories/productRepository';
 import { successResponse, errorResponse } from '@/utils/response';
+import { calculateSellingPriceForSale } from '@/utils/sellingPrice';
 
 /**
  * GET /api/stock/fifo
@@ -64,29 +65,34 @@ export async function GET(request: NextRequest) {
     // Check if we have enough stock
     const canFulfill = availableItems.length >= quantity;
 
-    // Get the recommended items (FIFO - take oldest first)
-    const recommendedItems = availableItems.slice(0, quantity).map((item) => ({
-      id: item.id,
-      tagId: item.tagId,
-      barcode: item.barcode,
-      purchaseCost: Number(item.purchaseCost),
-      sellingPrice: Number(item.sellingPrice),
-      purchaseDate: item.purchaseDate,
-      product: {
-        id: product.id,
-        name: product.name,
-        metalType: product.metalType,
-        purity: product.purity,
-        grossWeight: Number(product.grossWeight),
-        netWeight: Number(product.netWeight),
-        makingCharges: Number(product.makingCharges),
-        wastagePercent: Number(product.wastagePercent),
-        stoneWeight: product.stoneWeight ? Number(product.stoneWeight) : null,
-        stoneValue: product.stoneValue ? Number(product.stoneValue) : null,
-        huid: product.huid,
-        hallmarkNumber: product.hallmarkNumber,
-      },
-    }));
+    // Get the recommended items (FIFO - take oldest first) and calculate selling prices
+    const recommendedItems = await Promise.all(
+      availableItems.slice(0, quantity).map(async (item) => {
+        const priceResult = await calculateSellingPriceForSale(item.id);
+        return {
+          id: item.id,
+          tagId: item.tagId,
+          barcode: item.barcode,
+          purchaseCost: Number(item.purchaseCost),
+          purchaseDate: item.purchaseDate,
+          sellingPrice: priceResult.sellingPrice,
+          product: {
+            id: product.id,
+            name: product.name,
+            metalType: product.metalType,
+            purity: product.purity,
+            grossWeight: Number(product.grossWeight),
+            netWeight: Number(product.netWeight),
+            makingCharges: Number(product.makingCharges),
+            wastagePercent: Number(product.wastagePercent),
+            stoneWeight: product.stoneWeight ? Number(product.stoneWeight) : null,
+            stoneValue: product.stoneValue ? Number(product.stoneValue) : null,
+            huid: product.huid,
+            hallmarkNumber: product.hallmarkNumber,
+          },
+        };
+      })
+    );
 
     // Calculate totals
     const totalSellingPrice = recommendedItems.reduce(

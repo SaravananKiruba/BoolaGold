@@ -23,6 +23,7 @@
 import { rateMasterRepository } from '@/repositories/rateMasterRepository';
 import { stockItemRepository } from '@/repositories/stockItemRepository';
 import { calculatePriceFromRate } from '@/utils/pricing';
+import { MetalType } from '@prisma/client';
 
 export interface SellingPriceResult {
   stockItemId: string;

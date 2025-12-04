@@ -46,8 +46,8 @@ export default function StockPage() {
   };
 
   const handleSearch = async () => {
-    if (!searchValue.trim()) {
-      toast.warning('Please enter a Tag ID or Barcode to search');
+    if (!searchTerm.trim()) {
+      console.warn('Please enter a Tag ID or Barcode to search');
       return;
     }
 
@@ -78,10 +78,9 @@ export default function StockPage() {
       }
 
       // Not found
-      toast.error('Stock item not found. Please check the Tag ID or Barcode and try again.');
+      console.error('Stock item not found. Please check the Tag ID or Barcode and try again.');
     } catch (error) {
       console.error('Search failed:', error);
-      toast.error('Search failed. Please try again.');
     }
   };
 
@@ -169,7 +168,7 @@ export default function StockPage() {
               <div style={{ fontSize: '16px', fontWeight: 500 }}>
                 Selling prices calculated at checkout
               </div>
-              <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.8' }}>
+              <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.8 }}>
                 Using current market rates
               </div>
             </div>

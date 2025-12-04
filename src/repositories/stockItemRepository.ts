@@ -62,6 +62,8 @@ export class StockItemRepository {
       },
       include: {
         product: true,
+        purchaseOrder: true,
+        salesOrderLine: true,
       },
     });
   }

@@ -1,10 +1,9 @@
 // Rate Master Repository - Robust Implementation
 // Handles all rate master operations with comprehensive error handling and transaction support
 
-import { Prisma, RateMaster } from '@prisma/client';
+import { Prisma, RateMaster, MetalType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
-import { MetalType } from '@/domain/entities/types';
 
 export interface RateMasterFilters {
   metalType?: MetalType;

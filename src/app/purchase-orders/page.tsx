@@ -655,7 +655,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
 
               <button
                 type="button"
-                onClick={addItem}
+                onClick={handleAddItem}
                 style={{
                   padding: '8px 16px',
                   background: '#28a745',

@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     const { calculateSellingPriceForSale } = await import('@/utils/sellingPrice');
     
     let orderTotal = 0;
-    const lineItemsWithPrices = [];
+    const lineItemsWithPrices: any[] = [];
 
     for (const line of data.lines) {
       // Find stock item by ID or Tag ID
