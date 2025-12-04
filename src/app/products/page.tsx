@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast, confirmAction } from '@/utils/toast';
 
 interface Product {
   id: string;
@@ -118,12 +119,13 @@ export default function ProductsPage() {
         setSelectedProduct(product || null);
       }
     } catch (err: any) {
-      alert('Error loading price breakdown: ' + err.message);
+      toast.error('Error loading price breakdown: ' + err.message);
     }
   };
 
   const recalculatePrices = async () => {
-    if (!confirm('Recalculate prices for all active products based on current rates?')) return;
+    const confirmed = await confirmAction('Recalculate prices for all active products based on current rates?', 'Recalculate Prices');
+    if (!confirmed) return;
     
     try {
       setRecalculating(true);
@@ -136,13 +138,13 @@ export default function ProductsPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert(`Successfully updated ${result.data.updated} products. Skipped ${result.data.skipped} products.`);
+        toast.success(`Successfully updated ${result.data.updated} products. Skipped ${result.data.skipped} products.`);
         fetchProducts();
       } else {
-        alert('Error: ' + result.error?.message);
+        toast.error('Error: ' + result.error?.message);
       }
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      toast.error('Error: ' + err.message);
     } finally {
       setRecalculating(false);
     }
@@ -319,7 +321,6 @@ export default function ProductsPage() {
                   <th>Product Details</th>
                   <th>Metal/Purity</th>
                   <th>Weight (g)</th>
-                  <th>Identifiers</th>
                   <th>Price</th>
                   <th>Stock</th>
                   <th>Status</th>
@@ -352,13 +353,6 @@ export default function ProductsPage() {
                       </div>
                       <div style={{ fontSize: '11px', color: '#666' }}>
                         Wastage: {Number(product.wastagePercent)}%
-                      </div>
-                    </td>
-                    <td style={{ fontSize: '11px', fontFamily: 'monospace' }}>
-                      <div title="Product Barcode (Design Template)">📦 {product.barcode}</div>
-                      {product.huid && <div title="BIS Hallmark ID">🏅 {product.huid}</div>}
-                      <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>
-                        Stock tags auto-generated
                       </div>
                     </td>
                     <td>
@@ -642,7 +636,7 @@ function ProductFormModal({ product, onClose, onSuccess }: {
 
   const generateBarcode = async () => {
     if (!formData.metalType || !formData.purity) {
-      alert('Please select Metal Type and Purity first');
+      toast.warning('Please select Metal Type and Purity first');
       return;
     }
 
@@ -735,7 +729,7 @@ function ProductFormModal({ product, onClose, onSuccess }: {
       const result = await response.json();
 
       if (result.success) {
-        alert(product ? 'Product updated successfully!' : 'Product created successfully!');
+        toast.success(product ? 'Product updated successfully!' : 'Product created successfully!');
         onSuccess();
       } else {
         if (result.error?.errors) {
@@ -745,11 +739,11 @@ function ProductFormModal({ product, onClose, onSuccess }: {
           });
           setErrors(errorMap);
         } else {
-          alert(result.error?.message || 'Failed to save product');
+          toast.error(result.error?.message || 'Failed to save product');
         }
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast } from '@/utils/toast';
 
 interface SalesOrder {
   id: string;
@@ -33,7 +34,6 @@ interface StockItem {
   id: string;
   tagId: string;
   barcode: string;
-  sellingPrice: number;
   status: string;
   product: {
     id: string;
@@ -42,6 +42,7 @@ interface StockItem {
     purity: string;
     netWeight: number;
   };
+  sellingPrice?: number; // Optional: only used during barcode scan response
 }
 
 interface OrderLine {
@@ -49,6 +50,7 @@ interface OrderLine {
   quantity: number;
   unitPrice: number;
   stockItem?: StockItem;
+  calculatingPrice?: boolean;
 }
 
 export default function SalesOrdersPage() {
@@ -170,19 +172,51 @@ export default function SalesOrdersPage() {
     }
   };
 
-  const addOrderLine = (stockItem: StockItem) => {
+  const addOrderLine = async (stockItem: StockItem) => {
     // Check if already added
     if (orderLines.find(line => line.stockItemId === stockItem.id)) {
-      alert('This item is already added to the order');
+      toast.warning('This item is already added to the order');
       return;
     }
 
-    setOrderLines([...orderLines, {
+    console.log('[Sales Order] Adding item to order:', stockItem.tagId);
+
+    // Add line with placeholder price (calculating)
+    const newLine: OrderLine = {
       stockItemId: stockItem.id,
       quantity: 1,
-      unitPrice: Number(stockItem.sellingPrice),
-      stockItem
-    }]);
+      unitPrice: 0,
+      stockItem,
+      calculatingPrice: true,
+    };
+    setOrderLines([...orderLines, newLine]);
+
+    // Fetch calculated selling price from API
+    try {
+      console.log('[Sales Order] Calculating price for item:', stockItem.id);
+      const response = await fetch(`/api/stock/calculate-price?stockItemId=${stockItem.id}`);
+      const result = await response.json();
+      
+      console.log('[Sales Order] Price calculation result:', result);
+      
+      if (result.success && result.data) {
+        console.log('[Sales Order] Price calculated:', result.data.sellingPrice);
+        // Update line with calculated price
+        setOrderLines(prev => prev.map(line => 
+          line.stockItemId === stockItem.id 
+            ? { ...line, unitPrice: result.data.sellingPrice, calculatingPrice: false }
+            : line
+        ));
+      } else {
+        console.error('[Sales Order] Price calculation failed:', result.error);
+        toast.error(`Failed to calculate price: ${result.error?.message || 'Unknown error'}`);
+        setOrderLines(prev => prev.filter(line => line.stockItemId !== stockItem.id));
+      }
+    } catch (err: any) {
+      console.error('[Sales Order] Failed to calculate price:', err);
+      toast.error(`Failed to calculate price for this item: ${err.message}`);
+      setOrderLines(prev => prev.filter(line => line.stockItemId !== stockItem.id));
+    }
   };
 
   const removeOrderLine = (stockItemId: string) => {
@@ -224,7 +258,7 @@ export default function SalesOrdersPage() {
         lines: orderLines.map(line => ({
           stockItemId: line.stockItemId,
           quantity: line.quantity,
-          unitPrice: line.unitPrice
+          // unitPrice calculated automatically by backend
         })),
         discountAmount: discountAmount,
         paymentMethod: paymentMethod,
@@ -245,7 +279,7 @@ export default function SalesOrdersPage() {
       const result = await response.json();
 
       if (result.success) {
-        alert('Order created successfully! Invoice: ' + result.data.invoiceNumber);
+        toast.success('Order created successfully! Invoice: ' + result.data.invoiceNumber, 5000);
         setShowCreateForm(false);
         resetForm();
         fetchOrders();
@@ -427,9 +461,14 @@ export default function SalesOrdersPage() {
 
             {/* Search and Add Items */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 500 }}>
-                🔍 Search or Scan Items to Add
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                <label style={{ fontWeight: 500 }}>
+                  🔍 Search or Scan Items to Add
+                </label>
+                <div style={{ fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
+                  💡 Prices calculated using current market rates
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input
                   type="text"
@@ -447,7 +486,6 @@ export default function SalesOrdersPage() {
                             id: result.data.stockItem.id,
                             tagId: result.data.stockItem.tagId,
                             barcode: result.data.stockItem.barcode,
-                            sellingPrice: result.data.stockItem.sellingPrice,
                             status: result.data.stockItem.status,
                             product: result.data.product
                           };
@@ -456,7 +494,7 @@ export default function SalesOrdersPage() {
                             setSearchQuery('');
                             setSearchResults([]);
                           } else {
-                            alert(`Item ${item.tagId} is not available (Status: ${item.status})`);
+                            toast.warning(`Item ${item.tagId} is not available (Status: ${item.status})`);
                           }
                         } else {
                           // Fall back to search
@@ -565,8 +603,8 @@ export default function SalesOrdersPage() {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', marginLeft: '15px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '16px', color: '#27ae60', marginBottom: '6px' }}>
-                            ₹{Number(item.sellingPrice).toLocaleString('en-IN')}
+                          <div style={{ fontWeight: 500, fontSize: '13px', color: '#666', marginBottom: '6px', fontStyle: 'italic' }}>
+                            💰 Price calculated at checkout
                           </div>
                           <button
                             onClick={() => {
@@ -660,7 +698,11 @@ export default function SalesOrdersPage() {
                             </div>
                           </td>
                           <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
-                            ₹{line.unitPrice.toLocaleString('en-IN')}
+                            {line.calculatingPrice ? (
+                              <span style={{ color: '#999', fontStyle: 'italic' }}>Calculating...</span>
+                            ) : (
+                              <span>₹{line.unitPrice.toLocaleString('en-IN')}</span>
+                            )}
                           </td>
                           <td style={{ padding: '12px', textAlign: 'center' }}>
                             <span style={{
@@ -673,7 +715,11 @@ export default function SalesOrdersPage() {
                             </span>
                           </td>
                           <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, fontSize: '15px', color: '#27ae60' }}>
-                            ₹{(line.unitPrice * line.quantity).toLocaleString('en-IN')}
+                            {line.calculatingPrice ? (
+                              <span style={{ color: '#999', fontStyle: 'italic' }}>Calculating...</span>
+                            ) : (
+                              <span>₹{(line.unitPrice * line.quantity).toLocaleString('en-IN')}</span>
+                            )}
                           </td>
                           <td style={{ padding: '12px', textAlign: 'center' }}>
                             <button

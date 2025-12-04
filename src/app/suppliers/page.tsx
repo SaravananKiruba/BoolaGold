@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from '@/utils/toast';
 import Link from 'next/link';
 
 interface Supplier {
@@ -90,7 +91,7 @@ export default function SuppliersPage() {
         setShowDetailModal(true);
       }
     } catch (err: any) {
-      alert('Failed to load supplier details');
+      toast.error('Failed to load supplier details');
     }
   };
 
@@ -524,13 +525,13 @@ function SupplierFormModal({ supplier, onClose, onSuccess }: {
       const result = await response.json();
 
       if (result.success) {
-        alert(supplier ? 'Supplier updated successfully!' : 'Supplier created successfully!');
+        toast.success(supplier ? 'Supplier updated successfully!' : 'Supplier created successfully!');
         onSuccess();
       } else {
-        alert(result.error?.message || 'Failed to save supplier');
+        toast.error(result.error?.message || 'Failed to save supplier');
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }

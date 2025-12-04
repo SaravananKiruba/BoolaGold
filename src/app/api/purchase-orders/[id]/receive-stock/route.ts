@@ -14,6 +14,10 @@ import { MetalType, AuditAction, AuditModule } from '@/domain/entities/types';
  * Receive stock items against a purchase order
  * 
  * User Story 7: Stock Receipt from Purchase Order
+ * 
+ * INPUT: Only purchase cost per item (what you paid)
+ * OUTPUT: Stock items created with tag IDs
+ * NOTE: NO selling price asked - calculated later at sales time!
  */
 export async function POST(
   request: NextRequest,
@@ -35,8 +39,7 @@ export async function POST(
      *   productId: string,
      *   quantityToReceive: number,
      *   receiptDetails: [{
-     *     purchaseCost: number,
-     *     sellingPrice: number,
+     *     purchaseCost: number
      *   }]
      * }]
      */
@@ -106,7 +109,8 @@ export async function POST(
         return generateStockBarcode(productId, Date.now() + i);
       });
 
-      // Create individual stock items
+      // Create individual stock items - ONLY purchase cost
+      // Selling price will be calculated at SALES time!
       const individualItems = [];
       for (let i = 0; i < quantityToReceive; i++) {
         const detail = receiptDetails[i] || receiptDetails[0]; // Use first detail as default
@@ -115,7 +119,6 @@ export async function POST(
           tagId: tagIds[i],
           barcode: barcodes[i],
           purchaseCost: detail.purchaseCost,
-          sellingPrice: detail.sellingPrice,
           purchaseDate: new Date(),
         });
       }

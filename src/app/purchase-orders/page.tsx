@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast } from '@/utils/toast';
 
 interface PurchaseOrder {
   id: string;
@@ -39,7 +40,6 @@ interface OrderItem {
   unitPrice: string;
   expectedWeight: string;
   purchaseCost?: string;
-  sellingPrice?: string;
 }
 
 export default function PurchaseOrdersPage() {
@@ -268,7 +268,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
     unitPrice: '',
     expectedWeight: '',
     purchaseCost: '',
-    sellingPrice: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -312,16 +311,16 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
     }
   };
 
-  const addItem = () => {
+  const handleAddItem = () => {
     if (!currentItem.productId || !currentItem.quantity || !currentItem.unitPrice) {
-      alert('Please fill in product, quantity, and unit price');
+      toast.warning('Please fill in product, quantity, and unit price');
       return;
     }
 
     // If auto-receive is enabled, validate pricing fields
     if (formData.autoReceiveStock) {
-      if (!currentItem.purchaseCost || !currentItem.sellingPrice) {
-        alert('Purchase cost and selling price are required when auto-generating stock items');
+      if (!currentItem.purchaseCost) {
+        toast.warning('Purchase cost is required when auto-generating stock items');
         return;
       }
     }
@@ -336,7 +335,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       unitPrice: currentItem.unitPrice,
       expectedWeight: currentItem.expectedWeight,
       purchaseCost: currentItem.purchaseCost,
-      sellingPrice: currentItem.sellingPrice,
     };
 
     setOrderItems([...orderItems, newItem]);
@@ -346,7 +344,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       unitPrice: '',
       expectedWeight: '',
       purchaseCost: '',
-      sellingPrice: '',
     });
   };
 
@@ -393,7 +390,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
           unitPrice: parseFloat(item.unitPrice),
           expectedWeight: item.expectedWeight ? parseFloat(item.expectedWeight) : undefined,
           purchaseCost: item.purchaseCost ? parseFloat(item.purchaseCost) : parseFloat(item.unitPrice),
-          sellingPrice: item.sellingPrice ? parseFloat(item.sellingPrice) : parseFloat(item.unitPrice),
         })),
       };
 
@@ -411,7 +407,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
         const message = formData.autoReceiveStock 
           ? `Purchase order created successfully! Order #: ${result.data.orderNumber}\n${result.data.stockItemsCreated} stock items generated with unique tags and barcodes.`
           : `Purchase order created successfully! Order #: ${result.data.orderNumber}`;
-        alert(message);
+        toast.success(message, 5000);
         onSuccess();
       } else {
         setFormError(result.error?.message || 'Failed to create purchase order');
@@ -537,7 +533,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                   Enable this for <strong>direct purchases</strong> where stock is received immediately.
                   System will auto-generate unique <strong>Tag IDs and Barcodes</strong> for each physical jewelry piece.
                   <br />
-                  ⚠️ Requires purchase cost and selling price for each item.
+                  ⚠️ Requires purchase cost for each item. Selling price calculated automatically at sales time.
                 </div>
               </div>
             </label>
@@ -607,7 +603,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                  Unit Price (₹)
+                  Unit Price (₹) - Cost Price
                 </label>
                 <input
                   type="number"
@@ -616,7 +612,11 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                   value={currentItem.unitPrice}
                   onChange={(e) => setCurrentItem({ ...currentItem, unitPrice: e.target.value })}
                   style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  placeholder="Cost per unit from supplier"
                 />
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                  💡 Unit price from supplier. Selling price calculated automatically at sales time.
+                </div>
               </div>
 
               {formData.autoReceiveStock && (
@@ -631,21 +631,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                       min="0"
                       value={currentItem.purchaseCost}
                       onChange={(e) => setCurrentItem({ ...currentItem, purchaseCost: e.target.value })}
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                      placeholder="Per piece"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                      Selling Price (₹) <span style={{ color: 'red' }}>*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={currentItem.sellingPrice}
-                      onChange={(e) => setCurrentItem({ ...currentItem, sellingPrice: e.target.value })}
                       style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
                       placeholder="Per piece"
                     />
@@ -698,10 +683,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                     <th>Qty</th>
                     <th>Unit Price</th>
                     {formData.autoReceiveStock && (
-                      <>
-                        <th>Purchase Cost</th>
-                        <th>Selling Price</th>
-                      </>
+                      <th>Purchase Cost</th>
                     )}
                     <th>Weight</th>
                     <th>Total</th>
@@ -715,10 +697,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                       <td>{item.quantity}</td>
                       <td>₹{parseFloat(item.unitPrice).toFixed(2)}</td>
                       {formData.autoReceiveStock && (
-                        <>
-                          <td>₹{item.purchaseCost ? parseFloat(item.purchaseCost).toFixed(2) : '-'}</td>
-                          <td>₹{item.sellingPrice ? parseFloat(item.sellingPrice).toFixed(2) : '-'}</td>
-                        </>
+                        <td>₹{item.purchaseCost ? parseFloat(item.purchaseCost).toFixed(2) : '-'}</td>
                       )}
                       <td>{item.expectedWeight ? `${item.expectedWeight}g` : '-'}</td>
                       <td style={{ fontWeight: 500 }}>

@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { toast, confirmAction } from '@/utils/toast';
 
 // Types
 interface RateMaster {
@@ -163,8 +164,9 @@ export default function BulkPriceUpdatePage() {
   };
 
   const handleConfirmUpdate = async () => {
-    const confirmed = window.confirm(
-      `⚠️ Are you sure you want to update prices for ${priceChanges.length} products?\n\nThis action will:\n- Update calculated prices\n- Replace existing rate references\n- Record the change in product history\n\nThis cannot be undone. Proceed?`
+    const confirmed = await confirmAction(
+      `Are you sure you want to update prices for ${priceChanges.length} products?\n\nThis action will:\n- Update calculated prices\n- Replace existing rate references\n- Record the change in product history\n\nThis cannot be undone. Proceed?`,
+      'Confirm Bulk Price Update'
     );
     
     if (confirmed) {
