@@ -93,7 +93,7 @@ export default function PurchaseOrdersPage() {
 
       <div className="card" style={{ marginBottom: '20px' }}>
         <h3 style={{ marginTop: 0 }}>Filters</h3>
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+        <div className="responsive-grid responsive-grid-4">
           <div>
             <label style={{ display: 'block', fontSize: '14px', marginBottom: '5px', fontWeight: 500 }}>Status</label>
             <select
@@ -147,6 +147,7 @@ export default function PurchaseOrdersPage() {
         )}
 
         {!loading && !error && purchaseOrders.length > 0 && (
+          <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
@@ -225,6 +226,7 @@ export default function PurchaseOrdersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -422,43 +424,11 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: 'clamp(10px, 3vw, 20px)',
-      overflowY: 'auto'
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '8px',
-        maxWidth: '1000px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        padding: 'clamp(16px, 4vw, 30px)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '1000px' }}>
+        <div className="modal-header">
           <h2 style={{ margin: 0 }}>Create Purchase Order</h2>
-          <button 
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '24px',
-              cursor: 'pointer',
-              color: '#666',
-            }}
-          >
-            ×
-          </button>
+          <button onClick={onClose} className="modal-close">×</button>
         </div>
 
         {formError && (
@@ -478,7 +448,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
             Order Details
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+          <div className="responsive-grid responsive-grid-2" style={{ marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                 Supplier <span style={{ color: 'red' }}>*</span>
@@ -590,12 +560,10 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
           )}
 
           <div style={{ background: '#f5f5f5', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
-            <div style={{ 
-              display: 'grid', 
+            <div className="responsive-grid" style={{ 
               gridTemplateColumns: formData.autoReceiveStock 
-                ? 'repeat(auto-fit, minmax(120px, 1fr))' 
-                : 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '10px', 
+                ? 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))' 
+                : 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', 
               alignItems: 'end' 
             }}>
               <div>
@@ -722,8 +690,8 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
           </div>
 
           {orderItems.length > 0 && (
-            <div style={{ marginBottom: '20px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table className="table" style={{ minWidth: '600px' }}>
+            <div className="table-wrapper" style={{ marginBottom: '20px' }}>
+              <table className="table" style={{ minWidth: '700px' }}>
                 <thead>
                   <tr>
                     <th>Product</th>
@@ -824,7 +792,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '20px' }}>
             <button
               type="submit"
               disabled={submitting || orderItems.length === 0}

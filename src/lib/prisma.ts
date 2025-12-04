@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
+// Create Prisma client (will use DATABASE_URL from environment)
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({

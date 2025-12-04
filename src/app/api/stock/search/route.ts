@@ -2,9 +2,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { stockItemRepository } from '@/repositories/stockItemRepository';
-import { handleApiError, successResponse } from '@/utils/response';
+import { successResponse } from '@/utils/response';
 import prisma from '@/lib/prisma';
-import { Prisma, StockStatus } from '@/domain/entities/types';
+import { StockStatus } from '@/domain/entities/types';
 
 /**
  * GET /api/stock/search
@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
       }
 
       if (!stockItem) {
-        return NextResponse.json(successResponse([]), { status: 200 });
+        return NextResponse.json(successResponse({ stockItem: null }), { status: 200 });
       }
 
-      return NextResponse.json(successResponse([stockItem]), { status: 200 });
+      return NextResponse.json(successResponse({ stockItem }), { status: 200 });
     }
 
     // General search query

@@ -306,6 +306,7 @@ export default function SalesOrdersPage() {
         )}
 
         {!loading && !error && orders.length > 0 && (
+          <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
@@ -386,42 +387,17 @@ export default function SalesOrdersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {/* Create Order Modal */}
       {showCreateForm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px',
-          overflowY: 'auto'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '8px',
-            maxWidth: '900px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            padding: '30px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '900px' }}>
+            <div className="modal-header">
               <h2 style={{ margin: 0 }}>Create New Sales Order</h2>
-              <button 
-                onClick={() => { setShowCreateForm(false); resetForm(); }}
-                style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}
-              >
-                ×
-              </button>
+              <button onClick={() => { setShowCreateForm(false); resetForm(); }} className="modal-close">×</button>
             </div>
 
             {createError && (
@@ -627,7 +603,9 @@ export default function SalesOrdersPage() {
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center',
-                  marginBottom: '10px'
+                  marginBottom: '10px',
+                  flexWrap: 'wrap',
+                  gap: '10px'
                 }}>
                   <label style={{ fontWeight: 600, fontSize: '15px' }}>
                     🛒 Selected Items ({orderLines.length})
@@ -647,13 +625,8 @@ export default function SalesOrdersPage() {
                     Clear All
                   </button>
                 </div>
-                <div style={{ 
-                  border: '1px solid #ddd', 
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-wrapper" style={{ borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                     <thead>
                       <tr style={{ background: 'linear-gradient(to bottom, #f8f9fa, #e9ecef)' }}>
                         <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: 600 }}>Item Details</th>
@@ -728,7 +701,7 @@ export default function SalesOrdersPage() {
             )}
 
             {/* Order Details */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+            <div className="responsive-grid responsive-grid-2" style={{ marginBottom: '20px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 500 }}>
                   Discount Amount
@@ -830,7 +803,7 @@ export default function SalesOrdersPage() {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button
                 onClick={() => { setShowCreateForm(false); resetForm(); }}
                 disabled={creating}

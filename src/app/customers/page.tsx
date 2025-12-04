@@ -160,7 +160,7 @@ export default function CustomersPage() {
       <div className="card" style={{ marginBottom: '20px' }}>
         <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Search & Filters</h3>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+        <div className="responsive-grid responsive-grid-3">
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
               Search by Name/Phone
@@ -265,6 +265,7 @@ export default function CustomersPage() {
 
         {!loading && !error && customers.length > 0 && (
           <>
+            <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
@@ -340,6 +341,7 @@ export default function CustomersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -425,38 +427,11 @@ const errorStyles = {
 // Customer Detail Modal Component
 function CustomerDetailModal({ customer, onClose }: { customer: CustomerDetails; onClose: () => void }) {
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-      padding: '20px',
-      overflow: 'auto',
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '8px',
-        padding: '30px',
-        maxWidth: '900px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
           <h2 style={{ margin: 0 }}>Customer Details</h2>
-          <button onClick={onClose} style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            color: '#666',
-          }}>×</button>
+          <button onClick={onClose} className="modal-close">×</button>
         </div>
 
         {/* Basic Info */}
@@ -524,7 +499,7 @@ function CustomerDetailModal({ customer, onClose }: { customer: CustomerDetails;
             <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
               Purchase Statistics
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+            <div className="responsive-grid responsive-grid-3">
               <div style={{ background: '#e8f5e9', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>
                   {customer.statistics.totalOrders}
@@ -604,7 +579,7 @@ function CustomerDetailModal({ customer, onClose }: { customer: CustomerDetails;
                       {new Date(order.orderDate).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                      {order.lines.map(line => line.stockItem.product.name).join(', ')}
+                      {order.lines?.map(line => line.stockItem.product.name).join(', ') || 'N/A'}
                     </td>
                     <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'right' }}>
                       ₹{order.finalAmount.toLocaleString()}
@@ -727,38 +702,11 @@ function CustomerFormModal({ customer, onClose, onSuccess }: {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-      padding: '20px',
-      overflow: 'auto',
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '8px',
-        padding: '30px',
-        maxWidth: '800px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '800px' }}>
+        <div className="modal-header">
           <h2 style={{ margin: 0 }}>{customer ? 'Edit Customer' : 'Add New Customer'}</h2>
-          <button onClick={onClose} style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            color: '#666',
-          }}>×</button>
+          <button onClick={onClose} className="modal-close">×</button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -767,7 +715,7 @@ function CustomerFormModal({ customer, onClose, onSuccess }: {
             Basic Information
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+          <div className="responsive-grid responsive-grid-2" style={{ marginBottom: '20px' }}>
             <div style={{ gridColumn: 'span 2' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                 Customer Name <span style={{ color: 'red' }}>*</span>

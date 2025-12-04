@@ -15,6 +15,7 @@ export default function Navigation() {
     { href: '/stock', label: 'Stock', icon: '📦' },
     { href: '/suppliers', label: 'Suppliers', icon: '🏭' },
     { href: '/purchase-orders', label: 'Purchase', icon: '📋' },
+    { href: '/transactions', label: 'Transactions', icon: '💳' },
     { href: '/rate-master', label: 'Rates', icon: '💰' },
     { href: '/reports', label: 'Reports', icon: '📈' },
   ];

@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/utils/response';
-import { generateBarcode, generateBatchBarcodes } from '@/utils/barcode';
+import { generateBatchBarcodes } from '@/utils/barcode';
 
 /**
  * GET /api/barcode/labels?stockItemIds=id1,id2,id3

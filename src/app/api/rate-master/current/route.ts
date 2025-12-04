@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rateMasterRepository } from '@/repositories/rateMasterRepository';
 import { successResponse, errorResponse } from '@/utils/response';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const currentRates = await rateMasterRepository.getAllCurrentRates();
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(
-      successResponse(currentRates, 'Current rates fetched successfully', metadata), 
+      successResponse(currentRates, metadata), 
       { status: 200 }
     );
   } catch (error: any) {
