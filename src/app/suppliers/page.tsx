@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from '@/utils/toast';
 import Link from 'next/link';
 
 interface Supplier {
@@ -90,7 +91,7 @@ export default function SuppliersPage() {
         setShowDetailModal(true);
       }
     } catch (err: any) {
-      alert('Failed to load supplier details');
+      toast.error('Failed to load supplier details');
     }
   };
 
@@ -127,7 +128,7 @@ export default function SuppliersPage() {
       <div className="card" style={{ marginBottom: '20px' }}>
         <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Search & Filters</h3>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+        <div className="responsive-grid responsive-grid-3">
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
               Search by Name
@@ -205,6 +206,7 @@ export default function SuppliersPage() {
 
         {!loading && !error && suppliers.length > 0 && (
           <>
+            <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
@@ -271,6 +273,7 @@ export default function SuppliersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -336,38 +339,11 @@ export default function SuppliersPage() {
 // Supplier Detail Modal Component
 function SupplierDetailModal({ supplier, onClose }: { supplier: SupplierDetails; onClose: () => void }) {
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-      padding: '20px',
-      overflow: 'auto',
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '8px',
-        padding: '30px',
-        maxWidth: '800px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '800px' }}>
+        <div className="modal-header">
           <h2 style={{ margin: 0 }}>Supplier Details</h2>
-          <button onClick={onClose} style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            color: '#666',
-          }}>×</button>
+          <button onClick={onClose} className="modal-close">×</button>
         </div>
 
         {/* Basic Info */}
@@ -375,7 +351,7 @@ function SupplierDetailModal({ supplier, onClose }: { supplier: SupplierDetails;
           <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
             Basic Information
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+          <div className="responsive-grid responsive-grid-2">
             <div>
               <strong>Supplier Name:</strong> {supplier.name}
             </div>
@@ -417,7 +393,7 @@ function SupplierDetailModal({ supplier, onClose }: { supplier: SupplierDetails;
           <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
             Purchase Statistics
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+          <div className="responsive-grid responsive-grid-3">
             <div style={{ background: '#e3f2fd', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1565c0' }}>
                 {supplier.stats.totalPurchaseOrders}
@@ -549,51 +525,24 @@ function SupplierFormModal({ supplier, onClose, onSuccess }: {
       const result = await response.json();
 
       if (result.success) {
-        alert(supplier ? 'Supplier updated successfully!' : 'Supplier created successfully!');
+        toast.success(supplier ? 'Supplier updated successfully!' : 'Supplier created successfully!');
         onSuccess();
       } else {
-        alert(result.error?.message || 'Failed to save supplier');
+        toast.error(result.error?.message || 'Failed to save supplier');
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-      padding: '20px',
-      overflow: 'auto',
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '8px',
-        padding: '30px',
-        maxWidth: '600px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '600px' }}>
+        <div className="modal-header">
           <h2 style={{ margin: 0 }}>{supplier ? 'Edit Supplier' : 'Add New Supplier'}</h2>
-          <button onClick={onClose} style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            color: '#666',
-          }}>×</button>
+          <button onClick={onClose} className="modal-close">×</button>
         </div>
 
         <form onSubmit={handleSubmit}>

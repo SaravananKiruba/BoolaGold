@@ -91,13 +91,10 @@ export async function GET(request: NextRequest) {
       const productNetWeight = Number(product.netWeight || 0);
 
       // Calculate product value based on valuation basis
-      // StockItem has purchaseCost and sellingPrice, so we need to sum from stockItems
+      // StockItem only has purchaseCost, selling prices are calculated dynamically
       let productValue = 0;
-      if (valuationBasis === 'PURCHASE') {
-        productValue = product.stockItems.reduce((sum, item) => sum + Number(item.purchaseCost || 0), 0);
-      } else {
-        productValue = product.stockItems.reduce((sum, item) => sum + Number(item.sellingPrice || 0), 0);
-      }
+      // Use purchase cost for inventory valuation
+      productValue = product.stockItems.reduce((sum, item) => sum + Number(item.purchaseCost || 0), 0);
 
       totalInventoryValue += productValue;
 

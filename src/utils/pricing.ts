@@ -111,3 +111,49 @@ export function calculateEmiInstallment(
 
   return Number(emi.toFixed(2));
 }
+
+/**
+ * Calculate selling price from rate and product details
+ * This is the core pricing logic used throughout the system
+ */
+export interface RateBasedPriceInput {
+  netWeight: number;
+  wastagePercent: number;
+  metalRatePerGram: number;
+  makingCharges: number;
+  stoneValue?: number;
+}
+
+export interface RateBasedPriceResult {
+  sellingPrice: number;
+  calculation: PriceCalculation;
+}
+
+export function calculatePriceFromRate(input: RateBasedPriceInput): RateBasedPriceResult {
+  const calculation = calculateProductPrice({
+    netWeight: input.netWeight,
+    wastagePercent: input.wastagePercent,
+    metalRatePerGram: input.metalRatePerGram,
+    makingCharges: input.makingCharges,
+    stoneValue: input.stoneValue || 0,
+  });
+
+  return {
+    sellingPrice: calculation.totalPrice,
+    calculation,
+  };
+}
+
+/**
+ * Validate if a price calculation is stale and needs refresh
+ * @param priceCalculatedAt When the price was last calculated
+ * @param maxAgeHours Maximum age in hours before price is considered stale (default: 24)
+ */
+export function isPriceStale(priceCalculatedAt: Date | null, maxAgeHours: number = 24): boolean {
+  if (!priceCalculatedAt) return true;
+
+  const now = new Date();
+  const ageInHours = (now.getTime() - priceCalculatedAt.getTime()) / (1000 * 60 * 60);
+
+  return ageInHours > maxAgeHours;
+}

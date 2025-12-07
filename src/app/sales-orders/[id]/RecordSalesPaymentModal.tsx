@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/utils/toast';
 
 interface SalesOrder {
   id: string;
@@ -54,7 +55,7 @@ export default function RecordSalesPaymentModal({ salesOrder, onClose, onSuccess
       const result = await response.json();
 
       if (result.success) {
-        alert(`✅ Payment recorded successfully!\n💰 Income transaction created.\nRemaining: ₹${result.data.pendingAmount.toLocaleString('en-IN')}`);
+        toast.success(`Payment recorded successfully! Remaining: ₹${result.data.pendingAmount.toLocaleString('en-IN')}`, 5000);
         onSuccess();
       } else {
         setError(result.error?.message || 'Failed to record payment');

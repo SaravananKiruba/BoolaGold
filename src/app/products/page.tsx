@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast, confirmAction } from '@/utils/toast';
 
 interface Product {
   id: string;
@@ -118,12 +119,13 @@ export default function ProductsPage() {
         setSelectedProduct(product || null);
       }
     } catch (err: any) {
-      alert('Error loading price breakdown: ' + err.message);
+      toast.error('Error loading price breakdown: ' + err.message);
     }
   };
 
   const recalculatePrices = async () => {
-    if (!confirm('Recalculate prices for all active products based on current rates?')) return;
+    const confirmed = await confirmAction('Recalculate prices for all active products based on current rates?', 'Recalculate Prices');
+    if (!confirmed) return;
     
     try {
       setRecalculating(true);
@@ -136,13 +138,13 @@ export default function ProductsPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert(`Successfully updated ${result.data.updated} products. Skipped ${result.data.skipped} products.`);
+        toast.success(`Successfully updated ${result.data.updated} products. Skipped ${result.data.skipped} products.`);
         fetchProducts();
       } else {
-        alert('Error: ' + result.error?.message);
+        toast.error('Error: ' + result.error?.message);
       }
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      toast.error('Error: ' + err.message);
     } finally {
       setRecalculating(false);
     }
@@ -209,7 +211,7 @@ export default function ProductsPage() {
         </div>
 
         {showFilters && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
+          <div className="responsive-grid responsive-grid-3" style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#666' }}>Metal Type</label>
               <select
@@ -312,14 +314,13 @@ export default function ProductsPage() {
         )}
 
         {!loading && !error && products.length > 0 && (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
                   <th>Product Details</th>
                   <th>Metal/Purity</th>
                   <th>Weight (g)</th>
-                  <th>Identifiers</th>
                   <th>Price</th>
                   <th>Stock</th>
                   <th>Status</th>
@@ -352,13 +353,6 @@ export default function ProductsPage() {
                       </div>
                       <div style={{ fontSize: '11px', color: '#666' }}>
                         Wastage: {Number(product.wastagePercent)}%
-                      </div>
-                    </td>
-                    <td style={{ fontSize: '11px', fontFamily: 'monospace' }}>
-                      <div title="Product Barcode (Design Template)">📦 {product.barcode}</div>
-                      {product.huid && <div title="BIS Hallmark ID">🏅 {product.huid}</div>}
-                      <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>
-                        Stock tags auto-generated
                       </div>
                     </td>
                     <td>
@@ -452,41 +446,11 @@ export default function ProductsPage() {
 
       {/* Price Breakdown Modal */}
       {priceBreakdown && selectedProduct && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-          }}
-          onClick={closePriceBreakdown}
-        >
-          <div
-            className="card"
-            style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'auto', margin: '20px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div className="modal-overlay" onClick={closePriceBreakdown}>
+          <div className="modal-content" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
               <h2 style={{ margin: 0 }}>Price Breakdown: {selectedProduct.name}</h2>
-              <button
-                onClick={closePriceBreakdown}
-                style={{
-                  padding: '4px 12px',
-                  background: '#f0f0f0',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                }}
-              >
-                ×
-              </button>
+              <button onClick={closePriceBreakdown} className="modal-close">×</button>
             </div>
 
             {/* Current Price Calculation */}
@@ -672,7 +636,7 @@ function ProductFormModal({ product, onClose, onSuccess }: {
 
   const generateBarcode = async () => {
     if (!formData.metalType || !formData.purity) {
-      alert('Please select Metal Type and Purity first');
+      toast.warning('Please select Metal Type and Purity first');
       return;
     }
 
@@ -765,7 +729,7 @@ function ProductFormModal({ product, onClose, onSuccess }: {
       const result = await response.json();
 
       if (result.success) {
-        alert(product ? 'Product updated successfully!' : 'Product created successfully!');
+        toast.success(product ? 'Product updated successfully!' : 'Product created successfully!');
         onSuccess();
       } else {
         if (result.error?.errors) {
@@ -775,49 +739,22 @@ function ProductFormModal({ product, onClose, onSuccess }: {
           });
           setErrors(errorMap);
         } else {
-          alert(result.error?.message || 'Failed to save product');
+          toast.error(result.error?.message || 'Failed to save product');
         }
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-      padding: '20px',
-      overflow: 'auto',
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '8px',
-        padding: '30px',
-        maxWidth: '900px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '900px' }}>
+        <div className="modal-header">
           <h2 style={{ margin: 0 }}>{product ? 'Edit Product' : 'Add New Product'}</h2>
-          <button onClick={onClose} style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            color: '#666',
-          }}>×</button>
+          <button onClick={onClose} className="modal-close">×</button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -825,7 +762,7 @@ function ProductFormModal({ product, onClose, onSuccess }: {
             Basic Information
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+          <div className="responsive-grid responsive-grid-2" style={{ marginBottom: '20px' }}>
             <div style={{ gridColumn: 'span 2' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                 Product Name <span style={{ color: 'red' }}>*</span>
@@ -957,7 +894,7 @@ function ProductFormModal({ product, onClose, onSuccess }: {
             <br/>• <strong>Tag IDs & Stock Barcodes</strong>: Auto-generated when you receive stock (one per physical piece)
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+          <div className="responsive-grid responsive-grid-2" style={{ marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                 Product Barcode <span style={{ color: 'red' }}>*</span>
@@ -1037,7 +974,7 @@ function ProductFormModal({ product, onClose, onSuccess }: {
             Additional Details
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+          <div className="responsive-grid responsive-grid-2" style={{ marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
                 Supplier

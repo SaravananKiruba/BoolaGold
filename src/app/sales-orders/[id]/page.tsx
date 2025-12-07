@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast, confirmAction } from '@/utils/toast';
 import { useParams, useRouter } from 'next/navigation';
 import RecordSalesPaymentModal from './RecordSalesPaymentModal';
 
@@ -98,7 +99,11 @@ export default function SalesOrderDetailPage() {
   };
 
   const handleCancelOrder = async () => {
-    if (!confirm('Are you sure you want to cancel this order? Stock items will be released back to AVAILABLE.')) {
+    const confirmed = await confirmAction(
+      'Are you sure you want to cancel this order? Stock items will be released back to AVAILABLE.',
+      'Cancel Order'
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -112,13 +117,13 @@ export default function SalesOrderDetailPage() {
 
       const result = await response.json();
       if (result.success) {
-        alert('Order cancelled successfully');
+        toast.success('Order cancelled successfully');
         fetchSalesOrder();
       } else {
-        alert('Error: ' + (result.error?.message || 'Failed to cancel order'));
+        toast.error('Error: ' + (result.error?.message || 'Failed to cancel order'));
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
       setActionLoading(false);
     }

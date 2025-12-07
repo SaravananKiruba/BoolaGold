@@ -14,9 +14,12 @@ import { generateInvoiceNumber } from '@/utils/barcode';
 import prisma from '@/lib/prisma';
 
 const salesOrderLineSchema = z.object({
-  stockItemId: uuidSchema,
+  stockItemId: uuidSchema.optional(),
+  tagId: z.string().optional(), // Can use tagId instead of stockItemId
   quantity: z.number().int().positive().default(1),
-  unitPrice: amountSchema,
+  // unitPrice is calculated automatically from product + latest rate
+}).refine((data) => data.stockItemId || data.tagId, {
+  message: 'Either stockItemId or tagId must be provided',
 });
 
 const createSalesOrderSchema = z.object({
@@ -66,6 +69,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/sales-orders
+ * Create sales order with AUTOMATIC price calculation
+ * 
+ * INPUT: Customer ID + Stock Item IDs/Tag IDs (NO manual price!)
+ * AUTOMATIC: Calculates selling price from:
+ *   1. Product specs (weight, wastage, making charges)
+ *   2. Latest rate from Rate Master (current market rate)
+ * OUTPUT: Sales order with calculated prices
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -78,16 +91,26 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
-    // Validate stock availability and calculate totals
+    // Calculate selling prices automatically from product + latest rate
+    const { calculateSellingPriceForSale } = await import('@/utils/sellingPrice');
+    
     let orderTotal = 0;
-    const stockValidations = [];
+    const lineItemsWithPrices: any[] = [];
 
     for (const line of data.lines) {
-      const stockItem = await stockItemRepository.findById(line.stockItemId);
+      // Find stock item by ID or Tag ID
+      const identifier = line.stockItemId || line.tagId!;
+      let stockItem;
+      
+      if (line.stockItemId) {
+        stockItem = await stockItemRepository.findById(line.stockItemId);
+      } else if (line.tagId) {
+        stockItem = await stockItemRepository.findByTagId(line.tagId);
+      }
 
       if (!stockItem) {
         return NextResponse.json(
-          errorResponse(`Stock item ${line.stockItemId} not found`),
+          errorResponse(`Stock item ${identifier} not found`),
           { status: 404 }
         );
       }
@@ -99,8 +122,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      orderTotal += line.unitPrice * line.quantity;
-      stockValidations.push(stockItem);
+      // Calculate selling price from product specs + latest rate
+      const priceInfo = await calculateSellingPriceForSale(stockItem.id);
+      
+      const lineTotal = priceInfo.sellingPrice * line.quantity;
+      orderTotal += lineTotal;
+
+      lineItemsWithPrices.push({
+        stockItemId: stockItem.id,
+        quantity: line.quantity,
+        unitPrice: priceInfo.sellingPrice,
+        lineTotal,
+      });
     }
 
     // Calculate final amount
@@ -156,12 +189,7 @@ export async function POST(request: NextRequest) {
           notes: data.notes || null,
           orderDate: new Date(),
           lines: {
-            create: data.lines.map((line) => ({
-              stockItemId: line.stockItemId,
-              quantity: line.quantity,
-              unitPrice: line.unitPrice,
-              lineTotal: line.unitPrice * line.quantity,
-            })),
+            create: lineItemsWithPrices,
           },
         },
         include: {

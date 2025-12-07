@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
     console.log('[Stock Search] Searching for:', searchTerm);
     
     // Build SQL query with conditional status filter
+    // Note: sellingPrice is NOT used - it's calculated dynamically at sale time
     let sqlQuery = `
       SELECT 
         si.id,
@@ -68,7 +69,6 @@ export async function GET(request: NextRequest) {
         si.tagId,
         si.barcode,
         si.purchaseCost,
-        si.sellingPrice,
         si.status,
         si.purchaseOrderId,
         si.purchaseDate,
@@ -82,8 +82,13 @@ export async function GET(request: NextRequest) {
         p.purity as product_purity,
         p.grossWeight as product_grossWeight,
         p.netWeight as product_netWeight,
+        p.stoneWeight as product_stoneWeight,
         p.barcode as product_barcode,
-        p.description as product_description
+        p.description as product_description,
+        p.huid as product_huid,
+        p.wastagePercent as product_wastagePercent,
+        p.makingCharges as product_makingCharges,
+        p.stoneValue as product_stoneValue
       FROM stock_items si
       INNER JOIN products p ON si.productId = p.id
       WHERE si.deletedAt IS NULL
@@ -109,13 +114,13 @@ export async function GET(request: NextRequest) {
     const stockItems: any[] = await prisma.$queryRawUnsafe(sqlQuery, ...params);
     
     // Transform the raw result to match the expected structure
+    // Note: sellingPrice is NOT included - calculated dynamically at sale time
     const transformedItems = stockItems.map((item: any) => ({
       id: item.id,
       productId: item.productId,
       tagId: item.tagId,
       barcode: item.barcode,
       purchaseCost: item.purchaseCost,
-      sellingPrice: item.sellingPrice,
       status: item.status,
       purchaseOrderId: item.purchaseOrderId,
       purchaseDate: item.purchaseDate,
@@ -130,8 +135,13 @@ export async function GET(request: NextRequest) {
         purity: item.product_purity,
         grossWeight: item.product_grossWeight,
         netWeight: item.product_netWeight,
+        stoneWeight: item.product_stoneWeight,
         barcode: item.product_barcode,
         description: item.product_description,
+        huid: item.product_huid,
+        wastagePercent: item.product_wastagePercent,
+        makingCharges: item.product_makingCharges,
+        stoneValue: item.product_stoneValue,
       }
     }));
 
