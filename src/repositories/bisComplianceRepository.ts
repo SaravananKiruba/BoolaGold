@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { BisComplianceStatus } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface BisComplianceFilters {
   complianceStatus?: BisComplianceStatus;
@@ -17,13 +18,20 @@ export interface BisComplianceFilters {
   daysUntilExpiry?: number;
 }
 
-export class BisComplianceRepository {
+export class BisComplianceRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new BIS compliance record
    */
-  async create(data: Prisma.BisComplianceCreateInput) {
+  async create(data: Omit<Prisma.BisComplianceCreateInput, 'shop'>) {
     return prisma.bisCompliance.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(),
+      },
     });
   }
 
@@ -31,8 +39,8 @@ export class BisComplianceRepository {
    * Find BIS compliance record by ID
    */
   async findById(id: string) {
-    return prisma.bisCompliance.findUnique({
-      where: { id },
+    return prisma.bisCompliance.findFirst({
+      where: this.withShopContext({ id }),
     });
   }
 
@@ -40,8 +48,8 @@ export class BisComplianceRepository {
    * Find BIS compliance record by HUID
    */
   async findByHuid(huid: string) {
-    return prisma.bisCompliance.findUnique({
-      where: { huid },
+    return prisma.bisCompliance.findFirst({
+      where: this.withShopContext({ huid }),
     });
   }
 
@@ -50,7 +58,7 @@ export class BisComplianceRepository {
    */
   async findByProductId(productId: string) {
     return prisma.bisCompliance.findFirst({
-      where: { productId },
+      where: this.withShopContext({ productId }),
     });
   }
 
@@ -59,7 +67,7 @@ export class BisComplianceRepository {
    */
   async findByStockItemId(stockItemId: string) {
     return prisma.bisCompliance.findFirst({
-      where: { stockItemId },
+      where: this.withShopContext({ stockItemId }),
     });
   }
 
@@ -69,7 +77,9 @@ export class BisComplianceRepository {
   async findAll(filters: BisComplianceFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.BisComplianceWhereInput = {};
+    const where: Prisma.BisComplianceWhereInput = {
+      shopId: this.getShopId(),
+    };
 
     if (filters.complianceStatus) {
       where.complianceStatus = filters.complianceStatus;
@@ -217,11 +227,10 @@ export class BisComplianceRepository {
    * Check if HUID exists
    */
   async huidExists(huid: string): Promise<boolean> {
+    const where = this.withShopContext({ huid });
     const count = await prisma.bisCompliance.count({
-      where: { huid },
+      where,
     });
     return count > 0;
   }
 }
-
-export const bisComplianceRepository = new BisComplianceRepository();

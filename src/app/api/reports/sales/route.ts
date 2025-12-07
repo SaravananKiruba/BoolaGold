@@ -1,9 +1,10 @@
 // Sales Reports API - Detailed sales analysis
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { handleApiError, successResponse } from '@/utils/response';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { buildDateRangeFilter } from '@/utils/filters';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/reports/sales
@@ -11,6 +12,12 @@ import { buildDateRangeFilter } from '@/utils/filters';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'REPORTS_SALES')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');

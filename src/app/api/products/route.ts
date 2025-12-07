@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { productRepository } from '@/repositories/productRepository';
+import { ProductRepository } from '@/repositories/productRepository';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { weightSchema, amountSchema } from '@/utils/validation';
 import { MetalType, AuditModule } from '@/domain/entities/types';
@@ -12,6 +12,7 @@ import { logCreate } from '@/utils/audit';
 import { generateBarcode } from '@/utils/barcode';
 import { calculateProductPrice } from '@/utils/pricing';
 import prisma from '@/lib/prisma';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const createProductSchema = z.object({
   name: z.string().min(1).max(200),
@@ -43,6 +44,12 @@ const createProductSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'PRODUCT_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse pagination
@@ -71,7 +78,8 @@ export async function GET(request: NextRequest) {
         : undefined,
     };
 
-    const result = await productRepository.findAll(filters, { page, pageSize });
+    const repository = new ProductRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error: any) {
@@ -82,6 +90,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'PRODUCT_CREATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -96,8 +110,10 @@ export async function POST(request: NextRequest) {
     const tempId = Math.random().toString(36).substring(7);
     const barcode = generateBarcode('PRD', tempId);
 
+    const repository = new ProductRepository({ session });
+
     // Check if barcode exists (very unlikely but safe to check)
-    const existingProduct = await productRepository.findByBarcode(barcode);
+    const existingProduct = await repository.findByBarcode(barcode);
     if (existingProduct) {
       return NextResponse.json(errorResponse('Barcode collision, please try again'), {
         status: 409,
@@ -115,6 +131,7 @@ export async function POST(request: NextRequest) {
           metalType: data.metalType,
           purity: data.purity,
           isActive: true,
+          shopId: session?.shopId, // Filter by shop
         },
         orderBy: {
           effectiveDate: 'desc',
@@ -167,10 +184,10 @@ export async function POST(request: NextRequest) {
       rateUsedId,
     };
 
-    const product = await productRepository.create(productData);
+    const product = await repository.create(productData);
 
     // Log the creation
-    await logCreate(AuditModule.PRODUCTS, product.id, product);
+    await logCreate(AuditModule.PRODUCTS, product.id, product, session);
 
     return NextResponse.json(successResponse(product), { status: 201 });
   } catch (error: any) {

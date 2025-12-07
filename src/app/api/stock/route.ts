@@ -1,9 +1,10 @@
 // Stock Items API - List and Query
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+import { StockItemRepository } from '@/repositories/stockItemRepository';
 import { StockStatus } from '@/domain/entities/types';
-import { handleApiError, successResponse } from '@/utils/response';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/stock
@@ -13,6 +14,12 @@ import { handleApiError, successResponse } from '@/utils/response';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'STOCK_MANAGE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     // Pagination
@@ -34,7 +41,8 @@ export async function GET(request: NextRequest) {
       filters.purchaseOrderId = searchParams.get('purchaseOrderId')!;
     }
 
-    const result = await stockItemRepository.findAll(filters, { page, pageSize });
+    const repository = new StockItemRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error) {

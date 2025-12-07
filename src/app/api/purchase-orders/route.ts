@@ -1,12 +1,13 @@
 // Purchase Orders API - List and Create
 
 import { NextRequest, NextResponse } from 'next/server';
-import { purchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
+import { PurchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
 import { PurchaseOrderStatus, PaymentStatus, PaymentMethod } from '@/domain/entities/types';
-import { handleApiError, successResponse } from '@/utils/response';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { generatePurchaseOrderNumber } from '@/utils/barcode';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/purchase-orders
@@ -14,6 +15,12 @@ import { AuditAction, AuditModule } from '@/domain/entities/types';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'PURCHASE_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     // Pagination
@@ -47,7 +54,8 @@ export async function GET(request: NextRequest) {
       filters.endDate = new Date(searchParams.get('endDate')!);
     }
 
-    const result = await purchaseOrderRepository.findAll(filters, { page, pageSize });
+    const repository = new PurchaseOrderRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error) {
@@ -73,6 +81,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'PURCHASE_CREATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     const {
@@ -116,7 +130,8 @@ export async function POST(request: NextRequest) {
     const orderNumber = generatePurchaseOrderNumber();
 
     // Create purchase order with items
-    const purchaseOrder = await purchaseOrderRepository.create({
+    const repository = new PurchaseOrderRepository({ session });
+    const purchaseOrder = await repository.create({
       orderNumber,
       supplier: {
         connect: { id: supplierId },

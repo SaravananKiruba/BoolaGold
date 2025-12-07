@@ -5,11 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { transactionRepository } from '@/repositories/transactionRepository';
+import { TransactionRepository } from '@/repositories/transactionRepository';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema } from '@/utils/validation';
 import { TransactionStatus, PaymentMethod, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const updateTransactionSchema = z.object({
   amount: amountSchema.optional(),
@@ -26,7 +27,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const transaction = await transactionRepository.findById(params.id);
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'TRANSACTION_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
+    const repository = new TransactionRepository({ session });
+    const transaction = await repository.findById(params.id);
 
     if (!transaction) {
       return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
@@ -44,6 +52,12 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'TRANSACTION_EDIT')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input

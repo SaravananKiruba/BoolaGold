@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { EmiInstallmentStatus, PaymentMethod } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface EmiPaymentFilters {
   customerId?: string;
@@ -12,13 +13,20 @@ export interface EmiPaymentFilters {
   overdue?: boolean;
 }
 
-export class EmiPaymentRepository {
+export class EmiPaymentRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new EMI payment with installments
    */
-  async create(data: Prisma.EmiPaymentCreateInput) {
+  async create(data: Omit<Prisma.EmiPaymentCreateInput, 'shop'>) {
     return prisma.emiPayment.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(),
+      },
       include: {
         customer: true,
         installments: true,
@@ -30,11 +38,13 @@ export class EmiPaymentRepository {
    * Find EMI payment by ID
    */
   async findById(id: string, includeDeleted = false) {
+    const where = this.withShopContext({
+      id,
+      ...buildSoftDeleteFilter(includeDeleted),
+    });
+
     return prisma.emiPayment.findFirst({
-      where: {
-        id,
-        ...buildSoftDeleteFilter(includeDeleted),
-      },
+      where,
       include: {
         customer: true,
         installments: {
@@ -50,9 +60,9 @@ export class EmiPaymentRepository {
   async findAll(filters: EmiPaymentFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.EmiPaymentWhereInput = {
+    const where: Prisma.EmiPaymentWhereInput = this.withShopContext({
       ...buildSoftDeleteFilter(),
-    };
+    });
 
     if (filters.customerId) {
       where.customerId = filters.customerId;
@@ -376,5 +386,3 @@ export class EmiPaymentRepository {
     });
   }
 }
-
-export const emiPaymentRepository = new EmiPaymentRepository();

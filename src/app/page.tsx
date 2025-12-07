@@ -1,16 +1,8 @@
-import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return (
-    <div className="container">
-      {/* Hero Section */}
-      <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <div style={{ fontSize: '4rem', marginBottom: '16px' }}>💎</div>
-        <h1 className="page-title">BoolaGold Management System</h1>
-        <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-          Production-ready jewelry store management solution with automated pricing, inventory tracking, and compliance management
-        </p>
-      </div>
+  // Redirect to dashboard
+  redirect('/dashboard');
 
       {/* Main Feature Cards */}
       <div className="grid-3" style={{ marginBottom: '48px' }}>

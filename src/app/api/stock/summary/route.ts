@@ -34,8 +34,8 @@ export async function GET(_request: NextRequest) {
     // Get low stock products
     const lowStockProducts = await productRepository.getLowStockProducts();
 
-    // Get inventory summary by metal type
-    const inventorySummary = await productRepository.getInventorySummary();
+    // Get inventory summary by metal type - Fixed to show actual stock items
+    const inventorySummary = await stockItemRepository.getStockSummaryByMetalType();
 
     const responseData = {
       totalInventory: {
@@ -55,12 +55,7 @@ export async function GET(_request: NextRequest) {
           reorderLevel: product.reorderLevel,
         })),
       },
-      byMetalType: inventorySummary.map((item) => ({
-        metalType: item.metalType,
-        productCount: item._count.id,
-        totalWeight: item._sum.netWeight || 0,
-        totalValue: item._sum.calculatedPrice || 0,
-      })),
+      byMetalType: inventorySummary,
     };
 
     // Update cache

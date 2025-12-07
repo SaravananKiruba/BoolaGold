@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { StockStatus } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface StockItemFilters {
   productId?: string;
@@ -12,13 +13,20 @@ export interface StockItemFilters {
   purchaseOrderId?: string;
 }
 
-export class StockItemRepository {
+export class StockItemRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create stock item
    */
-  async create(data: Prisma.StockItemCreateInput) {
+  async create(data: Omit<Prisma.StockItemCreateInput, 'shop'>) {
     return prisma.stockItem.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(),
+      },
       include: {
         product: true,
       },
@@ -28,9 +36,14 @@ export class StockItemRepository {
   /**
    * Create multiple stock items
    */
-  async createMany(items: Prisma.StockItemCreateManyInput[]) {
+  async createMany(items: Omit<Prisma.StockItemCreateManyInput, 'shopId'>[]) {
+    const itemsWithShop = items.map(item => ({
+      ...item,
+      shopId: this.getShopId(),
+    }));
+
     return prisma.stockItem.createMany({
-      data: items,
+      data: itemsWithShop,
     });
   }
 
@@ -38,11 +51,13 @@ export class StockItemRepository {
    * Find stock item by ID
    */
   async findById(id: string, includeDeleted = false) {
+    const where = this.withShopContext({
+      id,
+      ...buildSoftDeleteFilter(includeDeleted),
+    });
+
     return prisma.stockItem.findFirst({
-      where: {
-        id,
-        ...buildSoftDeleteFilter(includeDeleted),
-      },
+      where,
       include: {
         product: true,
         purchaseOrder: true,
@@ -55,11 +70,13 @@ export class StockItemRepository {
    * Find stock item by tag ID
    */
   async findByTagId(tagId: string) {
+    const where = this.withShopContext({
+      tagId,
+      deletedAt: null,
+    });
+
     return prisma.stockItem.findFirst({
-      where: {
-        tagId,
-        deletedAt: null,
-      },
+      where,
       include: {
         product: true,
         purchaseOrder: true,
@@ -72,11 +89,13 @@ export class StockItemRepository {
    * Find stock item by barcode
    */
   async findByBarcode(barcode: string) {
+    const where = this.withShopContext({
+      barcode,
+      deletedAt: null,
+    });
+
     return prisma.stockItem.findFirst({
-      where: {
-        barcode,
-        deletedAt: null,
-      },
+      where,
       include: {
         product: true,
       },
@@ -228,6 +247,43 @@ export class StockItemRepository {
 
     return summary;
   }
-}
 
-export const stockItemRepository = new StockItemRepository();
+  /**
+   * Get stock summary by metal type
+   */
+  async getStockSummaryByMetalType() {
+    const summary = await prisma.stockItem.findMany({
+      where: {
+        status: { in: ['AVAILABLE', 'RESERVED'] },
+        deletedAt: null,
+      },
+      include: {
+        product: {
+          select: {
+            metalType: true,
+            netWeight: true,
+          },
+        },
+      },
+    });
+
+    // Group by metal type
+    const grouped = summary.reduce((acc: any, item) => {
+      const metalType = item.product.metalType;
+      if (!acc[metalType]) {
+        acc[metalType] = {
+          metalType,
+          productCount: 0,
+          totalWeight: 0,
+          totalValue: 0,
+        };
+      }
+      acc[metalType].productCount += 1;
+      acc[metalType].totalWeight += Number(item.product.netWeight);
+      acc[metalType].totalValue += Number(item.purchaseCost);
+      return acc;
+    }, {});
+
+    return Object.values(grouped);
+  }
+}

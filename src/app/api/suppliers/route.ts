@@ -1,10 +1,11 @@
 // Suppliers API - List and Create (User Story 9)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supplierRepository } from '@/repositories/supplierRepository';
-import { handleApiError, successResponse } from '@/utils/response';
+import { SupplierRepository } from '@/repositories/supplierRepository';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/suppliers
@@ -12,6 +13,12 @@ import { AuditAction, AuditModule } from '@/domain/entities/types';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SUPPLIER_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     // Pagination
@@ -41,7 +48,8 @@ export async function GET(request: NextRequest) {
       filters.isActive = searchParams.get('isActive') === 'true';
     }
 
-    const result = await supplierRepository.findAll(filters, { page, pageSize });
+    const repository = new SupplierRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error) {
@@ -55,6 +63,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SUPPLIER_CREATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     const {
@@ -96,7 +110,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if supplier with same phone already exists
-    const existingSupplier = await supplierRepository.findByPhone(phone);
+    const repository = new SupplierRepository({ session });
+    const existingSupplier = await repository.findByPhone(phone);
     if (existingSupplier) {
       return NextResponse.json(
         { error: 'Supplier with this phone number already exists' },
@@ -105,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create supplier
-    const supplier = await supplierRepository.create({
+    const supplier = await repository.create({
       name,
       contactPerson,
       phone,

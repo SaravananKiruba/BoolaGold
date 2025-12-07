@@ -2,6 +2,18 @@
 
 A **production-ready**, full-stack Next.js application for comprehensive jewelry store management. Built with TypeScript, Prisma ORM, and MySQL, implementing clean architecture and domain-driven design principles.
 
+## 🏢 Multi-Tenant Support
+
+✨ **NEW**: Now supports multiple jewelry shops with complete data isolation!
+
+- 🔐 **Secure Authentication**: JWT-based with bcrypt password hashing
+- 👥 **Role-Based Access Control**: OWNER, SALES, ACCOUNTS roles
+- 🏪 **Shop Management**: Multiple shops on single infrastructure
+- 🔒 **Data Isolation**: Complete separation of shop data
+- ⚙️ **Dynamic Configuration**: Per-shop branding and settings
+
+See [MULTI_TENANT_GUIDE.md](./MULTI_TENANT_GUIDE.md) for migration details.
+
 ## 🎯 Features Overview
 
 This system covers **all 30 user stories** across the following modules:

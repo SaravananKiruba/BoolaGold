@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { PurchaseOrderStatus, PaymentStatus } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface PurchaseOrderFilters {
   supplierId?: string;
@@ -27,13 +28,20 @@ export interface StockReceiptItem {
   }[];
 }
 
-export class PurchaseOrderRepository {
+export class PurchaseOrderRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create purchase order with items
    */
-  async create(data: Prisma.PurchaseOrderCreateInput) {
+  async create(data: Omit<Prisma.PurchaseOrderCreateInput, 'shop'>) {
     return prisma.purchaseOrder.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(),
+      },
       include: {
         supplier: true,
         items: {
@@ -49,11 +57,13 @@ export class PurchaseOrderRepository {
    * Find purchase order by ID
    */
   async findById(id: string, includeDeleted = false) {
+    const where = this.withShopContext({
+      id,
+      ...buildSoftDeleteFilter(includeDeleted),
+    });
+
     return prisma.purchaseOrder.findFirst({
-      where: {
-        id,
-        ...buildSoftDeleteFilter(includeDeleted),
-      },
+      where,
       include: {
         supplier: true,
         items: {
@@ -76,11 +86,13 @@ export class PurchaseOrderRepository {
    * Find purchase order by order number
    */
   async findByOrderNumber(orderNumber: string) {
+    const where = this.withShopContext({
+      orderNumber,
+      deletedAt: null,
+    });
+
     return prisma.purchaseOrder.findFirst({
-      where: {
-        orderNumber,
-        deletedAt: null,
-      },
+      where,
       include: {
         supplier: true,
         items: {
@@ -98,9 +110,9 @@ export class PurchaseOrderRepository {
   async findAll(filters: PurchaseOrderFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.PurchaseOrderWhereInput = {
+    const where: Prisma.PurchaseOrderWhereInput = this.withShopContext({
       ...buildSoftDeleteFilter(),
-    };
+    });
 
     if (filters.supplierId) {
       where.supplierId = filters.supplierId;
@@ -158,6 +170,8 @@ export class PurchaseOrderRepository {
    * Update purchase order
    */
   async update(id: string, data: Prisma.PurchaseOrderUpdateInput) {
+    await this.verifyOwnership('purchaseOrder', id);
+
     return prisma.purchaseOrder.update({
       where: { id },
       data,
@@ -176,6 +190,8 @@ export class PurchaseOrderRepository {
    * Update purchase order status
    */
   async updateStatus(id: string, status: PurchaseOrderStatus) {
+    await this.verifyOwnership('purchaseOrder', id);
+
     return prisma.purchaseOrder.update({
       where: { id },
       data: { status },
@@ -186,6 +202,8 @@ export class PurchaseOrderRepository {
    * Update payment status
    */
   async updatePaymentStatus(id: string, paymentStatus: PaymentStatus, paidAmount?: number) {
+    await this.verifyOwnership('purchaseOrder', id);
+
     const data: any = { paymentStatus };
     if (paidAmount !== undefined) {
       data.paidAmount = paidAmount;
@@ -295,11 +313,13 @@ export class PurchaseOrderRepository {
    * Get pending purchase orders (for stock receipt)
    */
   async getPendingOrders() {
+    const where = this.withShopContext({
+      status: { in: ['PENDING', 'CONFIRMED', 'PARTIAL'] },
+      deletedAt: null,
+    });
+
     return prisma.purchaseOrder.findMany({
-      where: {
-        status: { in: ['PENDING', 'CONFIRMED', 'PARTIAL'] },
-        deletedAt: null,
-      },
+      where,
       include: {
         supplier: true,
         items: {
@@ -389,9 +409,9 @@ export class PurchaseOrderRepository {
    * Get purchase order summary
    */
   async getSummary(startDate?: Date, endDate?: Date) {
-    const where: Prisma.PurchaseOrderWhereInput = {
+    const where: Prisma.PurchaseOrderWhereInput = this.withShopContext({
       deletedAt: null,
-    };
+    });
 
     if (startDate || endDate) {
       where.orderDate = {};
@@ -426,5 +446,3 @@ export class PurchaseOrderRepository {
     };
   }
 }
-
-export const purchaseOrderRepository = new PurchaseOrderRepository();

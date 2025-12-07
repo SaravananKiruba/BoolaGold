@@ -7,6 +7,7 @@ import prisma from '@/lib/prisma';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { BisComplianceStatus, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const bisComplianceSchema = z.object({
   productId: z.string().uuid().optional(),
@@ -29,6 +30,12 @@ const bisComplianceSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'BIS_COMPLIANCE_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const { searchParams } = request.nextUrl;
 
     const page = parseInt(searchParams.get('page') || '1');
@@ -101,6 +108,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'BIS_COMPLIANCE_CREATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input

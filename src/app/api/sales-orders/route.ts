@@ -4,14 +4,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { salesOrderRepository } from '@/repositories/salesOrderRepository';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+import { SalesOrderRepository } from '@/repositories/salesOrderRepository';
+import { StockItemRepository } from '@/repositories/stockItemRepository';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { PaymentMethod, OrderType, AuditModule, TransactionType, TransactionCategory } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
 import { generateInvoiceNumber } from '@/utils/barcode';
 import prisma from '@/lib/prisma';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const salesOrderLineSchema = z.object({
   stockItemId: uuidSchema.optional(),
@@ -35,6 +36,12 @@ const createSalesOrderSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SALES_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse pagination
@@ -60,7 +67,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const result = await salesOrderRepository.findAll(filters, { page, pageSize });
+    const repository = new SalesOrderRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error: any) {
@@ -81,6 +89,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SALES_CREATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -97,15 +111,17 @@ export async function POST(request: NextRequest) {
     let orderTotal = 0;
     const lineItemsWithPrices: any[] = [];
 
+    const stockRepository = new StockItemRepository({ session });
+
     for (const line of data.lines) {
       // Find stock item by ID or Tag ID
       const identifier = line.stockItemId || line.tagId!;
       let stockItem;
       
       if (line.stockItemId) {
-        stockItem = await stockItemRepository.findById(line.stockItemId);
+        stockItem = await stockRepository.findById(line.stockItemId);
       } else if (line.tagId) {
-        stockItem = await stockItemRepository.findByTagId(line.tagId);
+        stockItem = await stockRepository.findByTagId(line.tagId);
       }
 
       if (!stockItem) {
@@ -150,7 +166,8 @@ export async function POST(request: NextRequest) {
     const invoiceNumber = generateInvoiceNumber();
 
     // Check for duplicate invoice (very unlikely)
-    const existingOrder = await salesOrderRepository.findByInvoiceNumber(invoiceNumber);
+    const salesRepository = new SalesOrderRepository({ session });
+    const existingOrder = await salesRepository.findByInvoiceNumber(invoiceNumber);
     if (existingOrder) {
       return NextResponse.json(
         errorResponse('Invoice number collision, please try again'),

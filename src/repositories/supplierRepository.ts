@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface SupplierFilters {
   name?: string;
@@ -13,13 +14,20 @@ export interface SupplierFilters {
   isActive?: boolean;
 }
 
-export class SupplierRepository {
+export class SupplierRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new supplier
    */
-  async create(data: Prisma.SupplierCreateInput) {
+  async create(data: Omit<Prisma.SupplierCreateInput, 'shop'>) {
     return prisma.supplier.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(),
+      },
     });
   }
 
@@ -27,11 +35,13 @@ export class SupplierRepository {
    * Find supplier by ID
    */
   async findById(id: string, includeDeleted = false) {
+    const where = this.withShopContext({
+      id,
+      ...buildSoftDeleteFilter(includeDeleted),
+    });
+
     return prisma.supplier.findFirst({
-      where: {
-        id,
-        ...buildSoftDeleteFilter(includeDeleted),
-      },
+      where,
     });
   }
 
@@ -39,11 +49,13 @@ export class SupplierRepository {
    * Find supplier by phone number
    */
   async findByPhone(phone: string) {
+    const where = this.withShopContext({
+      phone,
+      deletedAt: null,
+    });
+
     return prisma.supplier.findFirst({
-      where: {
-        phone,
-        deletedAt: null,
-      },
+      where,
     });
   }
 
@@ -52,9 +64,9 @@ export class SupplierRepository {
    */
   async findAll(filters: SupplierFilters, pagination: PaginationParams) {
     const { skip, take, page, pageSize } = normalizePagination(pagination);
-    const where: Prisma.SupplierWhereInput = {
+    const where: Prisma.SupplierWhereInput = this.withShopContext({
       ...buildSoftDeleteFilter(false),
-    };
+    });
 
     // Apply filters
     if (filters.name) {
@@ -276,5 +288,3 @@ export class SupplierRepository {
     };
   }
 }
-
-export const supplierRepository = new SupplierRepository();

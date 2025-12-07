@@ -1,10 +1,11 @@
 // Financial Reports API - P&L statement and financial analysis
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { handleApiError, successResponse } from '@/utils/response';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { buildDateRangeFilter } from '@/utils/filters';
-import { transactionRepository } from '@/repositories/transactionRepository';
+import { TransactionRepository } from '@/repositories/transactionRepository';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/reports/financial
@@ -12,6 +13,12 @@ import { transactionRepository } from '@/repositories/transactionRepository';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'REPORTS_FINANCIAL')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -30,10 +37,11 @@ export async function GET(request: NextRequest) {
     };
 
     // Get income, expense and metal purchase summaries using repository
+    const repository = new TransactionRepository({ session });
     const [incomeSummary, expenseSummary, metalPurchaseSummary] = await Promise.all([
-      transactionRepository.getIncomeSummary(filters),
-      transactionRepository.getExpenseSummary(filters),
-      transactionRepository.getMetalPurchaseSummary(filters),
+      repository.getIncomeSummary(filters),
+      repository.getExpenseSummary(filters),
+      repository.getMetalPurchaseSummary(filters),
     ]);
 
     // Calculate totals

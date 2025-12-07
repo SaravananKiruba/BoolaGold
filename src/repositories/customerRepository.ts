@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildDateRangeFilter, buildSoftDeleteFilter } from '@/utils/filters';
 import { CustomerType } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface CustomerFilters {
   search?: string;
@@ -13,13 +14,20 @@ export interface CustomerFilters {
   registrationDateRange?: { startDate?: Date; endDate?: Date };
 }
 
-export class CustomerRepository {
+export class CustomerRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new customer
    */
-  async create(data: Prisma.CustomerCreateInput) {
+  async create(data: Omit<Prisma.CustomerCreateInput, 'shop'>) {
     return prisma.customer.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(), // Automatically add shopId from session
+      },
       include: {
         familyMembers: true,
       },
@@ -33,7 +41,7 @@ export class CustomerRepository {
     return prisma.customer.findFirst({
       where: {
         id,
-        ...buildSoftDeleteFilter(includeDeleted),
+        ...this.getBaseFilter(includeDeleted), // Includes shopId + deletedAt filter
       },
       include: {
         familyMembers: true,
@@ -46,13 +54,13 @@ export class CustomerRepository {
   }
 
   /**
-   * Find customer by phone
+   * Find customer by phone (within current shop only)
    */
   async findByPhone(phone: string) {
     return prisma.customer.findFirst({
       where: {
         phone,
-        deletedAt: null,
+        ...this.getBaseFilter(), // Ensures shopId filtering
       },
     });
   }
@@ -64,7 +72,7 @@ export class CustomerRepository {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
     const where: Prisma.CustomerWhereInput = {
-      ...buildSoftDeleteFilter(),
+      ...this.getBaseFilter(), // Includes shopId + deletedAt filter
     };
 
     // Apply filters
@@ -112,6 +120,12 @@ export class CustomerRepository {
    * Update customer
    */
   async update(id: string, data: Prisma.CustomerUpdateInput) {
+    // First verify customer belongs to this shop
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error('Customer not found');
+    }
+    
     return prisma.customer.update({
       where: { id },
       data,
@@ -125,6 +139,12 @@ export class CustomerRepository {
    * Soft delete customer
    */
   async softDelete(id: string) {
+    // First verify customer belongs to this shop
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error('Customer not found');
+    }
+    
     return prisma.customer.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -139,7 +159,7 @@ export class CustomerRepository {
 
     const where: Prisma.SalesOrderWhereInput = {
       customerId,
-      deletedAt: null,
+      ...this.getBaseFilter(), // Ensure shop-level filtering
     };
 
     const [orders, totalCount] = await Promise.all([

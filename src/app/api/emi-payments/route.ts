@@ -4,11 +4,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { emiPaymentRepository } from '@/repositories/emiPaymentRepository';
+import { EmiPaymentRepository } from '@/repositories/emiPaymentRepository';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { EmiInstallmentStatus, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const createEmiPaymentSchema = z.object({
   customerId: uuidSchema,
@@ -22,6 +23,12 @@ const createEmiPaymentSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'EMI_MANAGE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse pagination
@@ -35,7 +42,8 @@ export async function GET(request: NextRequest) {
       overdue: searchParams.get('overdue') === 'true',
     };
 
-    const result = await emiPaymentRepository.findAll(filters, { page, pageSize });
+    const repository = new EmiPaymentRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error: any) {
@@ -46,6 +54,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'EMI_MANAGE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -74,7 +88,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create EMI payment with installments
-    const emiPayment = await emiPaymentRepository.create({
+    const repository = new EmiPaymentRepository({ session });
+    const emiPayment = await repository.create({
       customer: {
         connect: { id: data.customerId },
       },

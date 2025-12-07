@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildDateRangeFilter, buildSoftDeleteFilter } from '@/utils/filters';
 import { TransactionType, TransactionCategory, TransactionStatus, PaymentMethod, MetalType } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface TransactionFilters {
   transactionType?: TransactionType;
@@ -17,13 +18,20 @@ export interface TransactionFilters {
   search?: string;
 }
 
-export class TransactionRepository {
+export class TransactionRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new transaction
    */
-  async create(data: Prisma.TransactionCreateInput) {
+  async create(data: Omit<Prisma.TransactionCreateInput, 'shop'>) {
     return prisma.transaction.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(),
+      },
       include: {
         customer: true,
         salesOrder: true,
@@ -35,11 +43,13 @@ export class TransactionRepository {
    * Find transaction by ID
    */
   async findById(id: string, includeDeleted = false) {
+    const where = this.withShopContext({
+      id,
+      ...buildSoftDeleteFilter(includeDeleted),
+    });
+
     return prisma.transaction.findFirst({
-      where: {
-        id,
-        ...buildSoftDeleteFilter(includeDeleted),
-      },
+      where,
       include: {
         customer: true,
         salesOrder: true,
@@ -53,9 +63,9 @@ export class TransactionRepository {
   async findAll(filters: TransactionFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.TransactionWhereInput = {
+    const where: Prisma.TransactionWhereInput = this.withShopContext({
       ...buildSoftDeleteFilter(),
-    };
+    });
 
     // Apply filters
     if (filters.search) {
@@ -304,17 +314,17 @@ export class TransactionRepository {
   }
 
   /**
-   * Get transactions by sales order
+   * Find transactions by sales order
    */
   async findBySalesOrder(salesOrderId: string) {
+    const where = this.withShopContext({
+      salesOrderId,
+      deletedAt: null,
+    });
+
     return prisma.transaction.findMany({
-      where: {
-        salesOrderId,
-        deletedAt: null,
-      },
+      where,
       orderBy: { transactionDate: 'desc' },
     });
   }
 }
-
-export const transactionRepository = new TransactionRepository();

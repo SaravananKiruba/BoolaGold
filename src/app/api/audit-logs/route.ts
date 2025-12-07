@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/utils/response';
 import { AuditAction, AuditModule, AuditSeverity } from '@/domain/entities/types';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/audit-logs
@@ -25,6 +26,12 @@ import { AuditAction, AuditModule, AuditSeverity } from '@/domain/entities/types
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'AUDIT_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const { searchParams } = request.nextUrl;
 
     // Parse pagination

@@ -1,10 +1,11 @@
 // Supplier Detail API - Get, Update, Delete (User Story 9)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supplierRepository } from '@/repositories/supplierRepository';
-import { handleApiError, successResponse } from '@/utils/response';
+import { SupplierRepository } from '@/repositories/supplierRepository';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/suppliers/[id]
@@ -15,9 +16,16 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SUPPLIER_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const supplierId = params.id;
 
-    const supplier = await supplierRepository.findById(supplierId);
+    const repository = new SupplierRepository({ session });
+    const supplier = await repository.findById(supplierId);
     if (!supplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
     }
@@ -43,11 +51,18 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SUPPLIER_EDIT')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const supplierId = params.id;
     const body = await request.json();
 
     // Get existing supplier
-    const existingSupplier = await supplierRepository.findById(supplierId);
+    const repository = new SupplierRepository({ session });
+    const existingSupplier = await repository.findById(supplierId);
     if (!existingSupplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
     }

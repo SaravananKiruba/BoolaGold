@@ -4,11 +4,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { transactionRepository } from '@/repositories/transactionRepository';
+import { TransactionRepository } from '@/repositories/transactionRepository';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { TransactionType, TransactionCategory, TransactionStatus, PaymentMethod, MetalType, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const createTransactionSchema = z.object({
   transactionDate: z.string().datetime().optional(),
@@ -43,6 +44,12 @@ const createTransactionSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'TRANSACTION_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse pagination
@@ -70,7 +77,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const result = await transactionRepository.findAll(filters, { page, pageSize });
+    const repository = new TransactionRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error: any) {
@@ -81,6 +89,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'TRANSACTION_CREATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -97,7 +111,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create transaction
-    const transaction = await transactionRepository.create({
+    const repository = new TransactionRepository({ session });
+    const transaction = await repository.create({
       transactionDate: data.transactionDate ? new Date(data.transactionDate) : new Date(),
       transactionType: data.transactionType,
       amount: data.amount,

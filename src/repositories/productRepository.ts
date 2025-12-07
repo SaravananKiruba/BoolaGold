@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { MetalType } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface ProductFilters {
   search?: string;
@@ -21,13 +22,20 @@ export interface ProductFilters {
   lowStock?: boolean;
 }
 
-export class ProductRepository {
+export class ProductRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new product
    */
-  async create(data: Prisma.ProductCreateInput) {
+  async create(data: Omit<Prisma.ProductCreateInput, 'shop'>) {
     return prisma.product.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(), // Automatically add shopId from session
+      },
       include: {
         rateUsed: true,
       },
@@ -38,11 +46,13 @@ export class ProductRepository {
    * Find product by ID
    */
   async findById(id: string, includeDeleted = false) {
+    const where = this.withShopContext({
+      id,
+      ...buildSoftDeleteFilter(includeDeleted),
+    });
+
     return prisma.product.findFirst({
-      where: {
-        id,
-        ...buildSoftDeleteFilter(includeDeleted),
-      },
+      where,
       include: {
         rateUsed: true,
         stockItems: {
@@ -56,11 +66,13 @@ export class ProductRepository {
    * Find product by barcode
    */
   async findByBarcode(barcode: string) {
+    const where = this.withShopContext({
+      barcode,
+      deletedAt: null,
+    });
+
     return prisma.product.findFirst({
-      where: {
-        barcode,
-        deletedAt: null,
-      },
+      where,
     });
   }
 
@@ -70,9 +82,9 @@ export class ProductRepository {
   async findAll(filters: ProductFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.ProductWhereInput = {
+    const where: Prisma.ProductWhereInput = this.withShopContext({
       ...buildSoftDeleteFilter(),
-    };
+    });
 
     // Apply filters
     if (filters.search) {
@@ -176,6 +188,9 @@ export class ProductRepository {
    * Update product
    */
   async update(id: string, data: Prisma.ProductUpdateInput) {
+    // Verify ownership
+    await this.verifyOwnership('product', id);
+
     return prisma.product.update({
       where: { id },
       data,
@@ -189,6 +204,9 @@ export class ProductRepository {
    * Soft delete product
    */
   async softDelete(id: string) {
+    // Verify ownership
+    await this.verifyOwnership('product', id);
+
     return prisma.product.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -199,11 +217,13 @@ export class ProductRepository {
    * Get low stock products
    */
   async getLowStockProducts() {
+    const where = this.withShopContext({
+      isActive: true,
+      deletedAt: null,
+    });
+
     const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        deletedAt: null,
-      },
+      where,
       include: {
         _count: {
           select: {
@@ -229,6 +249,11 @@ export class ProductRepository {
     rateId: string,
     calculatedPrices: Record<string, number>
   ) {
+    // Verify all products belong to this shop
+    for (const id of productIds) {
+      await this.verifyOwnership('product', id);
+    }
+
     const updates = productIds.map((id) =>
       prisma.product.update({
         where: { id },
@@ -247,12 +272,14 @@ export class ProductRepository {
    * Get inventory summary
    */
   async getInventorySummary() {
+    const where = this.withShopContext({
+      isActive: true,
+      deletedAt: null,
+    });
+
     const summary = await prisma.product.groupBy({
       by: ['metalType'],
-      where: {
-        isActive: true,
-        deletedAt: null,
-      },
+      where,
       _count: {
         id: true,
       },
@@ -265,5 +292,3 @@ export class ProductRepository {
     return summary;
   }
 }
-
-export const productRepository = new ProductRepository();

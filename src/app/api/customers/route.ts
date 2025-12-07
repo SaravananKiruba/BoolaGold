@@ -4,11 +4,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { customerRepository } from '@/repositories/customerRepository';
+import { CustomerRepository } from '@/repositories/customerRepository';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { phoneSchema, emailSchema } from '@/utils/validation';
 import { CustomerType, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
+import { getSession, hasPermission } from '@/lib/auth';
 
 // Validation schema for creating a customer
 const createCustomerSchema = z.object({
@@ -36,6 +37,12 @@ const createCustomerSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'CUSTOMER_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse pagination
@@ -61,7 +68,9 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const result = await customerRepository.findAll(filters, { page, pageSize });
+    // Create repository with session for automatic shop filtering
+    const repository = new CustomerRepository({ session });
+    const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
   } catch (error: any) {
@@ -72,6 +81,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'CUSTOMER_CREATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -82,8 +97,11 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
-    // Check if phone already exists
-    const existingCustomer = await customerRepository.findByPhone(data.phone);
+    // Create repository with session
+    const repository = new CustomerRepository({ session });
+
+    // Check if phone already exists (within this shop)
+    const existingCustomer = await repository.findByPhone(data.phone);
     if (existingCustomer) {
       return NextResponse.json(errorResponse('Customer with this phone already exists'), {
         status: 409,
@@ -117,7 +135,8 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const customer = await customerRepository.create(customerData);
+    // Create customer (shopId is automatically added by repository)
+    const customer = await repository.create(customerData);
 
     // Log the creation
     await logCreate(AuditModule.CUSTOMERS, customer.id, customer);

@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildDateRangeFilter, buildSoftDeleteFilter } from '@/utils/filters';
 import { SalesOrderStatus, OrderType, PaymentStatus } from '@/domain/entities/types';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface SalesOrderFilters {
   customerId?: string;
@@ -15,13 +16,20 @@ export interface SalesOrderFilters {
   search?: string;
 }
 
-export class SalesOrderRepository {
+export class SalesOrderRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new sales order with lines
    */
-  async create(data: Prisma.SalesOrderCreateInput) {
+  async create(data: Omit<Prisma.SalesOrderCreateInput, 'shop'>) {
     return prisma.salesOrder.create({
-      data,
+      data: {
+        ...data,
+        shopId: this.getShopId(),
+      },
       include: {
         customer: true,
         lines: {
@@ -41,11 +49,13 @@ export class SalesOrderRepository {
    * Find sales order by ID
    */
   async findById(id: string, includeDeleted = false) {
+    const where = this.withShopContext({
+      id,
+      ...buildSoftDeleteFilter(includeDeleted),
+    });
+
     return prisma.salesOrder.findFirst({
-      where: {
-        id,
-        ...buildSoftDeleteFilter(includeDeleted),
-      },
+      where,
       include: {
         customer: true,
         lines: {
@@ -67,11 +77,13 @@ export class SalesOrderRepository {
    * Find sales order by invoice number
    */
   async findByInvoiceNumber(invoiceNumber: string) {
+    const where = this.withShopContext({
+      invoiceNumber,
+      deletedAt: null,
+    });
+
     return prisma.salesOrder.findFirst({
-      where: {
-        invoiceNumber,
-        deletedAt: null,
-      },
+      where,
       include: {
         customer: true,
         lines: {
@@ -93,9 +105,9 @@ export class SalesOrderRepository {
   async findAll(filters: SalesOrderFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.SalesOrderWhereInput = {
+    const where: Prisma.SalesOrderWhereInput = this.withShopContext({
       ...buildSoftDeleteFilter(),
-    };
+    });
 
     // Apply filters
     if (filters.search) {
@@ -158,6 +170,8 @@ export class SalesOrderRepository {
    * Update sales order
    */
   async update(id: string, data: Prisma.SalesOrderUpdateInput) {
+    await this.verifyOwnership('salesOrder', id);
+
     return prisma.salesOrder.update({
       where: { id },
       data,
@@ -180,6 +194,8 @@ export class SalesOrderRepository {
    * Soft delete sales order
    */
   async softDelete(id: string) {
+    await this.verifyOwnership('salesOrder', id);
+
     return prisma.salesOrder.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -199,10 +215,10 @@ export class SalesOrderRepository {
    * Get sales statistics
    */
   async getSalesStatistics(filters: { startDate?: Date; endDate?: Date } = {}) {
-    const where: Prisma.SalesOrderWhereInput = {
+    const where: Prisma.SalesOrderWhereInput = this.withShopContext({
       status: 'COMPLETED',
       deletedAt: null,
-    };
+    });
 
     if (filters.startDate || filters.endDate) {
       where.orderDate = buildDateRangeFilter(filters);
@@ -237,5 +253,3 @@ export class SalesOrderRepository {
     };
   }
 }
-
-export const salesOrderRepository = new SalesOrderRepository();

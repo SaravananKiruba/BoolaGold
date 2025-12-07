@@ -1,11 +1,12 @@
 // Purchase Order API - Get, Update, Delete by ID
 
 import { NextRequest, NextResponse } from 'next/server';
-import { purchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
+import { PurchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
 import { PurchaseOrderStatus, PaymentStatus } from '@/domain/entities/types';
-import { handleApiError, successResponse } from '@/utils/response';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
+import { getSession, hasPermission } from '@/lib/auth';
 
 /**
  * GET /api/purchase-orders/[id]
@@ -16,7 +17,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const purchaseOrder = await purchaseOrderRepository.findById(params.id);
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'PURCHASE_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
+    const repository = new PurchaseOrderRepository({ session });
+    const purchaseOrder = await repository.findById(params.id);
 
     if (!purchaseOrder) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
@@ -37,11 +45,18 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'PURCHASE_EDIT')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
     const { id } = params;
 
     // Get existing purchase order
-    const existing = await purchaseOrderRepository.findById(id);
+    const repository = new PurchaseOrderRepository({ session });
+    const existing = await repository.findById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }

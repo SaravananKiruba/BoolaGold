@@ -4,6 +4,7 @@
 import { Prisma, RateMaster, MetalType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
+import { BaseRepository, RepositoryOptions } from './baseRepository';
 
 export interface RateMasterFilters {
   metalType?: MetalType;
@@ -14,17 +15,22 @@ export interface RateMasterFilters {
   effectiveDateTo?: Date;
 }
 
-export class RateMasterRepository {
+export class RateMasterRepository extends BaseRepository {
+  constructor(options: RepositoryOptions) {
+    super(options);
+  }
+
   /**
    * Create a new rate master entry with transaction support
    */
-  async create(data: Prisma.RateMasterCreateInput): Promise<RateMaster> {
+  async create(data: Omit<Prisma.RateMasterCreateInput, 'shop'>): Promise<RateMaster> {
     try {
       return await prisma.$transaction(async (tx) => {
         // If this is set as active, deactivate other rates for the same metal type and purity
         if (data.isActive) {
           await tx.rateMaster.updateMany({
             where: {
+              shopId: this.getShopId(),
               metalType: data.metalType,
               purity: data.purity,
               isActive: true,
@@ -36,7 +42,10 @@ export class RateMasterRepository {
 
         // Create the new rate master
         return await tx.rateMaster.create({
-          data,
+          data: {
+            ...data,
+            shopId: this.getShopId(),
+          },
         });
       });
     } catch (error: any) {
@@ -66,7 +75,9 @@ export class RateMasterRepository {
     try {
       const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-      const where: Prisma.RateMasterWhereInput = {};
+      const where: Prisma.RateMasterWhereInput = {
+        shopId: this.getShopId(),
+      };
 
       // Apply filters
       if (filters.metalType) {
@@ -416,5 +427,3 @@ export class RateMasterRepository {
     }
   }
 }
-
-export const rateMasterRepository = new RateMasterRepository();

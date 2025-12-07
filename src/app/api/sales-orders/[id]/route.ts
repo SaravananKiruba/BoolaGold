@@ -5,12 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { salesOrderRepository } from '@/repositories/salesOrderRepository';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+import { SalesOrderRepository } from '@/repositories/salesOrderRepository';
+import { StockItemRepository } from '@/repositories/stockItemRepository';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { SalesOrderStatus, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
 import prisma from '@/lib/prisma';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const updateSalesOrderSchema = z.object({
   status: z.nativeEnum(SalesOrderStatus).optional(),
@@ -22,7 +23,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const salesOrder = await salesOrderRepository.findById(params.id);
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SALES_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
+    const repository = new SalesOrderRepository({ session });
+    const salesOrder = await repository.findById(params.id);
 
     if (!salesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
@@ -40,6 +48,12 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SALES_EDIT')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input

@@ -11,6 +11,91 @@ datasource db {
 }
 
 // ============================================
+// MULTI-TENANT SUPPORT - SHOP & USER MANAGEMENT
+// ============================================
+
+enum UserRole {
+  OWNER
+  SALES
+  ACCOUNTS
+}
+
+model Shop {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(200)
+  tagline       String?  @db.VarChar(200)
+  address       String   @db.Text
+  city          String   @db.VarChar(100)
+  state         String   @db.VarChar(100)
+  pincode       String   @db.VarChar(10)
+  phone         String   @db.VarChar(15)
+  email         String   @db.VarChar(255)
+  website       String?  @db.VarChar(255)
+  gstNumber     String   @db.VarChar(20)
+  panNumber     String   @db.VarChar(20)
+  logo          String?  @db.Text
+  primaryColor  String?  @db.VarChar(20)
+  invoicePrefix String   @db.VarChar(20)
+  isActive      Boolean  @default(true)
+  
+  // Bank Details (JSON)
+  bankName      String?  @db.VarChar(200)
+  accountNumber String?  @db.VarChar(50)
+  ifscCode      String?  @db.VarChar(20)
+  bankBranch    String?  @db.VarChar(200)
+  
+  // Terms and Conditions (stored as JSON array in TEXT)
+  termsAndConditions String? @db.Text
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  users            User[]
+  customers        Customer[]
+  suppliers        Supplier[]
+  products         Product[]
+  purchaseOrders   PurchaseOrder[]
+  salesOrders      SalesOrder[]
+  transactions     Transaction[]
+  emiPayments      EmiPayment[]
+  rateMaster       RateMaster[]
+  auditLogs        AuditLog[]
+  bisCompliance    BisCompliance[]
+
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("shops")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(255) // bcrypt hashed
+  name      String   @db.VarChar(200)
+  email     String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(15)
+  role      UserRole
+  shopId    String
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([username])
+  @@index([shopId])
+  @@index([role])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// ============================================
 // CUSTOMER MANAGEMENT (User Stories 1-2)
 // ============================================
 
@@ -22,6 +107,7 @@ enum CustomerType {
 
 model Customer {
   id               String       @id @default(uuid())
+  shopId           String
   name             String       @db.VarChar(100)
   phone            String       @db.VarChar(10)
   email            String?      @db.VarChar(255)
@@ -38,11 +124,13 @@ model Customer {
   deletedAt        DateTime?
 
   // Relations
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
   familyMembers FamilyMember[]
   salesOrders   SalesOrder[]
   emiPayments   EmiPayment[]
   transactions  Transaction[]
 
+  @@index([shopId])
   @@index([phone])
   @@index([customerType])
   @@index([isActive])
@@ -72,6 +160,7 @@ model FamilyMember {
 
 model Supplier {
   id               String    @id @default(uuid())
+  shopId           String
   name             String    @db.VarChar(200)
   contactPerson    String?   @db.VarChar(100)
   phone            String    @db.VarChar(15)
@@ -85,9 +174,11 @@ model Supplier {
   deletedAt        DateTime?
 
   // Relations
+  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
   products       Product[]
   purchaseOrders PurchaseOrder[]
 
+  @@index([shopId])
   @@index([isActive])
   @@index([deletedAt])
   @@map("suppliers")
@@ -105,12 +196,13 @@ enum MetalType {
 
 model Product {
   id                  String    @id @default(uuid())
+  shopId              String
   name                String    @db.VarChar(200)
   metalType           MetalType
   purity              String    @db.VarChar(20)
   grossWeight         Decimal   @db.Decimal(10, 3)
   netWeight           Decimal   @db.Decimal(10, 3)
-  barcode             String    @unique @db.VarChar(100)
+  barcode             String    @db.VarChar(100)
   huid                String?   @db.VarChar(50)
   tagNumber           String?   @db.VarChar(50)
   description         String?   @db.Text
@@ -138,11 +230,14 @@ model Product {
   deletedAt           DateTime?
 
   // Relations
+  shop               Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
   supplier           Supplier?           @relation(fields: [supplierId], references: [id])
   rateUsed           RateMaster?         @relation(fields: [rateUsedId], references: [id])
   stockItems         StockItem[]
   purchaseOrderItems PurchaseOrderItem[]
 
+  @@unique([shopId, barcode])
+  @@index([shopId])
   @@index([metalType])
   @@index([purity])
   @@index([collectionName])
@@ -205,6 +300,7 @@ enum RateSource {
 
 model RateMaster {
   id                         String     @id @default(uuid())
+  shopId                     String
   metalType                  MetalType
   purity                     String     @db.VarChar(20)
   ratePerGram                Decimal    @db.Decimal(10, 2)
@@ -219,8 +315,10 @@ model RateMaster {
   updatedAt                  DateTime   @updatedAt
 
   // Relations
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   products Product[]
 
+  @@index([shopId])
   @@index([metalType, purity, isActive])
   @@index([effectiveDate])
   @@map("rate_master")
@@ -256,7 +354,8 @@ enum PaymentMethod {
 
 model PurchaseOrder {
   id                   String              @id @default(uuid())
-  orderNumber          String              @unique @db.VarChar(50)
+  shopId               String
+  orderNumber          String              @db.VarChar(50)
   supplierId           String
   expectedDeliveryDate DateTime?
   actualDeliveryDate   DateTime?
@@ -274,11 +373,14 @@ model PurchaseOrder {
   deletedAt            DateTime?
 
   // Relations
+  shop       Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
   supplier   Supplier            @relation(fields: [supplierId], references: [id])
   items      PurchaseOrderItem[]
   stockItems StockItem[]
   payments   PurchasePayment[]
 
+  @@unique([shopId, orderNumber])
+  @@index([shopId])
   @@index([supplierId])
   @@index([orderNumber])
   @@index([status])
@@ -344,7 +446,8 @@ enum OrderType {
 
 model SalesOrder {
   id             String           @id @default(uuid())
-  invoiceNumber  String           @unique @db.VarChar(50)
+  shopId         String
+  invoiceNumber  String           @db.VarChar(50)
   customerId     String
   orderTotal     Decimal          @db.Decimal(12, 2)
   discountAmount Decimal          @default(0) @db.Decimal(10, 2)
@@ -361,11 +464,14 @@ model SalesOrder {
   deletedAt      DateTime?
 
   // Relations
+  shop         Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customer     Customer         @relation(fields: [customerId], references: [id])
   lines        SalesOrderLine[]
   payments     SalesPayment[]
   transactions Transaction[]
 
+  @@unique([shopId, invoiceNumber])
+  @@index([shopId])
   @@index([customerId])
   @@index([invoiceNumber])
   @@index([status])
@@ -439,6 +545,7 @@ enum TransactionStatus {
 
 model Transaction {
   id              String              @id @default(uuid())
+  shopId          String
   transactionDate DateTime            @default(now())
   transactionType TransactionType
   amount          Decimal             @db.Decimal(12, 2)
@@ -464,9 +571,11 @@ model Transaction {
   deletedAt DateTime?
 
   // Relations
+  shop       Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customer   Customer?   @relation(fields: [customerId], references: [id])
   salesOrder SalesOrder? @relation(fields: [salesOrderId], references: [id])
 
+  @@index([shopId])
   @@index([transactionDate])
   @@index([transactionType])
   @@index([customerId])
@@ -488,6 +597,7 @@ enum EmiInstallmentStatus {
 
 model EmiPayment {
   id                   String               @id @default(uuid())
+  shopId               String
   customerId           String
   salesOrderId         String?
   totalAmount          Decimal              @db.Decimal(12, 2)
@@ -505,9 +615,11 @@ model EmiPayment {
   deletedAt            DateTime?
 
   // Relations
+  shop         Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customer     Customer         @relation(fields: [customerId], references: [id])
   installments EmiInstallment[]
 
+  @@index([shopId])
   @@index([customerId])
   @@index([nextInstallmentDate])
   @@index([status])
@@ -569,6 +681,7 @@ enum AuditSeverity {
 
 model AuditLog {
   id           String        @id @default(uuid())
+  shopId       String
   timestamp    DateTime      @default(now())
   userId       String?       @db.VarChar(100)
   action       AuditAction
@@ -582,6 +695,10 @@ model AuditLog {
   errorMessage String?       @db.Text
   stackTrace   String?       @db.Text
 
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
   @@index([timestamp])
   @@index([userId])
   @@index([module])
@@ -601,9 +718,10 @@ enum BisComplianceStatus {
 
 model BisCompliance {
   id                   String              @id @default(uuid())
+  shopId               String
   productId            String?
   stockItemId          String?
-  huid                 String              @unique @db.VarChar(50)
+  huid                 String              @db.VarChar(50)
   huidRegistrationDate DateTime?
   hallmarkNumber       String?             @db.VarChar(50)
   complianceStatus     BisComplianceStatus @default(PENDING)
@@ -616,6 +734,11 @@ model BisCompliance {
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, huid])
+  @@index([shopId])
   @@index([huid])
   @@index([complianceStatus])
   @@map("bis_compliance")
