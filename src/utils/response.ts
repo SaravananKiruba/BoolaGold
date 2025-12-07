@@ -81,3 +81,17 @@ export function handleApiError(error: unknown) {
     { status: 500 }
   );
 }
+
+/**
+ * Create a successful NextResponse with JSON data
+ */
+export function createSuccessResponse<T>(data: T, status: number = 200) {
+  return Response.json(successResponse(data), { status });
+}
+
+/**
+ * Create an error NextResponse with error message
+ */
+export function createErrorResponse(message: string, status: number = 500, code?: string, details?: any) {
+  return Response.json(errorResponse(message, code, details), { status });
+}

@@ -217,6 +217,11 @@ export const toast = {
     toastManager.dismissAll()
 };
 
+// Backward compatibility function
+export function showToast(type: ToastType, message: string, duration?: number): string {
+  return toastManager.show({ message, type, duration });
+}
+
 // Browser-friendly confirm replacement with promise
 export function confirmAction(message: string, title: string = 'Confirm Action'): Promise<boolean> {
   return new Promise((resolve) => {

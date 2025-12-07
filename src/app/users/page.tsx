@@ -15,14 +15,14 @@ interface User {
   email: string | null;
   phone: string | null;
   role: string;
-  shopId: string;
+  shopId: string | null;
   isActive: boolean;
   lastLogin: string | null;
   createdAt: string;
   shop: {
     id: string;
     name: string;
-  };
+  } | null;
 }
 
 interface UserFormData {
@@ -41,6 +41,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedShop, setSelectedShop] = useState<string>('all');
+  const [currentUserRole, setCurrentUserRole] = useState<string>('');
+  const [createdUser, setCreatedUser] = useState<{ username: string; password: string; name: string; role: string } | null>(null);
   const [formData, setFormData] = useState<UserFormData>({
     username: '',
     password: '',
@@ -53,9 +55,22 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    fetchCurrentUser();
     fetchShops();
     fetchUsers();
   }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/auth/session');
+      const data = await response.json();
+      if (response.ok && data.user) {
+        setCurrentUserRole(data.user.role);
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -109,6 +124,13 @@ export default function UsersPage() {
 
       if (response.ok) {
         showToast('success', 'User created successfully');
+        // Store credentials for display
+        setCreatedUser({
+          username: formData.username,
+          password: formData.password,
+          name: formData.name,
+          role: formData.role,
+        });
         setShowCreateModal(false);
         setFormData({
           username: '',
@@ -159,6 +181,8 @@ export default function UsersPage() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
+      case 'SUPER_ADMIN':
+        return { bg: '#fce7f3', color: '#831843', border: '#ec4899' };
       case 'OWNER':
         return { bg: '#fef3c7', color: '#92400e', border: '#fbbf24' };
       case 'SALES':
@@ -167,6 +191,21 @@ export default function UsersPage() {
         return { bg: '#dcfce7', color: '#14532d', border: '#22c55e' };
       default:
         return { bg: '#f1f5f9', color: '#475569', border: '#94a3b8' };
+    }
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return 'Super Admin';
+      case 'OWNER':
+        return 'Shop Admin';
+      case 'SALES':
+        return 'Sales';
+      case 'ACCOUNTS':
+        return 'Accounts';
+      default:
+        return role;
     }
   };
 
@@ -314,7 +353,7 @@ export default function UsersPage() {
                       </td>
                       <td style={{ padding: '16px' }}>
                         <div style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>
-                          {user.shop.name}
+                          {user.shop ? user.shop.name : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>System-wide</span>}
                         </div>
                       </td>
                       <td style={{ padding: '16px' }}>
@@ -330,7 +369,7 @@ export default function UsersPage() {
                             fontWeight: 600,
                           }}
                         >
-                          {user.role}
+                          {getRoleDisplayName(user.role)}
                         </span>
                       </td>
                       <td style={{ padding: '16px' }}>
@@ -458,14 +497,14 @@ export default function UsersPage() {
             {/* Form */}
             <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gap: '16px' }}>
-                {/* Shop Selection */}
+                {/* Role Selection - Moved to top */}
                 <div>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
-                    Shop <span style={{ color: 'red' }}>*</span>
+                    User Role <span style={{ color: 'red' }}>*</span>
                   </label>
                   <select
-                    name="shopId"
-                    value={formData.shopId}
+                    name="role"
+                    value={formData.role}
                     onChange={handleInputChange}
                     required
                     style={{
@@ -477,14 +516,51 @@ export default function UsersPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    <option value="">Select Shop</option>
-                    {shops.map((shop) => (
-                      <option key={shop.id} value={shop.id}>
-                        {shop.name}
-                      </option>
-                    ))}
+                    {currentUserRole === 'SUPER_ADMIN' && (
+                      <>
+                        <option value="SUPER_ADMIN">🔴 SUPER ADMIN - Platform Administrator (No Shop)</option>
+                        <option value="OWNER">👑 SHOP ADMIN - Full Shop Management Access</option>
+                      </>
+                    )}
+                    <option value="SALES">📊 SALES - Sales and Inventory Management</option>
+                    <option value="ACCOUNTS">💰 ACCOUNTS - Financial and Purchase Management</option>
                   </select>
+                  {currentUserRole === 'SUPER_ADMIN' && (
+                    <div style={{ marginTop: '8px', padding: '10px', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '6px', fontSize: '0.85rem', color: '#92400e' }}>
+                      <strong>💡 Tip:</strong> Create <strong>SHOP ADMIN</strong> users for shop owners, then share credentials so they can create their team (SALES & ACCOUNTS).
+                    </div>
+                  )}
                 </div>
+
+                {/* Shop Selection - Only show if not SUPER_ADMIN role */}
+                {formData.role !== 'SUPER_ADMIN' && (
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                      Shop <span style={{ color: 'red' }}>*</span>
+                    </label>
+                    <select
+                      name="shopId"
+                      value={formData.shopId}
+                      onChange={handleInputChange}
+                      required={formData.role !== 'SUPER_ADMIN'}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '2px solid #e2e8f0',
+                        borderRadius: '8px',
+                        fontSize: '0.95rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="">Select Shop</option>
+                      {shops.map((shop) => (
+                        <option key={shop.id} value={shop.id}>
+                          {shop.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Name */}
                 <div>
@@ -510,7 +586,7 @@ export default function UsersPage() {
                 {/* Username */}
                 <div>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
-                    Username <span style={{ color: 'red' }}>*</span>
+                    Username (Login ID) <span style={{ color: 'red' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -518,6 +594,7 @@ export default function UsersPage() {
                     value={formData.username}
                     onChange={handleInputChange}
                     required
+                    placeholder="e.g., mumbai_admin or john_sales"
                     style={{
                       width: '100%',
                       padding: '10px',
@@ -526,6 +603,9 @@ export default function UsersPage() {
                       fontSize: '0.95rem',
                     }}
                   />
+                  <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#64748b' }}>
+                    This will be used to login to the system
+                  </div>
                 </div>
 
                 {/* Password */}
@@ -534,12 +614,13 @@ export default function UsersPage() {
                     Password <span style={{ color: 'red' }}>*</span>
                   </label>
                   <input
-                    type="password"
+                    type="text"
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
                     required
                     minLength={6}
+                    placeholder="Minimum 6 characters"
                     style={{
                       width: '100%',
                       padding: '10px',
@@ -548,31 +629,9 @@ export default function UsersPage() {
                       fontSize: '0.95rem',
                     }}
                   />
-                </div>
-
-                {/* Role */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
-                    Role <span style={{ color: 'red' }}>*</span>
-                  </label>
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '2px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '0.95rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="SALES">SALES - Sales and inventory management</option>
-                    <option value="ACCOUNTS">ACCOUNTS - Financial and purchase management</option>
-                    <option value="OWNER">OWNER - Full administrative access</option>
-                  </select>
+                  <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#64748b' }}>
+                    💡 Note: Password is shown in plain text - you'll need to share these credentials
+                  </div>
                 </div>
 
                 {/* Email */}
@@ -664,6 +723,177 @@ export default function UsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal - Show Credentials */}
+      {createdUser && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+            padding: '20px',
+          }}
+          onClick={() => setCreatedUser(null)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '550px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Success Header */}
+            <div style={{ padding: '24px', borderBottom: '2px solid #dcfce7', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>✅</div>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#14532d', marginBottom: '8px' }}>
+                  User Created Successfully!
+                </h2>
+                <p style={{ fontSize: '0.95rem', color: '#15803d' }}>
+                  {createdUser.role === 'OWNER' ? 'Share these credentials with the Shop Admin' : 'Share these credentials with the user'}
+                </p>
+              </div>
+            </div>
+
+            {/* Credentials Display */}
+            <div style={{ padding: '24px' }}>
+              <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '10px', padding: '20px', marginBottom: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '4px', fontWeight: 600 }}>USER NAME</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>{createdUser.name}</div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '4px', fontWeight: 600 }}>ROLE</div>
+                  <div>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '6px 12px',
+                      background: createdUser.role === 'SUPER_ADMIN' ? '#fce7f3' : createdUser.role === 'OWNER' ? '#fef3c7' : createdUser.role === 'SALES' ? '#dbeafe' : '#dcfce7',
+                      color: createdUser.role === 'SUPER_ADMIN' ? '#831843' : createdUser.role === 'OWNER' ? '#92400e' : createdUser.role === 'SALES' ? '#1e3a8a' : '#14532d',
+                      border: `1px solid ${createdUser.role === 'SUPER_ADMIN' ? '#ec4899' : createdUser.role === 'OWNER' ? '#fbbf24' : createdUser.role === 'SALES' ? '#3b82f6' : '#22c55e'}`,
+                      borderRadius: '6px',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                    }}>
+                      {getRoleDisplayName(createdUser.role)}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px', background: '#fff7ed', padding: '12px', borderRadius: '8px', border: '2px solid #fed7aa' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#92400e', marginBottom: '6px', fontWeight: 600 }}>🔑 LOGIN USERNAME</div>
+                  <div style={{ 
+                    fontSize: '1.3rem', 
+                    fontWeight: 700, 
+                    color: '#c2410c', 
+                    fontFamily: 'monospace',
+                    background: 'white',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    border: '1px solid #fed7aa'
+                  }}>
+                    {createdUser.username}
+                  </div>
+                </div>
+
+                <div style={{ background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '2px solid #fecaca' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#991b1b', marginBottom: '6px', fontWeight: 600 }}>🔒 PASSWORD</div>
+                  <div style={{ 
+                    fontSize: '1.3rem', 
+                    fontWeight: 700, 
+                    color: '#dc2626', 
+                    fontFamily: 'monospace',
+                    background: 'white',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    border: '1px solid #fecaca'
+                  }}>
+                    {createdUser.password}
+                  </div>
+                </div>
+              </div>
+
+              {createdUser.role === 'OWNER' && (
+                <div style={{ 
+                  background: '#eff6ff', 
+                  border: '2px solid #bfdbfe', 
+                  borderRadius: '8px', 
+                  padding: '16px',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ fontSize: '1.5rem' }}>💡</div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#1e40af', marginBottom: '6px' }}>Next Steps for Shop Admin:</div>
+                      <ol style={{ margin: 0, paddingLeft: '20px', color: '#1e40af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                        <li>Share these credentials with the shop owner</li>
+                        <li>They can login at <strong>{typeof window !== 'undefined' ? window.location.origin : ''}/login</strong></li>
+                        <li>They can create SALES and ACCOUNTS users for their team</li>
+                        <li>They will manage their shop's data independently</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
+                <button
+                  onClick={() => {
+                    const credentials = `Username: ${createdUser.username}\nPassword: ${createdUser.password}\nName: ${createdUser.name}\nRole: ${getRoleDisplayName(createdUser.role)}`;
+                    navigator.clipboard.writeText(credentials);
+                    showToast('success', 'Credentials copied to clipboard!');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    border: '2px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  📋 Copy Credentials
+                </button>
+                <button
+                  onClick={() => setCreatedUser(null)}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

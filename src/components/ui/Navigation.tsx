@@ -17,7 +17,14 @@ export default function Navigation() {
         const response = await fetch('/api/auth/session');
         if (response.ok) {
           const data = await response.json();
-          setUserRole(data.data?.user?.role);
+          console.log('🔐 Navigation: Full Session Response =', JSON.stringify(data, null, 2));
+          const role = data.data?.user?.role;
+          console.log('🔐 Navigation: Extracted Role =', role);
+          console.log('🔐 Navigation: Role Type =', typeof role);
+          console.log('🔐 Navigation: Is SUPER_ADMIN? =', role === 'SUPER_ADMIN');
+          setUserRole(role);
+        } else {
+          console.error('🔐 Navigation: Session fetch failed with status', response.status);
         }
       } catch (error) {
         console.error('Error checking permissions:', error);
@@ -26,17 +33,70 @@ export default function Navigation() {
     checkPermissions();
   }, []);
 
-  const isSuperAdmin = userRole === 'SUPER_ADMIN';
-  const isOwner = userRole === 'OWNER';
+  // Normalize and check role (trim whitespace and ensure uppercase)
+  const normalizedRole = userRole?.trim().toUpperCase();
+  const isSuperAdmin = normalizedRole === 'SUPER_ADMIN';
+  const isOwner = normalizedRole === 'OWNER';
   const hasShopConfigPermission = isOwner;
   const hasAdminAccess = isSuperAdmin || isOwner;
+
+  // Debug logging
+  useEffect(() => {
+    if (userRole) {
+      console.log('🔍 DEBUG - Current State:', {
+        userRole,
+        isSuperAdmin,
+        isOwner,
+        pathname
+      });
+    }
+  }, [userRole, isSuperAdmin, isOwner, pathname]);
+
+  // FORCE REDIRECT: If Super Admin tries to access shop operational pages, redirect them
+  // BUT allow access to /shops (shop management) and /users (user management)
+  useEffect(() => {
+    if (normalizedRole === 'SUPER_ADMIN') {
+      const shopOperationalPages = ['/dashboard', '/customers', '/sales-orders', '/transactions', 
+                        '/products', '/stock', '/suppliers', '/purchase-orders', 
+                        '/rate-master', '/reports'];
+      
+      const allowedPages = ['/super-admin', '/shops', '/users'];
+      const isAllowed = allowedPages.some(page => pathname.startsWith(page));
+      
+      console.log('🔐 Super Admin Navigation Check:', {
+        pathname,
+        isAllowed,
+        willBlock: !isAllowed && shopOperationalPages.some(page => pathname.startsWith(page))
+      });
+      
+      // Block only operational pages, NOT /shops or /users
+      if (!isAllowed && shopOperationalPages.some(page => pathname.startsWith(page))) {
+        console.log('🚫 BLOCKING SUPER ADMIN from shop operational page:', pathname);
+        console.log('🔄 FORCE REDIRECTING to /super-admin');
+        router.replace('/super-admin');
+      }
+    }
+  }, [normalizedRole, pathname, router]);
 
   // Don't show navigation on login page
   if (pathname === '/login') {
     return null;
   }
 
-  const navSections = [
+  // Super Admin Navigation - Only system management features
+  const superAdminNavSections = [
+    {
+      title: 'System',
+      items: [
+        { href: '/super-admin', label: 'Dashboard', icon: '🎛️', desc: 'System Overview' },
+        { href: '/shops', label: 'Shops', icon: '🏪', desc: 'Manage All Shops' },
+        { href: '/users', label: 'All Users', icon: '👥', desc: 'System Users' },
+      ],
+    },
+  ];
+
+  // Shop User Navigation - Business operations for shop owners and staff
+  const shopNavSections = [
     {
       title: 'Overview',
       items: [
@@ -74,23 +134,34 @@ export default function Navigation() {
     },
   ];
 
-  // Super Admin section - only visible to SUPER_ADMIN
-  const superAdminSection = {
-    title: 'Super Admin',
-    items: [
-      { href: '/super-admin', label: 'Dashboard', icon: '🎛️', desc: 'System Overview' },
-      { href: '/shops', label: 'Shops', icon: '🏪', desc: 'Manage All Shops' },
-      { href: '/users', label: 'Users', icon: '👤', desc: 'Manage All Users' },
-    ],
-  };
-
-  // Owner section - only visible to OWNER
+  // Owner section - only visible to OWNER (not SUPER_ADMIN)
   const ownerSection = {
     title: 'Admin',
     items: [
       { href: '/users', label: 'Users', icon: '👤', desc: 'Manage Shop Users' },
     ],
   };
+
+  // CRITICAL: Determine which navigation to show based on role
+  // Super Admin sees ONLY system management, Shop users see business operations
+  // If role is not loaded yet, show minimal navigation
+  let navSections;
+  let additionalSections: any[] = [];
+  
+  if (!userRole) {
+    // Role not loaded yet - show minimal nav
+    navSections = [{ title: 'Loading', items: [] }];
+  } else if (normalizedRole === 'SUPER_ADMIN') {
+    // SUPER ADMIN: Only system navigation
+    navSections = superAdminNavSections;
+    additionalSections = []; // NO additional sections for super admin
+  } else {
+    // SHOP USERS: Business navigation + owner section if applicable
+    navSections = shopNavSections;
+    if (normalizedRole === 'OWNER') {
+      additionalSections = [ownerSection];
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -107,6 +178,23 @@ export default function Navigation() {
 
   return (
     <>
+      {/* DEBUG BANNER - Remove after testing */}
+      {userRole && (
+        <div style={{
+          background: isSuperAdmin ? '#fbbf24' : '#3b82f6',
+          color: isSuperAdmin ? '#78350f' : 'white',
+          padding: '8px 20px',
+          textAlign: 'center',
+          fontWeight: 'bold',
+          fontSize: '0.9rem',
+          position: 'sticky',
+          top: 0,
+          zIndex: 101,
+        }}>
+          🐛 DEBUG MODE | Raw Role: "{userRole}" | Normalized: "{normalizedRole}" | Is Super Admin: {isSuperAdmin ? 'YES ✅' : 'NO ❌'} | Nav Type: {isSuperAdmin ? 'SUPER_ADMIN_NAV' : 'SHOP_NAV'}
+        </div>
+      )}
+      
       {/* Top Navigation Bar */}
       <nav
         style={{
@@ -121,7 +209,7 @@ export default function Navigation() {
         <div style={{ padding: '12px 20px', maxWidth: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
             {/* Logo */}
-            <Link href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link href={isSuperAdmin ? "/super-admin" : "/dashboard"} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '2rem' }}>💎</span>
               <span
                 style={{
@@ -134,13 +222,26 @@ export default function Navigation() {
               >
                 BoolaGold
               </span>
+              {isSuperAdmin && (
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  background: '#fbbf24', 
+                  color: '#78350f', 
+                  padding: '4px 8px', 
+                  borderRadius: '4px', 
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  marginLeft: '8px'
+                }}>
+                  🎛️ SUPER ADMIN
+                </span>
+              )}
             </Link>
 
             {/* Desktop Navigation */}
             <div className="desktop-nav" style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
               {navSections.flatMap(section => section.items)
-                .concat(isSuperAdmin ? superAdminSection.items : [])
-                .concat(isOwner ? ownerSection.items : [])
+                .concat(additionalSections.flatMap(section => section.items))
                 .map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
@@ -251,7 +352,7 @@ export default function Navigation() {
             overflowY: 'auto',
           }}
         >
-          {[...navSections, ...(isSuperAdmin ? [superAdminSection] : []), ...(isOwner ? [ownerSection] : [])].map((section, idx) => (
+          {[...navSections, ...additionalSections].map((section, idx) => (
             <div key={idx} style={{ padding: '16px 20px', borderBottom: '1px solid #eee' }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', marginBottom: '8px' }}>
                 {section.title}

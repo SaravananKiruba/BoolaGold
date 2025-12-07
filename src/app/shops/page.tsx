@@ -55,6 +55,8 @@ export default function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [formData, setFormData] = useState<ShopFormData>({
     name: '',
     tagline: '',
@@ -85,17 +87,22 @@ export default function ShopsPage() {
   const fetchShops = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching shops from /api/shops...');
       const response = await fetch('/api/shops');
+      console.log('📡 Response status:', response.status);
       const data = await response.json();
+      console.log('📦 Response data:', data);
 
       if (response.ok) {
         setShops(data.data || []);
+        console.log('✅ Shops loaded successfully:', data.data?.length || 0);
       } else {
+        console.error('❌ Failed to fetch shops:', data.error);
         showToast('error', data.error || 'Failed to fetch shops');
       }
     } catch (error) {
-      console.error('Error fetching shops:', error);
-      showToast('error', 'Failed to fetch shops');
+      console.error('❌ Error fetching shops:', error);
+      showToast('error', 'Failed to fetch shops: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -106,13 +113,16 @@ export default function ShopsPage() {
     setSubmitting(true);
 
     try {
+      console.log('🔄 Creating shop:', formData);
       const response = await fetch('/api/shops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
+      console.log('📡 Create shop response status:', response.status);
       const data = await response.json();
+      console.log('📦 Create shop response data:', data);
 
       if (response.ok) {
         showToast('success', 'Shop created successfully');
@@ -140,11 +150,12 @@ export default function ShopsPage() {
         });
         fetchShops();
       } else {
+        console.error('❌ Failed to create shop:', data.error);
         showToast('error', data.error || 'Failed to create shop');
       }
     } catch (error) {
-      console.error('Error creating shop:', error);
-      showToast('error', 'Failed to create shop');
+      console.error('❌ Error creating shop:', error);
+      showToast('error', 'Failed to create shop: ' + (error as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -158,7 +169,7 @@ export default function ShopsPage() {
   const toggleShopStatus = async (shopId: string, currentStatus: boolean) => {
     try {
       const response = await fetch(`/api/shops/${shopId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
@@ -173,6 +184,62 @@ export default function ShopsPage() {
     } catch (error) {
       console.error('Error updating shop:', error);
       showToast('error', 'Failed to update shop');
+    }
+  };
+
+  const handleEditShop = async (shop: Shop) => {
+    setSelectedShop(shop);
+    setFormData({
+      name: shop.name,
+      tagline: shop.tagline || '',
+      address: shop.address,
+      city: shop.city,
+      state: shop.state,
+      pincode: shop.pincode,
+      phone: shop.phone,
+      email: shop.email,
+      website: shop.website || '',
+      gstNumber: shop.gstNumber,
+      panNumber: shop.panNumber,
+      logo: shop.logo || '',
+      primaryColor: shop.primaryColor,
+      invoicePrefix: shop.invoicePrefix,
+      bankName: '',
+      accountNumber: '',
+      ifscCode: '',
+      bankBranch: '',
+      termsAndConditions: '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedShop) return;
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/shops/${selectedShop.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast('success', 'Shop updated successfully');
+        setShowEditModal(false);
+        setSelectedShop(null);
+        fetchShops();
+      } else {
+        showToast('error', data.error || 'Failed to update shop');
+      }
+    } catch (error) {
+      console.error('Error updating shop:', error);
+      showToast('error', 'Failed to update shop');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -325,6 +392,7 @@ export default function ShopsPage() {
                     padding: '12px',
                     background: '#f8fafc',
                     borderRadius: '8px',
+                    marginBottom: '12px',
                   }}
                 >
                   <div style={{ textAlign: 'center' }}>
@@ -353,6 +421,33 @@ export default function ShopsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Action Button */}
+              <button
+                onClick={() => handleEditShop(shop)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                ✏️ Edit Shop Details
+              </button>
             </div>
           ))}
         </div>
@@ -829,6 +924,375 @@ export default function ShopsPage() {
                   }}
                 >
                   {submitting ? 'Creating...' : 'Create Shop'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Shop Modal */}
+      {showEditModal && selectedShop && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => {
+            setShowEditModal(false);
+            setSelectedShop(null);
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '24px',
+                borderBottom: '2px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                position: 'sticky',
+                top: 0,
+                background: 'white',
+                zIndex: 1,
+              }}
+            >
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#333' }}>✏️ Edit Shop: {selectedShop.name}</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedShop(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#999',
+                  padding: '4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form - Reuse the same form structure */}
+            <form onSubmit={handleUpdateShop} style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                {/* Basic Information */}
+                <div style={{ gridColumn: 'span 2' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#333', marginBottom: '12px' }}>
+                    Basic Information
+                  </h3>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Shop Name <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Tagline
+                  </label>
+                  <input
+                    type="text"
+                    name="tagline"
+                    value={formData.tagline}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Address <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    City <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    State <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Pincode <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Phone <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Email <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Website
+                  </label>
+                  <input
+                    type="text"
+                    name="website"
+                    value={formData.website}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    GST Number <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="gstNumber"
+                    value={formData.gstNumber}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Invoice Prefix <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="invoicePrefix"
+                    value={formData.invoicePrefix}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Primary Color
+                  </label>
+                  <input
+                    type="color"
+                    name="primaryColor"
+                    value={formData.primaryColor}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      height: '44px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  marginTop: '24px',
+                  paddingTop: '24px',
+                  borderTop: '2px solid #f1f5f9',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedShop(null);
+                  }}
+                  disabled={submitting}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#f1f5f9',
+                    color: '#64748b',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    padding: '12px 24px',
+                    background: submitting
+                      ? '#cbd5e1'
+                      : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {submitting ? 'Updating...' : 'Update Shop'}
                 </button>
               </div>
             </form>

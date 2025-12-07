@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface DashboardMetrics {
@@ -27,11 +28,32 @@ interface DashboardMetrics {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Redirect Super Admin to their own dashboard
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        if (response.ok) {
+          const data = await response.json();
+          const role = data.data?.user?.role;
+          if (role === 'SUPER_ADMIN') {
+            console.log('🔄 Redirecting Super Admin to /super-admin');
+            router.push('/super-admin');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking role:', error);
+      }
+    };
+    checkRole();
+  }, [router]);
 
   const fetchMetrics = async () => {
     try {

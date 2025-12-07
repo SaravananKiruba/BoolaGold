@@ -19,10 +19,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch all shops with counts
+    // Fetch all shops with counts and location info
     const shops = await prisma.shop.findMany({
       where: { deletedAt: null },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        state: true,
+        isActive: true,
+        createdAt: true,
         _count: {
           select: {
             users: true,
@@ -44,11 +50,19 @@ export async function GET(request: NextRequest) {
       where: { deletedAt: null, isActive: true },
     });
 
+    // Calculate aggregated stats
+    const totalCustomers = shops.reduce((sum, shop) => sum + shop._count.customers, 0);
+    const totalProducts = shops.reduce((sum, shop) => sum + shop._count.products, 0);
+    const totalSalesOrders = shops.reduce((sum, shop) => sum + shop._count.salesOrders, 0);
+
     const dashboardStats = {
       totalShops: shops.length,
       activeShops: shops.filter(shop => shop.isActive).length,
       totalUsers,
       activeUsers,
+      totalCustomers,
+      totalProducts,
+      totalSalesOrders,
       shops,
     };
 

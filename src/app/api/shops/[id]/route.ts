@@ -134,6 +134,18 @@ export async function PATCH(
 }
 
 /**
+ * PUT /api/shops/[id] - Update shop (alias for PATCH)
+ * SUPER_ADMIN: Can update any shop
+ * OWNER: Can update only their own shop
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return PATCH(request, { params });
+}
+
+/**
  * DELETE /api/shops/[id] - Soft delete shop (SUPER_ADMIN only)
  * ⚠️ CRITICAL: Only SaaS Provider can delete shops
  */

@@ -10,11 +10,19 @@ import { createErrorResponse, createSuccessResponse } from '@/utils/response';
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
+    console.log('🔍 GET /api/shops - Session:', JSON.stringify(session, null, 2));
     
     // 🔒 SECURITY: Only SUPER_ADMIN can view all shops
     if (!hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE')) {
+      console.error('❌ GET /api/shops - Unauthorized:', {
+        session,
+        hasPermission: hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE'),
+        isSuperAdmin: session?.role === 'SUPER_ADMIN'
+      });
       return createErrorResponse('Unauthorized: Only Super Admin can view all shops', 403);
     }
+    
+    console.log('✅ GET /api/shops - Permission granted');
 
     const shops = await prisma.shop.findMany({
       where: { deletedAt: null },
@@ -33,8 +41,16 @@ export async function GET(request: NextRequest) {
 
     return createSuccessResponse(shops);
   } catch (error) {
-    console.error('Error fetching shops:', error);
-    return createErrorResponse('Failed to fetch shops');
+    console.error('❌ Error fetching shops:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
+    return createErrorResponse(
+      `Failed to fetch shops: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      500
+    );
   }
 }
 
@@ -45,11 +61,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
+    console.log('🔍 POST /api/shops - Session:', JSON.stringify(session, null, 2));
     
     // 🔒 SECURITY: Only SUPER_ADMIN can create shops
     if (!hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE')) {
+      console.error('❌ POST /api/shops - Unauthorized:', {
+        session,
+        hasPermission: hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE'),
+        isSuperAdmin: session?.role === 'SUPER_ADMIN'
+      });
       return createErrorResponse('Unauthorized: Only Super Admin can create shops', 403);
     }
+    
+    console.log('✅ POST /api/shops - Permission granted');
 
     const body = await request.json();
 
@@ -107,7 +131,15 @@ export async function POST(request: NextRequest) {
 
     return createSuccessResponse(shop, 201);
   } catch (error) {
-    console.error('Error creating shop:', error);
-    return createErrorResponse('Failed to create shop');
+    console.error('❌ Error creating shop:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
+    return createErrorResponse(
+      `Failed to create shop: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      500
+    );
   }
 }

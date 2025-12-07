@@ -8,12 +8,14 @@ import { createErrorResponse, createSuccessResponse } from '@/utils/response';
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
+    console.log('🔍 GET /api/auth/session - Session:', JSON.stringify(session, null, 2));
 
     if (!session) {
+      console.log('❌ No session found');
       return createErrorResponse('Not authenticated', 401);
     }
 
-    return createSuccessResponse({
+    const userData = {
       user: {
         id: session.userId,
         username: session.username,
@@ -22,9 +24,12 @@ export async function GET(request: NextRequest) {
         shopId: session.shopId,
         shopName: session.shopName,
       },
-    });
+    };
+    console.log('✅ Session data:', JSON.stringify(userData, null, 2));
+
+    return createSuccessResponse(userData);
   } catch (error) {
-    console.error('Error fetching session:', error);
+    console.error('❌ Error fetching session:', error);
     return createErrorResponse('Failed to fetch session');
   }
 }

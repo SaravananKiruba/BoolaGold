@@ -34,8 +34,17 @@ export default function LoginPage() {
       console.log('Login response:', { status: response.status, data });
 
       if (data.success) {
-        // Redirect to dashboard
-        router.push('/dashboard');
+        // Redirect based on role - FIX: The API returns user directly, not nested in data.data
+        const userRole = data.user?.role;
+        console.log('🔐 User role detected:', userRole);
+        
+        if (userRole === 'SUPER_ADMIN') {
+          console.log('🎛️ Redirecting to Super Admin dashboard');
+          router.push('/super-admin');
+        } else {
+          console.log('📊 Redirecting to shop dashboard');
+          router.push('/dashboard');
+        }
         router.refresh(); // Force refresh to update middleware
       } else {
         setError(data.message || 'Invalid username or password');

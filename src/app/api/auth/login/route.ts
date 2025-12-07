@@ -22,8 +22,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by username
-    const user = await prisma.user.findUnique({
-      where: { username, deletedAt: null },
+    const user = await prisma.user.findFirst({
+      where: { 
+        username,
+        deletedAt: null 
+      },
       include: {
         shop: true,
       },
