@@ -5,11 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { customerRepository } from '@/repositories/customerRepository';
+import { CustomerRepository } from '@/repositories/customerRepository';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { phoneSchema, emailSchema } from '@/utils/validation';
 import { CustomerType, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
+import { getSession, hasPermission } from '@/lib/auth';
 
 const updateCustomerSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -29,14 +30,21 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const customer = await customerRepository.findById(params.id);
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'CUSTOMER_VIEW')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
+    const repository = new CustomerRepository({ session });
+    const customer = await repository.findById(params.id);
 
     if (!customer) {
       return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
     }
 
     // Get customer statistics
-    const stats = await customerRepository.getStatistics(params.id);
+    const stats = await repository.getStatistics(params.id);
 
     return NextResponse.json(
       successResponse({
@@ -55,6 +63,12 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'CUSTOMER_UPDATE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -65,15 +79,17 @@ export async function PUT(
 
     const data = validation.data;
 
+    const repository = new CustomerRepository({ session });
+    
     // Check if customer exists
-    const existingCustomer = await customerRepository.findById(params.id);
+    const existingCustomer = await repository.findById(params.id);
     if (!existingCustomer) {
       return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
     }
 
     // If phone is being updated, check for duplicates
     if (data.phone && data.phone !== existingCustomer.phone) {
-      const phoneExists = await customerRepository.findByPhone(data.phone);
+      const phoneExists = await repository.findByPhone(data.phone);
       if (phoneExists) {
         return NextResponse.json(errorResponse('Customer with this phone already exists'), {
           status: 409,
@@ -96,7 +112,7 @@ export async function PUT(
     if (data.customerType) updateData.customerType = data.customerType;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-    const updatedCustomer = await customerRepository.update(params.id, updateData);
+    const updatedCustomer = await repository.update(params.id, updateData);
 
     // Log the update
     await logUpdate(AuditModule.CUSTOMERS, params.id, existingCustomer, updatedCustomer);
@@ -113,13 +129,20 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const customer = await customerRepository.findById(params.id);
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'CUSTOMER_DELETE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
+    const repository = new CustomerRepository({ session });
+    const customer = await repository.findById(params.id);
 
     if (!customer) {
       return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
     }
 
-    await customerRepository.softDelete(params.id);
+    await repository.softDelete(params.id);
 
     // Log the deletion
     await logDelete(AuditModule.CUSTOMERS, params.id, customer);

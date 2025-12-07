@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getSession, hasPermission } from '@/lib/auth';
+import { getSession, hasPermission, isSuperAdmin } from '@/lib/auth';
 import { createErrorResponse, createSuccessResponse } from '@/utils/response';
 
 /**
- * GET /api/shops - Get all shops (OWNER only)
+ * GET /api/shops - Get all shops (SUPER_ADMIN only)
+ * ⚠️ CRITICAL: Only SaaS Provider can view all shops
  */
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
-    if (!hasPermission(session, 'SHOP_CONFIG')) {
-      return createErrorResponse('Unauthorized', 403);
+    
+    // 🔒 SECURITY: Only SUPER_ADMIN can view all shops
+    if (!hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE')) {
+      return createErrorResponse('Unauthorized: Only Super Admin can view all shops', 403);
     }
 
     const shops = await prisma.shop.findMany({
@@ -36,13 +39,16 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/shops - Create a new shop (OWNER only)
+ * POST /api/shops - Create a new shop (SUPER_ADMIN only)
+ * ⚠️ CRITICAL: Only SaaS Provider can create new shops
  */
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    if (!hasPermission(session, 'SHOP_CONFIG')) {
-      return createErrorResponse('Unauthorized', 403);
+    
+    // 🔒 SECURITY: Only SUPER_ADMIN can create shops
+    if (!hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE')) {
+      return createErrorResponse('Unauthorized: Only Super Admin can create shops', 403);
     }
 
     const body = await request.json();

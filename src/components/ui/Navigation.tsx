@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -8,6 +8,28 @@ export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Check user role from session
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        if (response.ok) {
+          const data = await response.json();
+          setUserRole(data.data?.user?.role);
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error);
+      }
+    };
+    checkPermissions();
+  }, []);
+
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const isOwner = userRole === 'OWNER';
+  const hasShopConfigPermission = isOwner;
+  const hasAdminAccess = isSuperAdmin || isOwner;
 
   // Don't show navigation on login page
   if (pathname === '/login') {
@@ -51,6 +73,24 @@ export default function Navigation() {
       ],
     },
   ];
+
+  // Super Admin section - only visible to SUPER_ADMIN
+  const superAdminSection = {
+    title: 'Super Admin',
+    items: [
+      { href: '/super-admin', label: 'Dashboard', icon: '🎛️', desc: 'System Overview' },
+      { href: '/shops', label: 'Shops', icon: '🏪', desc: 'Manage All Shops' },
+      { href: '/users', label: 'Users', icon: '👤', desc: 'Manage All Users' },
+    ],
+  };
+
+  // Owner section - only visible to OWNER
+  const ownerSection = {
+    title: 'Admin',
+    items: [
+      { href: '/users', label: 'Users', icon: '👤', desc: 'Manage Shop Users' },
+    ],
+  };
 
   const handleLogout = async () => {
     try {
@@ -98,7 +138,10 @@ export default function Navigation() {
 
             {/* Desktop Navigation */}
             <div className="desktop-nav" style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {navSections.flatMap(section => section.items).map((item) => {
+              {navSections.flatMap(section => section.items)
+                .concat(isSuperAdmin ? superAdminSection.items : [])
+                .concat(isOwner ? ownerSection.items : [])
+                .map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
                   <Link
@@ -208,7 +251,7 @@ export default function Navigation() {
             overflowY: 'auto',
           }}
         >
-          {navSections.map((section, idx) => (
+          {[...navSections, ...(isSuperAdmin ? [superAdminSection] : []), ...(isOwner ? [ownerSection] : [])].map((section, idx) => (
             <div key={idx} style={{ padding: '16px 20px', borderBottom: '1px solid #eee' }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', marginBottom: '8px' }}>
                 {section.title}

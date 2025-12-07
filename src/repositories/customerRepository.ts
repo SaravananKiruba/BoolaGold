@@ -230,5 +230,3 @@ export class CustomerRepository extends BaseRepository {
     };
   }
 }
-
-export const customerRepository = new CustomerRepository();

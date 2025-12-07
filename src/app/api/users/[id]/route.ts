@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getSession, hasPermission, hashPassword } from '@/lib/auth';
+import { getSession, hasPermission, hashPassword, isSuperAdmin } from '@/lib/auth';
 import { createErrorResponse, createSuccessResponse } from '@/utils/response';
 
 /**
  * GET /api/users/[id] - Get user by ID
+ * SUPER_ADMIN: Can view any user
+ * OWNER: Can view users in their shop only
+ * Users: Can view their own profile
  */
 export async function GET(
   request: NextRequest,
@@ -14,8 +17,7 @@ export async function GET(
     const { id } = await params;
     const session = await getSession();
     
-    // Users can view their own profile or OWNER can view all
-    if (!session || (session.userId !== id && !hasPermission(session, 'USER_MANAGE'))) {
+    if (!session) {
       return createErrorResponse('Unauthorized', 403);
     }
 
@@ -51,6 +53,15 @@ export async function GET(
       return createErrorResponse('User not found', 404);
     }
 
+    // 🔒 SECURITY: Check if user can access this user
+    const canViewUser = session.userId === id || 
+                       isSuperAdmin(session) || 
+                       (hasPermission(session, 'USER_MANAGE') && user.shopId === session.shopId);
+    
+    if (!canViewUser) {
+      return createErrorResponse('Unauthorized: Cannot view this user', 403);
+    }
+
     return createSuccessResponse(user);
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -60,6 +71,9 @@ export async function GET(
 
 /**
  * PATCH /api/users/[id] - Update user
+ * SUPER_ADMIN: Can update any user
+ * OWNER: Can update users in their shop only
+ * Users: Can update their own profile (limited fields)
  */
 export async function PATCH(
   request: NextRequest,
@@ -69,9 +83,26 @@ export async function PATCH(
     const { id } = await params;
     const session = await getSession();
     
-    // Users can update their own profile or OWNER can update all
-    if (!session || (session.userId !== id && !hasPermission(session, 'USER_MANAGE'))) {
+    if (!session) {
       return createErrorResponse('Unauthorized', 403);
+    }
+
+    // Fetch user to check shop ownership
+    const existingUser = await prisma.user.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!existingUser) {
+      return createErrorResponse('User not found', 404);
+    }
+
+    // 🔒 SECURITY: Check if user can update this user
+    const isOwnProfile = session.userId === id;
+    const canManageUser = isSuperAdmin(session) || 
+                         (hasPermission(session, 'USER_MANAGE') && existingUser.shopId === session.shopId);
+    
+    if (!isOwnProfile && !canManageUser) {
+      return createErrorResponse('Unauthorized: Cannot update this user', 403);
     }
 
     const body = await request.json();
@@ -83,10 +114,17 @@ export async function PATCH(
       ...(phone !== undefined && { phone }),
     };
 
-    // Only OWNER can change role and isActive status
-    if (hasPermission(session, 'USER_MANAGE')) {
-      if (role && ['OWNER', 'SALES', 'ACCOUNTS'].includes(role)) {
-        updateData.role = role;
+    // Only managers can change role and isActive status
+    if (canManageUser && !isOwnProfile) {
+      if (role) {
+        // SUPER_ADMIN can set any role, OWNER can only set SALES/ACCOUNTS
+        if (isSuperAdmin(session)) {
+          if (['SUPER_ADMIN', 'OWNER', 'SALES', 'ACCOUNTS'].includes(role)) {
+            updateData.role = role;
+          }
+        } else if (['SALES', 'ACCOUNTS'].includes(role)) {
+          updateData.role = role;
+        }
       }
       if (isActive !== undefined) {
         updateData.isActive = isActive;
@@ -124,7 +162,9 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/users/[id] - Soft delete user (OWNER only)
+ * DELETE /api/users/[id] - Soft delete user
+ * SUPER_ADMIN: Can delete any user
+ * OWNER: Can delete users in their shop only
  */
 export async function DELETE(
   request: NextRequest,
@@ -134,7 +174,8 @@ export async function DELETE(
     const { id } = await params;
     const session = await getSession();
     
-    if (!hasPermission(session, 'USER_MANAGE')) {
+    const canManageUsers = hasPermission(session, 'USER_MANAGE') || hasPermission(session, 'SUPER_ADMIN_USERS_MANAGE');
+    if (!canManageUsers) {
       return createErrorResponse('Unauthorized', 403);
     }
 
@@ -143,7 +184,21 @@ export async function DELETE(
       return createErrorResponse('Cannot delete your own account', 400);
     }
 
-    await prisma.user.update({
+    // Fetch user to check shop ownership
+    const userToDelete = await prisma.user.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!userToDelete) {
+      return createErrorResponse('User not found', 404);
+    }
+
+    // 🔒 SECURITY: OWNER can only delete users in their shop
+    if (!isSuperAdmin(session) && userToDelete.shopId !== session?.shopId) {
+      return createErrorResponse('Unauthorized: Cannot delete users from other shops', 403);
+    }
+
+    await prisma.user.update(
       where: { id },
       data: { deletedAt: new Date() },
     });

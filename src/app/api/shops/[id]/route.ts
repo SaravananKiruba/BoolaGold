@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getSession, hasPermission } from '@/lib/auth';
+import { getSession, hasPermission, isSuperAdmin } from '@/lib/auth';
 import { createErrorResponse, createSuccessResponse } from '@/utils/response';
 
 /**
  * GET /api/shops/[id] - Get shop by ID
+ * SUPER_ADMIN: Can view any shop
+ * OWNER: Can view only their own shop
  */
 export async function GET(
   request: NextRequest,
@@ -14,9 +16,10 @@ export async function GET(
     const { id } = await params;
     const session = await getSession();
     
-    // Users can only view their own shop details
-    if (!session || (session.shopId !== id && !hasPermission(session, 'SHOP_CONFIG'))) {
-      return createErrorResponse('Unauthorized', 403);
+    // 🔒 SECURITY: SUPER_ADMIN can view any shop, OWNER can only view their own
+    const canViewShop = isSuperAdmin(session) || session?.shopId === id;
+    if (!session || !canViewShop) {
+      return createErrorResponse('Unauthorized: Cannot view this shop', 403);
     }
 
     const shop = await prisma.shop.findFirst({
@@ -54,7 +57,9 @@ export async function GET(
 }
 
 /**
- * PATCH /api/shops/[id] - Update shop (OWNER only)
+ * PATCH /api/shops/[id] - Update shop
+ * SUPER_ADMIN: Can update any shop
+ * OWNER: Can update only their own shop
  */
 export async function PATCH(
   request: NextRequest,
@@ -64,8 +69,10 @@ export async function PATCH(
     const { id } = await params;
     const session = await getSession();
     
-    if (!hasPermission(session, 'SHOP_CONFIG')) {
-      return createErrorResponse('Unauthorized', 403);
+    // 🔒 SECURITY: SUPER_ADMIN can update any shop, OWNER can only update their own
+    const canUpdateShop = isSuperAdmin(session) || (session?.shopId === id && hasPermission(session, 'SHOP_CONFIG'));
+    if (!canUpdateShop) {
+      return createErrorResponse('Unauthorized: Cannot update this shop', 403);
     }
 
     const body = await request.json();
@@ -127,7 +134,8 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/shops/[id] - Soft delete shop (OWNER only)
+ * DELETE /api/shops/[id] - Soft delete shop (SUPER_ADMIN only)
+ * ⚠️ CRITICAL: Only SaaS Provider can delete shops
  */
 export async function DELETE(
   request: NextRequest,
@@ -137,8 +145,9 @@ export async function DELETE(
     const { id } = await params;
     const session = await getSession();
     
-    if (!hasPermission(session, 'SHOP_CONFIG')) {
-      return createErrorResponse('Unauthorized', 403);
+    // 🔒 SECURITY: Only SUPER_ADMIN can delete shops
+    if (!hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE')) {
+      return createErrorResponse('Unauthorized: Only Super Admin can delete shops', 403);
     }
 
     await prisma.shop.update({

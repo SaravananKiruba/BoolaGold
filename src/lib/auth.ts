@@ -42,8 +42,8 @@ export interface SessionPayload {
   username: string;
   name: string;
   role: string;
-  shopId: string;
-  shopName: string;
+  shopId: string | null;  // NULL for SUPER_ADMIN
+  shopName: string | null;  // NULL for SUPER_ADMIN
 }
 
 /**
@@ -93,7 +93,14 @@ export function hasRole(session: SessionPayload | null, allowedRoles: string[]):
 }
 
 /**
- * Check if user is OWNER (has full access)
+ * Check if user is SUPER_ADMIN (SaaS Provider)
+ */
+export function isSuperAdmin(session: SessionPayload | null): boolean {
+  return session?.role === 'SUPER_ADMIN';
+}
+
+/**
+ * Check if user is OWNER (Shop Owner - full access within their shop)
  */
 export function isOwner(session: SessionPayload | null): boolean {
   return session?.role === 'OWNER';
@@ -104,7 +111,7 @@ export function isOwner(session: SessionPayload | null): boolean {
  */
 export function hasSalesAccess(session: SessionPayload | null): boolean {
   if (!session) return false;
-  return ['OWNER', 'SALES'].includes(session.role);
+  return ['SUPER_ADMIN', 'OWNER', 'SALES'].includes(session.role);
 }
 
 /**
@@ -112,7 +119,7 @@ export function hasSalesAccess(session: SessionPayload | null): boolean {
  */
 export function hasAccountsAccess(session: SessionPayload | null): boolean {
   if (!session) return false;
-  return ['OWNER', 'ACCOUNTS'].includes(session.role);
+  return ['SUPER_ADMIN', 'OWNER', 'ACCOUNTS'].includes(session.role);
 }
 
 /**
@@ -172,12 +179,17 @@ export const PERMISSIONS = {
   RATE_MASTER_EDIT: ['OWNER', 'ACCOUNTS'],
   RATE_MASTER_VIEW: ['OWNER', 'SALES', 'ACCOUNTS'],
 
-  // Shop Configuration (OWNER only)
+  // Shop Configuration (Shop Owner only)
   SHOP_CONFIG: ['OWNER'],
   USER_MANAGE: ['OWNER'],
 
-  // Audit Logs (OWNER only)
+  // Audit Logs (Shop Owner only)
   AUDIT_VIEW: ['OWNER'],
+
+  // ⭐ SUPER ADMIN ONLY - Multi-shop Management (SaaS Provider)
+  SUPER_ADMIN_SHOPS_MANAGE: ['SUPER_ADMIN'],  // Create, view, edit all shops
+  SUPER_ADMIN_USERS_MANAGE: ['SUPER_ADMIN'],  // Create users for any shop
+  SUPER_ADMIN_SYSTEM_VIEW: ['SUPER_ADMIN'],   // View all system data
 };
 
 /**

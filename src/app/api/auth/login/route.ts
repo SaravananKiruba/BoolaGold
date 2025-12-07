@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     console.log('User lookup result:', {
       found: !!user,
       username: user?.username,
+      role: user?.role,
       isActive: user?.isActive,
       shopActive: user?.shop?.isActive,
     });
@@ -52,8 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if shop is active
-    if (!user.shop.isActive) {
+    // Check if shop is active (SUPER_ADMIN doesn't have a shop)
+    if (user.role !== 'SUPER_ADMIN' && user.shop && !user.shop.isActive) {
       return NextResponse.json(
         { success: false, message: 'Shop is deactivated. Please contact support.' },
         { status: 403 }
@@ -81,14 +82,14 @@ export async function POST(request: NextRequest) {
       data: { lastLogin: new Date() },
     });
 
-    // Generate JWT token
+    // Generate JWT token (shopId and shopName are null for SUPER_ADMIN)
     const token = await generateToken({
       userId: user.id,
       username: user.username,
       name: user.name,
       role: user.role,
-      shopId: user.shopId,
-      shopName: user.shop.name,
+      shopId: user.shopId || null,
+      shopName: user.shop?.name || null,
     });
 
     // Create response with user data
@@ -101,8 +102,8 @@ export async function POST(request: NextRequest) {
           username: user.username,
           name: user.name,
           role: user.role,
-          shopId: user.shopId,
-          shopName: user.shop.name,
+          shopId: user.shopId || null,
+          shopName: user.shop?.name || null,
         },
       },
       { status: 200 }
