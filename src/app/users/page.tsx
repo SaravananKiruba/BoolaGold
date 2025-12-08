@@ -64,8 +64,20 @@ export default function UsersPage() {
     try {
       const response = await fetch('/api/auth/session');
       const data = await response.json();
-      if (response.ok && data.user) {
-        setCurrentUserRole(data.user.role);
+      console.log('📍 Users Page - Session Response:', data);
+      
+      // Session endpoint returns data.data.user (nested structure)
+      const user = data.data?.user || data.user;
+      
+      if (response.ok && user) {
+        console.log('✅ Users Page - Current User Role:', user.role);
+        setCurrentUserRole(user.role);
+        // Set default role based on current user
+        if (user.role === 'SUPER_ADMIN') {
+          setFormData(prev => ({ ...prev, role: 'OWNER' }));
+        } else if (user.role === 'OWNER') {
+          setFormData(prev => ({ ...prev, role: 'SALES' }));
+        }
       }
     } catch (error) {
       console.error('Error fetching current user:', error);
@@ -78,14 +90,22 @@ export default function UsersPage() {
 
   const fetchShops = async () => {
     try {
+      console.log('🔍 Fetching shops...');
       const response = await fetch('/api/shops');
       const data = await response.json();
+      console.log('📥 Shops response:', { ok: response.ok, status: response.status, data });
 
       if (response.ok) {
-        setShops(data.data || []);
+        const shopsData = data.data || [];
+        console.log('✅ Shops loaded:', shopsData.length, 'shops');
+        setShops(shopsData);
+      } else {
+        console.error('❌ Failed to fetch shops:', data);
+        showToast('error', data.error || 'Failed to fetch shops. You may not have permission.');
       }
     } catch (error) {
-      console.error('Error fetching shops:', error);
+      console.error('❌ Error fetching shops:', error);
+      showToast('error', 'Error loading shops');
     }
   };
 
@@ -114,6 +134,19 @@ export default function UsersPage() {
     setSubmitting(true);
 
     try {
+      // Validation check for SUPER_ADMIN creating OWNER
+      if (currentUserRole === 'SUPER_ADMIN' && formData.role === 'OWNER' && !formData.shopId) {
+        showToast('error', 'Please select a shop for the OWNER user');
+        setSubmitting(false);
+        return;
+      }
+
+      console.log('📤 Creating user with data:', {
+        ...formData,
+        password: '***hidden***',
+        currentUserRole,
+      });
+
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,6 +154,7 @@ export default function UsersPage() {
       });
 
       const data = await response.json();
+      console.log('📥 Create user response:', data);
 
       if (response.ok) {
         showToast('success', 'User created successfully');
@@ -143,6 +177,7 @@ export default function UsersPage() {
         });
         fetchUsers();
       } else {
+        console.error('❌ Failed to create user:', data);
         showToast('error', data.error || 'Failed to create user');
       }
     } catch (error) {
@@ -156,6 +191,29 @@ export default function UsersPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleOpenCreateModal = () => {
+    // Reset form with proper defaults based on user role
+    const defaultRole = currentUserRole === 'SUPER_ADMIN' ? 'OWNER' : 'SALES';
+    console.log('🔓 Opening create modal - Current user role:', currentUserRole, 'Default role:', defaultRole);
+    console.log('🔍 Available shops:', shops.length);
+    
+    // Warn if SUPER_ADMIN but no shops available
+    if (currentUserRole === 'SUPER_ADMIN' && shops.length === 0) {
+      showToast('warning', 'No shops available. Please create a shop first!');
+    }
+    
+    setFormData({
+      username: '',
+      password: '',
+      name: '',
+      email: '',
+      phone: '',
+      role: defaultRole,
+      shopId: '',
+    });
+    setShowCreateModal(true);
   };
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
@@ -199,7 +257,7 @@ export default function UsersPage() {
       case 'SUPER_ADMIN':
         return 'Super Admin';
       case 'OWNER':
-        return 'Shop Admin';
+        return 'Owner';
       case 'SALES':
         return 'Sales';
       case 'ACCOUNTS':
@@ -254,7 +312,7 @@ export default function UsersPage() {
           </select>
 
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={handleOpenCreateModal}
             style={{
               padding: '12px 24px',
               background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
@@ -516,18 +574,25 @@ export default function UsersPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    {currentUserRole === 'SUPER_ADMIN' && (
+                    {currentUserRole === 'SUPER_ADMIN' ? (
                       <>
-                        <option value="SUPER_ADMIN">🔴 SUPER ADMIN - Platform Administrator (No Shop)</option>
-                        <option value="OWNER">👑 SHOP ADMIN - Full Shop Management Access</option>
+                        <option value="OWNER">👑 OWNER - Shop Administrator (Full Access)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="SALES">📊 SALES - Sales and Inventory Management</option>
+                        <option value="ACCOUNTS">💰 ACCOUNTS - Financial and Purchase Management</option>
                       </>
                     )}
-                    <option value="SALES">📊 SALES - Sales and Inventory Management</option>
-                    <option value="ACCOUNTS">💰 ACCOUNTS - Financial and Purchase Management</option>
                   </select>
                   {currentUserRole === 'SUPER_ADMIN' && (
                     <div style={{ marginTop: '8px', padding: '10px', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '6px', fontSize: '0.85rem', color: '#92400e' }}>
-                      <strong>💡 Tip:</strong> Create <strong>SHOP ADMIN</strong> users for shop owners, then share credentials so they can create their team (SALES & ACCOUNTS).
+                      <strong>💡 Super Admin:</strong> Create <strong>OWNER</strong> users to manage shops. Owners get full access to all modules and can create their team (SALES & ACCOUNTS).
+                    </div>
+                  )}
+                  {currentUserRole === 'OWNER' && (
+                    <div style={{ marginTop: '8px', padding: '10px', background: '#dbeafe', border: '1px solid #3b82f6', borderRadius: '6px', fontSize: '0.85rem', color: '#1e3a8a' }}>
+                      <strong>💡 Shop Owner:</strong> Create <strong>SALES</strong> and <strong>ACCOUNTS</strong> staff to manage your shop operations.
                     </div>
                   )}
                 </div>
@@ -559,6 +624,16 @@ export default function UsersPage() {
                         </option>
                       ))}
                     </select>
+                    {shops.length === 0 && (
+                      <div style={{ marginTop: '8px', padding: '10px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '6px', fontSize: '0.85rem', color: '#991b1b' }}>
+                        <strong>⚠️ No shops available!</strong> Please create a shop first before creating an OWNER user.
+                      </div>
+                    )}
+                    {currentUserRole === 'SUPER_ADMIN' && shops.length > 0 && (
+                      <div style={{ marginTop: '8px', padding: '10px', background: '#e0e7ff', border: '1px solid #6366f1', borderRadius: '6px', fontSize: '0.85rem', color: '#3730a3' }}>
+                        <strong>🏪 Note:</strong> Assign this OWNER to a specific shop. They will have full control over that shop.
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -838,12 +913,13 @@ export default function UsersPage() {
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <div style={{ fontSize: '1.5rem' }}>💡</div>
                     <div>
-                      <div style={{ fontWeight: 600, color: '#1e40af', marginBottom: '6px' }}>Next Steps for Shop Admin:</div>
+                      <div style={{ fontWeight: 600, color: '#1e40af', marginBottom: '6px' }}>Next Steps for Shop Owner:</div>
                       <ol style={{ margin: 0, paddingLeft: '20px', color: '#1e40af', fontSize: '0.9rem', lineHeight: '1.6' }}>
                         <li>Share these credentials with the shop owner</li>
                         <li>They can login at <strong>{typeof window !== 'undefined' ? window.location.origin : ''}/login</strong></li>
-                        <li>They can create SALES and ACCOUNTS users for their team</li>
-                        <li>They will manage their shop's data independently</li>
+                        <li>They have <strong>FULL ACCESS</strong> to all shop modules (customers, products, sales, purchases, reports)</li>
+                        <li>They can create SALES and ACCOUNTS staff for their team</li>
+                        <li>They manage their shop independently</li>
                       </ol>
                     </div>
                   </div>

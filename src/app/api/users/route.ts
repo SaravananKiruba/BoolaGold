@@ -1,3 +1,34 @@
+/**
+ * USER MANAGEMENT API - Strict Role Hierarchy
+ * 
+ * ✅ ROLE SEPARATION (Strictly Enforced):
+ * 
+ * 1️⃣ SUPER_ADMIN (Platform Owner)
+ *    - Can ONLY create: OWNER users
+ *    - Cannot create: SUPER_ADMIN, SALES, or ACCOUNTS
+ *    - Must assign OWNER to a specific shop
+ *    - Purpose: Assign shop administrators
+ * 
+ * 2️⃣ OWNER (Shop Administrator - Full Power)
+ *    - Can ONLY create: SALES and ACCOUNTS users
+ *    - Cannot create: OWNER or SUPER_ADMIN
+ *    - Users auto-assigned to owner's shop
+ *    - Has FULL ACCESS to all shop modules
+ *    - Purpose: Run shop + build team
+ * 
+ * 3️⃣ SALES & ACCOUNTS (Staff)
+ *    - Cannot create any users
+ *    - Limited module access based on role
+ *    - Purpose: Specific operational duties
+ * 
+ * 🔒 SECURITY MODEL:
+ * - SUPER_ADMIN: Creates shop owners only
+ * - OWNER: Full shop power + creates staff
+ * - SALES: Customer, product, sales operations
+ * - ACCOUNTS: Finance, purchase operations
+ * - Shop deactivation blocks all shop users
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession, hasPermission, hashPassword, isSuperAdmin } from '@/lib/auth';
@@ -87,29 +118,31 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Missing required fields', 400);
     }
 
-    // 🔒 SECURITY: Validate role and shopId based on user's role
+    // 🔒 SECURITY: Strict role separation
+    // SUPER_ADMIN: Can ONLY create OWNER users
+    // OWNER: Can ONLY create SALES and ACCOUNTS users
+    // SALES/ACCOUNTS: Cannot create any users
     if (isSuperAdmin(session)) {
-      // SUPER_ADMIN can create any role (including OWNER and SUPER_ADMIN)
-      if (!['SUPER_ADMIN', 'OWNER', 'SALES', 'ACCOUNTS'].includes(role)) {
-        return createErrorResponse('Invalid role', 400);
+      // SUPER_ADMIN can ONLY create OWNER role
+      if (role !== 'OWNER') {
+        return createErrorResponse('Super Admin can only create OWNER users', 403);
       }
-      // SUPER_ADMIN must specify shopId for non-SUPER_ADMIN users
-      if (role !== 'SUPER_ADMIN' && !shopId) {
-        return createErrorResponse('shopId required for shop users', 400);
+      // OWNER must be assigned to a shop
+      if (!shopId) {
+        return createErrorResponse('Shop selection required for OWNER users', 400);
       }
-      // SUPER_ADMIN users should not have shopId
-      if (role === 'SUPER_ADMIN' && shopId) {
-        return createErrorResponse('SUPER_ADMIN cannot be assigned to a shop', 400);
-      }
-    } else {
+    } else if (session?.role === 'OWNER') {
       // OWNER can only create SALES/ACCOUNTS for their own shop
       if (!['SALES', 'ACCOUNTS'].includes(role)) {
-        return createErrorResponse('Unauthorized: Owners can only create SALES or ACCOUNTS users', 403);
+        return createErrorResponse('Shop Owners can only create SALES or ACCOUNTS users', 403);
       }
-      // Force shopId to be the owner's shop
+      // Force shopId to be the owner's shop (cannot create for other shops)
       if (shopId && shopId !== session?.shopId) {
-        return createErrorResponse('Unauthorized: Cannot create users for other shops', 403);
+        return createErrorResponse('Cannot create users for other shops', 403);
       }
+    } else {
+      // SALES and ACCOUNTS cannot create users
+      return createErrorResponse('You do not have permission to create users', 403);
     }
 
     // Check if username already exists

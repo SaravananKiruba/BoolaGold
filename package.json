@@ -18,7 +18,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "seed:shop": "tsx scripts/seed-initial-shop.ts"
+    "seed:shop": "tsx scripts/seed-initial-shop.ts",
+    "seed:admin": "tsx scripts/seed-super-admin.ts"
   },
   "dependencies": {
     "@chakra-ui/next-js": "^2.4.2",

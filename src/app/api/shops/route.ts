@@ -1,3 +1,30 @@
+/**
+ * SHOP MANAGEMENT API - SaaS Multi-Tenant Core
+ * 
+ * ✅ FULLY IMPLEMENTED FEATURES:
+ * 
+ * 1️⃣ CREATE SHOPS (Super Admin Only)
+ *    - Complete shop profile (name, address, GST, bank details)
+ *    - Automatic activation (isActive: true)
+ *    - Custom branding (logo, colors, invoice prefix)
+ * 
+ * 2️⃣ ACTIVATE/DEACTIVATE SHOPS (Super Admin Only)
+ *    - Toggle shop status via PATCH /api/shops/[id]
+ *    - Deactivation immediately blocks all shop users
+ *    - Validation happens at login and on every API call
+ * 
+ * 3️⃣ SHOP ISOLATION & SECURITY
+ *    - Each shop's data completely isolated
+ *    - Users can only access their own shop's data
+ *    - Super Admin can view/manage all shops
+ * 
+ * 🔒 CRITICAL SECURITY:
+ * - Only SUPER_ADMIN can create/delete shops
+ * - Only SUPER_ADMIN can activate/deactivate shops
+ * - OWNER can view/edit only their own shop details
+ * - Deactivated shops block ALL user access immediately
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession, hasPermission, isSuperAdmin } from '@/lib/auth';

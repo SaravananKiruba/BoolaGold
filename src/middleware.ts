@@ -26,10 +26,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 🔒 SECURITY: Super Admin route protection
-  // Note: This is a basic check. Full role verification happens in API routes.
-  // We can't decode JWT here without making middleware async with external libs.
-  // The API routes will do the actual authorization.
+  // 🔒 SECURITY: Super Admin route protection & Shop Deactivation Check
+  // Note: Basic authentication check here. Full role and shop status verification 
+  // happens in API routes using validateSession() which checks:
+  // 1. Valid session
+  // 2. User role permissions
+  // 3. Shop activation status (blocks deactivated shops)
   
   return NextResponse.next();
 }

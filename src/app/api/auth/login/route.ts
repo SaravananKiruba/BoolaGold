@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is active
+    // 🔒 SECURITY CHECK 1: Verify user account is active
     if (!user.isActive) {
       return NextResponse.json(
         { success: false, message: 'Account is deactivated. Please contact administrator.' },
@@ -56,8 +56,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if shop is active (SUPER_ADMIN doesn't have a shop)
+    // 🔒 SECURITY CHECK 2: Verify shop is active (blocks deactivated shops)
+    // ⭐ SUPER_ADMIN has no shop, so this check doesn't apply to them
+    // 🚫 If shop is deactivated, NO ONE from that shop can login
     if (user.role !== 'SUPER_ADMIN' && user.shop && !user.shop.isActive) {
+      console.log('❌ Shop deactivated - blocking login:', {
+        username: user.username,
+        shopId: user.shopId,
+        shopName: user.shop?.name,
+        shopActive: user.shop?.isActive
+      });
       return NextResponse.json(
         { success: false, message: 'Shop is deactivated. Please contact support.' },
         { status: 403 }

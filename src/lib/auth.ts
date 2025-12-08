@@ -85,6 +85,60 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 
 /**
+ * Validate if shop is active
+ * Returns true if user is SUPER_ADMIN (no shop) or if their shop is active
+ * Returns false if shop exists but is deactivated
+ */
+export async function isShopActive(session: SessionPayload | null): Promise<boolean> {
+  if (!session) return false;
+  
+  // SUPER_ADMIN has no shop, always allow
+  if (session.role === 'SUPER_ADMIN') return true;
+  
+  // If user has a shop, check if it's active
+  if (session.shopId) {
+    const prisma = (await import('@/lib/prisma')).default;
+    const shop = await prisma.shop.findUnique({
+      where: { id: session.shopId },
+      select: { isActive: true, deletedAt: true },
+    });
+    
+    // Shop must exist, be active, and not deleted
+    return shop ? shop.isActive && !shop.deletedAt : false;
+  }
+  
+  return false;
+}
+
+/**
+ * Validate session and shop status
+ * Use this in API routes to ensure shop users can only access if their shop is active
+ */
+export async function validateSession(): Promise<{ 
+  session: SessionPayload | null; 
+  isValid: boolean; 
+  message?: string 
+}> {
+  const session = await getSession();
+  
+  if (!session) {
+    return { session: null, isValid: false, message: 'Unauthorized: No session found' };
+  }
+  
+  const shopActive = await isShopActive(session);
+  
+  if (!shopActive) {
+    return { 
+      session, 
+      isValid: false, 
+      message: 'Shop is deactivated. Please contact support.' 
+    };
+  }
+  
+  return { session, isValid: true };
+}
+
+/**
  * Check if user has required role
  */
 export function hasRole(session: SessionPayload | null, allowedRoles: string[]): boolean {
