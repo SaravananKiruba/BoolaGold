@@ -9,14 +9,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface Session {
-  user: {
-    userId: string;
-    username: string;
-    name: string;
-    role: string;
-    shopId: string | null;
-    shopName: string | null;
+interface SessionResponse {
+  success: boolean;
+  data: {
+    user: {
+      id: string;
+      username: string;
+      name: string;
+      role: string;
+      shopId: string | null;
+      shopName: string | null;
+    };
   };
 }
 
@@ -33,16 +36,25 @@ export function usePageGuard(requiredRoles: string[]) {
     try {
       const response = await fetch('/api/auth/session');
       
+      console.log('🔍 usePageGuard - Response status:', response.status);
+      
       if (!response.ok) {
         console.log('🚫 No session - redirecting to login');
         router.replace('/login');
         return;
       }
 
-      const data: Session = await response.json();
-      const userRole = data.user?.role;
+      const responseData = await response.json();
+      console.log('🔍 usePageGuard - Full response:', JSON.stringify(responseData, null, 2));
+      
+      // Handle both response formats: direct data or wrapped in data property
+      const userData = responseData.data || responseData;
+      const userRole = userData.user?.role;
+      
+      console.log('🔍 usePageGuard - User role:', userRole);
+      console.log('🔍 usePageGuard - Required roles:', requiredRoles);
 
-      if (!requiredRoles.includes(userRole)) {
+      if (!userRole || !requiredRoles.includes(userRole)) {
         console.log(`🚫 Access denied - User role: ${userRole}, Required: ${requiredRoles.join(', ')}`);
         
         // Redirect based on role

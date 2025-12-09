@@ -17,9 +17,20 @@ export async function GET(request: NextRequest) {
   try {
     // Check authentication and permission
     const session = await getSession();
-    if (!hasPermission(session, 'PURCHASE_VIEW')) {
-      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    console.log('🔍 Purchase Orders API - Session:', JSON.stringify(session, null, 2));
+    console.log('🔍 Purchase Orders API - Has PURCHASE_VIEW permission:', hasPermission(session, 'PURCHASE_VIEW'));
+    
+    if (!session) {
+      console.log('❌ Purchase Orders API - No session found');
+      return NextResponse.json(errorResponse('Unauthorized - No session'), { status: 401 });
     }
+    
+    if (!hasPermission(session, 'PURCHASE_VIEW')) {
+      console.log(`❌ Purchase Orders API - User role ${session.role} does not have PURCHASE_VIEW permission`);
+      return NextResponse.json(errorResponse(`Unauthorized - Role ${session.role} cannot view purchase orders`), { status: 403 });
+    }
+    
+    console.log('✅ Purchase Orders API - Access granted');
 
     const { searchParams } = new URL(request.url);
 
@@ -83,9 +94,19 @@ export async function POST(request: NextRequest) {
   try {
     // Check authentication and permission
     const session = await getSession();
-    if (!hasPermission(session, 'PURCHASE_CREATE')) {
-      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    console.log('🔍 Purchase Orders CREATE API - Session:', JSON.stringify(session, null, 2));
+    
+    if (!session) {
+      console.log('❌ Purchase Orders CREATE API - No session found');
+      return NextResponse.json(errorResponse('Unauthorized - No session'), { status: 401 });
     }
+    
+    if (!hasPermission(session, 'PURCHASE_CREATE')) {
+      console.log(`❌ Purchase Orders CREATE API - User role ${session.role} does not have PURCHASE_CREATE permission`);
+      return NextResponse.json(errorResponse(`Unauthorized - Role ${session.role} cannot create purchase orders`), { status: 403 });
+    }
+    
+    console.log('✅ Purchase Orders CREATE API - Access granted');
 
     const body = await request.json();
 

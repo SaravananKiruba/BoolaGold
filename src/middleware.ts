@@ -5,6 +5,9 @@ import { SESSION_COOKIE_NAME, verifyToken } from '@/lib/auth';
 // Routes that don't require authentication
 const publicRoutes = ['/login'];
 
+// Debug routes - accessible to all authenticated users
+const debugRoutes = ['/debug-auth'];
+
 // Role-based route access control
 const roleRoutes = {
   SUPER_ADMIN: ['/super-admin', '/shops', '/users'],
@@ -19,6 +22,11 @@ export async function middleware(request: NextRequest) {
 
   // Allow public routes
   if (publicRoutes.includes(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Allow debug routes for authenticated users
+  if (debugRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
@@ -46,17 +54,22 @@ export async function middleware(request: NextRequest) {
       const userRole = session.role;
       const allowedRoutes = roleRoutes[userRole as keyof typeof roleRoutes] || [];
 
-      // Check if user is trying to access a restricted route
-      const isAccessingRestrictedRoute = Object.entries(roleRoutes).some(([role, routes]) => {
-        if (role === userRole) return false; // Skip own role
-        return routes.some(route => pathname.startsWith(route));
-      });
+      console.log(`🔐 Middleware Check: ${userRole} accessing ${pathname}`);
+      console.log(`📋 Allowed routes for ${userRole}:`, allowedRoutes);
 
-      if (isAccessingRestrictedRoute) {
-        // Check if the route is allowed for this role
-        const hasAccess = allowedRoutes.some(route => pathname.startsWith(route));
+      // Check if the current pathname is allowed for this user's role
+      const hasAccess = allowedRoutes.some(route => pathname.startsWith(route));
+      console.log(`✅ Has access:`, hasAccess);
+      
+      // If the user doesn't have access to this route, check if it's a protected route
+      if (!hasAccess) {
+        // Check if this route is protected (exists in any role's routes)
+        const isProtectedRoute = Object.values(roleRoutes)
+          .flat()
+          .some(route => pathname.startsWith(route));
         
-        if (!hasAccess) {
+        // Only block if it's a protected route
+        if (isProtectedRoute) {
           console.log(`🚫 BLOCKED: ${userRole} attempted to access ${pathname}`);
           const url = request.nextUrl.clone();
           
