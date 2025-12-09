@@ -7,6 +7,8 @@ import { buildDateRangeFilter } from '@/utils/filters';
 import { TransactionRepository } from '@/repositories/transactionRepository';
 import { getSession, hasPermission } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/reports/financial
  * Get comprehensive financial reports including P&L statement

@@ -6,6 +6,8 @@ import { successResponse } from '@/utils/response';
 import prisma from '@/lib/prisma';
 import { StockStatus } from '@/domain/entities/types';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/stock/search
  * Search for stock items by multiple criteria

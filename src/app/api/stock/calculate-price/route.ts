@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { calculateSellingPriceForSale } from '@/utils/sellingPrice';
 import { handleApiError, successResponse } from '@/utils/response';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/stock/calculate-price?tagId=xxx
  * GET /api/stock/calculate-price?stockItemId=xxx

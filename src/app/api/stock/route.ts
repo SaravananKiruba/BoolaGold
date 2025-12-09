@@ -6,6 +6,8 @@ import { StockStatus } from '@/domain/entities/types';
 import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { getSession, hasPermission } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/stock
  * List all stock items with filters and pagination

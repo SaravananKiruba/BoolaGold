@@ -56,25 +56,6 @@ export default function UsersPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (isAuthorized) {
-      fetchCurrentUser();
-      fetchShops();
-      fetchUsers();
-    }
-  }, [isAuthorized]);
-
-  if (authLoading || !isAuthorized) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner"></div>
-          <p>Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
-
   const fetchCurrentUser = async () => {
     try {
       const response = await fetch('/api/auth/session');
@@ -104,10 +85,6 @@ export default function UsersPage() {
       console.error('Error fetching current user:', error);
     }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, [selectedShop]);
 
   const fetchShops = async () => {
     try {
@@ -149,6 +126,31 @@ export default function UsersPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchCurrentUser();
+      fetchShops();
+      fetchUsers();
+    }
+  }, [isAuthorized]);
+
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchUsers();
+    }
+  }, [selectedShop, isAuthorized]);
+
+  if (authLoading || !isAuthorized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner"></div>
+          <p>Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

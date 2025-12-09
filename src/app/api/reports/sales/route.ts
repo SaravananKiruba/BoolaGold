@@ -6,6 +6,8 @@ import { handleApiError, successResponse, errorResponse } from '@/utils/response
 import { buildDateRangeFilter } from '@/utils/filters';
 import { getSession, hasPermission } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/reports/sales
  * Get detailed sales reports with analysis

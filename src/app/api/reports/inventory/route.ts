@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { handleApiError, successResponse } from '@/utils/response';
 import { MetalType } from '@/domain/entities/types';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/reports/inventory
  * Get comprehensive inventory reports

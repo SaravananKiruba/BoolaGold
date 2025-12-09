@@ -11,6 +11,8 @@ import prisma from '@/lib/prisma';
 import { logCreate } from '@/utils/audit';
 import { getSession } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 const bulkUpdatePricesSchema = z.object({
   rateId: z.string().uuid({ message: 'Invalid rate ID format' }),
   productFilters: z.object({

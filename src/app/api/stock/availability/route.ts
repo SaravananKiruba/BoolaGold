@@ -5,6 +5,8 @@ import { stockItemRepository } from '@/repositories/stockItemRepository';
 import { productRepository } from '@/repositories/productRepository';
 import { handleApiError, successResponse } from '@/utils/response';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/stock/availability
  * Check real-time stock availability by product

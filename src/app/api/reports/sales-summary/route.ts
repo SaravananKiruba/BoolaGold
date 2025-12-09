@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { handleApiError, successResponse } from '@/utils/response';
 import { buildDateRangeFilter } from '@/utils/filters';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/reports/sales-summary
  * Get sales summary export for external accounting systems or CA

@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { handleApiError, successResponse } from '@/utils/response';
 import { buildDateRangeFilter } from '@/utils/filters';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/dashboard
  * Get dashboard overview with key business metrics
