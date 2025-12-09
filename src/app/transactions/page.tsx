@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePageGuard } from '@/hooks/usePageGuard';
 
 interface Transaction {
   id: string;
@@ -27,6 +28,7 @@ interface TransactionSummary {
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const { isAuthorized, isLoading: authLoading } = usePageGuard(['OWNER', 'ACCOUNTS']);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +42,22 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    fetchTransactions();
-    fetchSummary();
-  }, [filters, page]);
+    if (isAuthorized) {
+      fetchTransactions();
+      fetchSummary();
+    }
+  }, [filters, page, isAuthorized]);
+
+  if (authLoading || !isAuthorized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner"></div>
+          <p>Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   const fetchTransactions = async () => {
     try {

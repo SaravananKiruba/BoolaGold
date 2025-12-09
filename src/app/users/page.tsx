@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePageGuard } from '@/hooks/usePageGuard';
 import { showToast } from '@/utils/toast';
 
 interface Shop {
@@ -36,6 +37,7 @@ interface UserFormData {
 }
 
 export default function UsersPage() {
+  const { isAuthorized, isLoading: authLoading } = usePageGuard(['OWNER', 'SUPER_ADMIN']);
   const [users, setUsers] = useState<User[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +57,23 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchCurrentUser();
-    fetchShops();
-    fetchUsers();
-  }, []);
+    if (isAuthorized) {
+      fetchCurrentUser();
+      fetchShops();
+      fetchUsers();
+    }
+  }, [isAuthorized]);
+
+  if (authLoading || !isAuthorized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner"></div>
+          <p>Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   const fetchCurrentUser = async () => {
     try {
@@ -70,13 +85,19 @@ export default function UsersPage() {
       const user = data.data?.user || data.user;
       
       if (response.ok && user) {
-        console.log('✅ Users Page - Current User Role:', user.role);
+        console.log('✅ Users Page - Current User Role:', user.role, 'ShopId:', user.shopId);
         setCurrentUserRole(user.role);
-        // Set default role based on current user
+        
+        // Set default role and shopId based on current user
         if (user.role === 'SUPER_ADMIN') {
           setFormData(prev => ({ ...prev, role: 'OWNER' }));
         } else if (user.role === 'OWNER') {
-          setFormData(prev => ({ ...prev, role: 'SALES' }));
+          // OWNER: Auto-fill their shopId and default to SALES role
+          setFormData(prev => ({ 
+            ...prev, 
+            role: 'SALES',
+            shopId: user.shopId || '' // Auto-fill owner's shop
+          }));
         }
       }
     } catch (error) {
@@ -193,7 +214,7 @@ export default function UsersPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = async () => {
     // Reset form with proper defaults based on user role
     const defaultRole = currentUserRole === 'SUPER_ADMIN' ? 'OWNER' : 'SALES';
     console.log('🔓 Opening create modal - Current user role:', currentUserRole, 'Default role:', defaultRole);
@@ -204,6 +225,20 @@ export default function UsersPage() {
       showToast('warning', 'No shops available. Please create a shop first!');
     }
     
+    // Get current user's shopId if OWNER
+    let ownerShopId = '';
+    if (currentUserRole === 'OWNER') {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        const user = data.data?.user || data.user;
+        ownerShopId = user?.shopId || '';
+        console.log('✅ Owner Shop ID:', ownerShopId);
+      } catch (error) {
+        console.error('Error fetching owner shop:', error);
+      }
+    }
+    
     setFormData({
       username: '',
       password: '',
@@ -211,7 +246,7 @@ export default function UsersPage() {
       email: '',
       phone: '',
       role: defaultRole,
-      shopId: '',
+      shopId: ownerShopId, // Auto-fill for OWNER
     });
     setShowCreateModal(true);
   };
@@ -671,7 +706,7 @@ export default function UsersPage() {
                   )}
                 </div>
 
-                {/* Shop Selection - Only show if not SUPER_ADMIN role */}
+                {/* Shop Selection - Different behavior for SUPER_ADMIN vs OWNER */}
                 {formData.role !== 'SUPER_ADMIN' && (
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
@@ -682,13 +717,16 @@ export default function UsersPage() {
                       value={formData.shopId}
                       onChange={handleInputChange}
                       required={formData.role !== 'SUPER_ADMIN'}
+                      disabled={currentUserRole === 'OWNER'} // OWNER can't change shop
                       style={{
                         width: '100%',
                         padding: '10px',
                         border: '2px solid #e2e8f0',
                         borderRadius: '8px',
                         fontSize: '0.95rem',
-                        cursor: 'pointer',
+                        cursor: currentUserRole === 'OWNER' ? 'not-allowed' : 'pointer',
+                        background: currentUserRole === 'OWNER' ? '#f8fafc' : 'white',
+                        color: currentUserRole === 'OWNER' ? '#64748b' : 'inherit',
                       }}
                     >
                       <option value="">Select Shop</option>
@@ -698,11 +736,22 @@ export default function UsersPage() {
                         </option>
                       ))}
                     </select>
-                    {shops.length === 0 && (
+                    
+                    {/* OWNER: Show info that shop is auto-selected */}
+                    {currentUserRole === 'OWNER' && formData.shopId && (
+                      <div style={{ marginTop: '8px', padding: '10px', background: '#dcfce7', border: '1px solid #22c55e', borderRadius: '6px', fontSize: '0.85rem', color: '#14532d' }}>
+                        <strong>✅ Auto-Selected:</strong> Users will be created for your shop automatically.
+                      </div>
+                    )}
+                    
+                    {/* SUPER_ADMIN: Show error if no shops */}
+                    {shops.length === 0 && currentUserRole === 'SUPER_ADMIN' && (
                       <div style={{ marginTop: '8px', padding: '10px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '6px', fontSize: '0.85rem', color: '#991b1b' }}>
                         <strong>⚠️ No shops available!</strong> Please create a shop first before creating an OWNER user.
                       </div>
                     )}
+                    
+                    {/* SUPER_ADMIN: Show info about shop assignment */}
                     {currentUserRole === 'SUPER_ADMIN' && shops.length > 0 && (
                       <div style={{ marginTop: '8px', padding: '10px', background: '#e0e7ff', border: '1px solid #6366f1', borderRadius: '6px', fontSize: '0.85rem', color: '#3730a3' }}>
                         <strong>🏪 Note:</strong> Assign this OWNER to a specific shop. They will have full control over that shop.

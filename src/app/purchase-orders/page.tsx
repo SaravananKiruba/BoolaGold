@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePageGuard } from '@/hooks/usePageGuard';
 import Link from 'next/link';
 import { toast } from '@/utils/toast';
 
@@ -43,6 +44,7 @@ interface OrderItem {
 }
 
 export default function PurchaseOrdersPage() {
+  const { isAuthorized, isLoading: authLoading } = usePageGuard(['OWNER', 'ACCOUNTS']);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,8 +55,21 @@ export default function PurchaseOrdersPage() {
   });
 
   useEffect(() => {
-    fetchPurchaseOrders();
-  }, [filters]);
+    if (isAuthorized) {
+      fetchPurchaseOrders();
+    }
+  }, [filters, isAuthorized]);
+
+  if (authLoading || !isAuthorized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner"></div>
+          <p>Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   const fetchPurchaseOrders = async () => {
     try {

@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SESSION_COOKIE_NAME } from '@/lib/auth';
+import { SESSION_COOKIE_NAME, verifyToken } from '@/lib/auth';
 
 // Routes that don't require authentication
 const publicRoutes = ['/login'];
 
-// Routes restricted to SUPER_ADMIN only (SaaS Provider)
-const superAdminRoutes = ['/shops', '/super-admin'];
+// Role-based route access control
+const roleRoutes = {
+  SUPER_ADMIN: ['/super-admin', '/shops', '/users'],
+  OWNER: ['/dashboard', '/customers', '/sales-orders', '/transactions', '/products', '/stock', 
+          '/suppliers', '/purchase-orders', '/rate-master', '/reports', '/users'],
+  SALES: ['/dashboard', '/customers', '/sales-orders', '/products', '/stock', '/rate-master', '/reports'],
+  ACCOUNTS: ['/dashboard', '/transactions', '/suppliers', '/purchase-orders', '/rate-master', '/reports'],
+};
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
@@ -26,12 +32,55 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 🔒 SECURITY: Super Admin route protection & Shop Deactivation Check
-  // Note: Basic authentication check here. Full role and shop status verification 
-  // happens in API routes using validateSession() which checks:
-  // 1. Valid session
-  // 2. User role permissions
-  // 3. Shop activation status (blocks deactivated shops)
+  // Verify token and check role-based access
+  if (sessionToken) {
+    try {
+      const session = await verifyToken(sessionToken);
+      
+      if (!session) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
+      }
+
+      const userRole = session.role;
+      const allowedRoutes = roleRoutes[userRole as keyof typeof roleRoutes] || [];
+
+      // Check if user is trying to access a restricted route
+      const isAccessingRestrictedRoute = Object.entries(roleRoutes).some(([role, routes]) => {
+        if (role === userRole) return false; // Skip own role
+        return routes.some(route => pathname.startsWith(route));
+      });
+
+      if (isAccessingRestrictedRoute) {
+        // Check if the route is allowed for this role
+        const hasAccess = allowedRoutes.some(route => pathname.startsWith(route));
+        
+        if (!hasAccess) {
+          console.log(`🚫 BLOCKED: ${userRole} attempted to access ${pathname}`);
+          const url = request.nextUrl.clone();
+          
+          // Redirect to role's default page
+          if (userRole === 'SUPER_ADMIN') {
+            url.pathname = '/super-admin';
+          } else if (userRole === 'SALES') {
+            url.pathname = '/dashboard';
+          } else if (userRole === 'ACCOUNTS') {
+            url.pathname = '/transactions';
+          } else {
+            url.pathname = '/dashboard';
+          }
+          
+          return NextResponse.redirect(url);
+        }
+      }
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
+  }
   
   return NextResponse.next();
 }
