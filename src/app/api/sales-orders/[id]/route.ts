@@ -105,7 +105,7 @@ export async function PATCH(
     const updatedSalesOrder = await salesOrderRepository.findById(params.id);
 
     // Log the update
-    await logUpdate(AuditModule.SALES_ORDERS, params.id, existingSalesOrder, updatedSalesOrder);
+    await logUpdate(AuditModule.SALES_ORDERS, params.id, existingSalesOrder, updatedSalesOrder, session!.shopId!);
 
     return NextResponse.json(successResponse(updatedSalesOrder), { status: 200 });
   } catch (error: any) {
@@ -119,6 +119,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    const salesOrderRepository = new SalesOrderRepository({ session });
     // Check if sales order exists
     const existingSalesOrder = await salesOrderRepository.findById(params.id);
     if (!existingSalesOrder) {

@@ -8,6 +8,7 @@ import { handleApiError, successResponse } from '@/utils/response';
 import { generateBatchTagIds, generateStockBarcode } from '@/utils/barcode';
 import { logAudit } from '@/utils/audit';
 import { MetalType, AuditAction, AuditModule } from '@/domain/entities/types';
+import { getSession } from '@/lib/auth';
 
 /**
  * POST /api/purchase-orders/[id]/receive-stock
@@ -24,6 +25,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const body = await request.json();
     const purchaseOrderId = params.id;
 

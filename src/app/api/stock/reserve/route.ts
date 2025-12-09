@@ -10,6 +10,7 @@ import { uuidSchema } from '@/utils/validation';
 import { AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 const reserveStockSchema = z.object({
   stockItemIds: z.array(uuidSchema).min(1, 'At least one stock item required'),
@@ -22,6 +23,7 @@ const releaseStockSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
@@ -77,7 +79,7 @@ export async function POST(request: NextRequest) {
       // Log the reservation
       for (const item of reservedItems) {
         const originalItem = stockItems.find((si) => si?.id === item.id);
-        await logUpdate(AuditModule.STOCK, item.id, originalItem, item);
+        await logUpdate(AuditModule.STOCK, item.id, originalItem, item, session!.shopId!);
       }
 
       return NextResponse.json(

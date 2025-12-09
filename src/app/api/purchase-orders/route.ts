@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create stock items via repository
-      const stockResult = await purchaseOrderRepository.receiveStock(
+      const stockResult = await repository.receiveStock(
         purchaseOrder.id,
         receiptItems
       );

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { emiPaymentRepository } from '@/repositories/emiPaymentRepository';
+import { getSession } from '@/lib/auth';
 import { successResponse, errorResponse, notFoundResponse } from '@/utils/response';
 import { AuditModule } from '@/domain/entities/types';
 import { logDelete } from '@/utils/audit';

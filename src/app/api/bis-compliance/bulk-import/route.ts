@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { BisComplianceStatus, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';

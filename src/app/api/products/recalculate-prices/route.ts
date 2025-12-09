@@ -8,6 +8,7 @@ import { calculateProductPrice } from '@/utils/pricing';
 import { MetalType, AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 const recalculatePricesSchema = z.object({
   productIds: z.array(z.string().uuid()).optional(),
@@ -19,6 +20,7 @@ const recalculatePricesSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
     const body = await request.json();
 
     // Validate input

@@ -9,6 +9,7 @@ import { rateMasterRepository } from '@/repositories/rateMasterRepository';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { MetalType, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
+import { getSession } from '@/lib/auth';
 
 const updateRateMasterSchema = z.object({
   metalType: z.nativeEnum(MetalType, { 
@@ -73,6 +74,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(params.id)) {
@@ -174,6 +176,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(params.id)) {

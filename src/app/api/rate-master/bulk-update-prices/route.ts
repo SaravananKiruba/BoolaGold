@@ -9,6 +9,7 @@ import { MetalType, AuditModule } from '@/domain/entities/types';
 import { calculateProductPrice } from '@/utils/pricing';
 import prisma from '@/lib/prisma';
 import { logCreate } from '@/utils/audit';
+import { getSession } from '@/lib/auth';
 
 const bulkUpdatePricesSchema = z.object({
   rateId: z.string().uuid({ message: 'Invalid rate ID format' }),
@@ -46,6 +47,7 @@ interface PriceChange {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
     const body = await request.json();
 
     // Validate input
@@ -264,7 +266,7 @@ export async function POST(request: NextRequest) {
           productsSkipped: skippedProducts.length,
           filters: data.productFilters,
           timestamp: new Date(),
-        });
+        }, session!.shopId!);
       } catch (auditError) {
         console.error('Audit log failed:', auditError);
         // Don't fail the request if audit logging fails

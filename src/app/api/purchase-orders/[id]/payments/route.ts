@@ -8,6 +8,7 @@ import { handleApiError, successResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 /**
  * POST /api/purchase-orders/[id]/payments
@@ -19,6 +20,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const body = await request.json();
     const purchaseOrderId = params.id;
 

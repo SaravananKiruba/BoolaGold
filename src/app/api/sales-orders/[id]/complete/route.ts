@@ -8,12 +8,14 @@ import { successResponse, errorResponse, notFoundResponse } from '@/utils/respon
 import { TransactionType, TransactionCategory, SalesOrderStatus, AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const salesOrderId = params.id;
 
     // Check if sales order exists

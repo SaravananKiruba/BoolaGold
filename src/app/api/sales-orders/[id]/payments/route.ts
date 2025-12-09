@@ -11,6 +11,7 @@ import { amountSchema } from '@/utils/validation';
 import { PaymentMethod, PaymentStatus, TransactionType, TransactionCategory, AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 const recordPaymentSchema = z.object({
   amount: amountSchema,
@@ -64,6 +65,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const body = await request.json();
     const salesOrderId = params.id;
 

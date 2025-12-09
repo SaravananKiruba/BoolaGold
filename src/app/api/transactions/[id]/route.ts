@@ -68,6 +68,7 @@ export async function PATCH(
 
     // Initialize repository
     const transactionRepository = new TransactionRepository({ session });
+    const repository = transactionRepository;
 
     // Check if transaction exists
     const existingTransaction = await transactionRepository.findById(params.id);
@@ -105,6 +106,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    const transactionRepository = new TransactionRepository({ session });
     // Check if transaction exists
     const existingTransaction = await transactionRepository.findById(params.id);
     if (!existingTransaction) {

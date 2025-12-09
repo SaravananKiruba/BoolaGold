@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { productRepository } from '@/repositories/productRepository';
+import { productRepository, ProductRepository } from '@/repositories/productRepository';
 import { stockItemRepository } from '@/repositories/stockItemRepository';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { weightSchema, amountSchema } from '@/utils/validation';
@@ -13,6 +13,7 @@ import { MetalType, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
 import { calculateProductPrice } from '@/utils/pricing';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 const updateProductSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -72,7 +73,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const body = await request.json();
+
+    const repository = new ProductRepository({ session });
 
     // Validate input
     const validation = updateProductSchema.safeParse(body);
@@ -162,6 +166,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const product = await productRepository.findById(params.id);
 
     if (!product) {
@@ -177,6 +182,7 @@ export async function DELETE(
       );
     }
 
+    const repository = new ProductRepository({ session });
     await repository.softDelete(params.id);
 
     // Log the deletion

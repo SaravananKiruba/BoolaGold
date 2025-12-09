@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     // Log the creation
     try {
-      await logCreate(AuditModule.RATE_MASTER, rateMaster.id, rateMaster);
+      await logCreate(AuditModule.RATE_MASTER, rateMaster.id, rateMaster, session!.shopId!);
     } catch (auditError) {
       console.error('Audit log failed:', auditError);
       // Don't fail the request if audit logging fails
