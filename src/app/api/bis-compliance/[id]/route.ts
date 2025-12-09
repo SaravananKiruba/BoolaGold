@@ -54,6 +54,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const body = await request.json();
 
     // Get existing record
@@ -79,7 +80,12 @@ export async function PUT(
     // Check HUID uniqueness if being updated
     if (data.huid && data.huid !== existing.huid) {
       const huidExists = await prisma.bisCompliance.findUnique({
-        where: { huid: data.huid },
+        where: { 
+          shopId_huid: {
+            shopId: session!.shopId!,
+            huid: data.huid
+          }
+        },
       });
 
       if (huidExists) {
@@ -126,6 +132,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const record = await prisma.bisCompliance.findUnique({
       where: { id: params.id },
     });

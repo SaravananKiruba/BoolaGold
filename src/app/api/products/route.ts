@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
           metalType: data.metalType,
           purity: data.purity,
           isActive: true,
-          shopId: session?.shopId, // Filter by shop
+          shopId: session!.shopId!, // Filter by shop
         },
         orderBy: {
           effectiveDate: 'desc',
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
     const product = await repository.create(productData);
 
     // Log the creation
-    await logCreate(AuditModule.PRODUCTS, product.id, product, session);
+    await logCreate(AuditModule.PRODUCTS, product.id, product, session!.shopId!);
 
     return NextResponse.json(successResponse(product), { status: 201 });
   } catch (error: any) {

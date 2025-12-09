@@ -8,6 +8,7 @@ import { successResponse, errorResponse, notFoundResponse, validationErrorRespon
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { PaymentMethod, AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
+import { getSession } from '@/lib/auth';
 
 const payInstallmentSchema = z.object({
   installmentId: uuidSchema,
@@ -21,6 +22,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
     const body = await request.json();
     const emiPaymentId = params.id;
 

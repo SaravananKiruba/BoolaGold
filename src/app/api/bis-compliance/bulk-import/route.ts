@@ -40,6 +40,7 @@ const bulkImportSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
     const body = await request.json();
 
     // Validate input

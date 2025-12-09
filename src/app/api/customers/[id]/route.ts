@@ -65,7 +65,7 @@ export async function PUT(
   try {
     // Check authentication and permission
     const session = await getSession();
-    if (!hasPermission(session, 'CUSTOMER_UPDATE')) {
+    if (!hasPermission(session, 'CUSTOMER_EDIT')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
