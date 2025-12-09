@@ -278,6 +278,80 @@ export default function UsersPage() {
 
   return (
     <div style={{ padding: '30px', maxWidth: '1600px', margin: '0 auto' }}>
+      {/* Super Admin Instructions Banner */}
+      {currentUserRole === 'SUPER_ADMIN' && shops.length === 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+          border: '2px solid #fbbf24',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 12px rgba(251, 191, 36, 0.2)'
+        }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'start' }}>
+            <div style={{ fontSize: '2.5rem' }}>⚠️</div>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>
+                No Shops Available - Create a Shop First!
+              </h3>
+              <p style={{ color: '#92400e', fontSize: '0.95rem', marginBottom: '12px', lineHeight: '1.6' }}>
+                Before you can create OWNER users, you need to create at least one shop. Here's the workflow:
+              </p>
+              <ol style={{ margin: '0 0 12px 20px', color: '#92400e', fontSize: '0.95rem', lineHeight: '1.8' }}>
+                <li><strong>Step 1:</strong> Create a shop at <strong>/shops</strong> page</li>
+                <li><strong>Step 2:</strong> Return here to create an OWNER user</li>
+                <li><strong>Step 3:</strong> Assign the OWNER to the shop you created</li>
+                <li><strong>Step 4:</strong> Share credentials with the shop owner</li>
+              </ol>
+              <button
+                onClick={() => window.location.href = '/shops'}
+                style={{
+                  padding: '12px 20px',
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>🏪</span>
+                Go to Shops Page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Banner - When shops exist */}
+      {currentUserRole === 'SUPER_ADMIN' && shops.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+          border: '2px solid #22c55e',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{ fontSize: '1.8rem' }}>✅</div>
+          <div>
+            <div style={{ fontWeight: 600, color: '#14532d', fontSize: '1rem', marginBottom: '4px' }}>
+              Ready to Create Shop Owners!
+            </div>
+            <div style={{ color: '#15803d', fontSize: '0.9rem' }}>
+              You have <strong>{shops.length}</strong> shop{shops.length > 1 ? 's' : ''} available. Click "Create New User" to assign OWNER users.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -285,7 +359,7 @@ export default function UsersPage() {
             👥 User Management
           </h1>
           <p style={{ color: '#666', fontSize: '0.95rem' }}>
-            Manage users across all shops (Super Admin Only)
+            {currentUserRole === 'SUPER_ADMIN' ? 'Create OWNER users and assign them to shops' : 'Manage users across all shops'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>

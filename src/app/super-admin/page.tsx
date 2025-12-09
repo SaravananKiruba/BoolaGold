@@ -96,6 +96,138 @@ export default function SuperAdminDashboard() {
             SaaS Platform - System Overview & Shop Management
           </p>
         </div>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button 
+            className="button button-primary" 
+            onClick={() => router.push('/shops')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <span style={{ fontSize: '1.2rem' }}>🏪</span>
+            Create Shop
+          </button>
+          <button 
+            className="button" 
+            onClick={() => router.push('/users')}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+              color: 'white',
+              border: 'none'
+            }}
+          >
+            <span style={{ fontSize: '1.2rem' }}>👥</span>
+            Create Shop Owner
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Actions Banner */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+        borderRadius: '16px', 
+        padding: '32px', 
+        marginBottom: '30px',
+        boxShadow: '0 10px 40px rgba(102, 126, 234, 0.3)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
+            🚀 Quick Actions
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1rem' }}>
+            Set up new jewelry shops and assign administrators
+          </p>
+        </div>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          gap: '16px',
+          maxWidth: '900px',
+          margin: '0 auto'
+        }}>
+          <button
+            onClick={() => router.push('/shops')}
+            style={{
+              padding: '24px',
+              background: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            }}
+          >
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🏪</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#333', marginBottom: '8px' }}>
+              Create New Shop
+            </div>
+            <div style={{ fontSize: '0.9rem', color: '#666', lineHeight: '1.5' }}>
+              Set up shop profile, branding, GST, and bank details
+            </div>
+            <div style={{ 
+              marginTop: '12px', 
+              fontSize: '0.85rem', 
+              fontWeight: 600, 
+              color: '#667eea',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              Get Started <span>→</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => router.push('/users')}
+            style={{
+              padding: '24px',
+              background: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            }}
+          >
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>👑</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#333', marginBottom: '8px' }}>
+              Create Shop Owner
+            </div>
+            <div style={{ fontSize: '0.9rem', color: '#666', lineHeight: '1.5' }}>
+              Assign an OWNER with full control over their shop
+            </div>
+            <div style={{ 
+              marginTop: '12px', 
+              fontSize: '0.85rem', 
+              fontWeight: 600, 
+              color: '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              Create User <span>→</span>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Primary Stats Grid */}
