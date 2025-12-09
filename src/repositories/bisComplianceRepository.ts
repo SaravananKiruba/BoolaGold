@@ -26,12 +26,12 @@ export class BisComplianceRepository extends BaseRepository {
   /**
    * Create a new BIS compliance record
    */
-  async create(data: Omit<Prisma.BisComplianceCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.BisComplianceUncheckedCreateInput, 'shopId'>) {
     return prisma.bisCompliance.create({
       data: {
         ...data,
         shopId: this.getShopId(),
-      },
+      } as Prisma.BisComplianceUncheckedCreateInput,
     });
   }
 
@@ -234,3 +234,6 @@ export class BisComplianceRepository extends BaseRepository {
     return count > 0;
   }
 }
+
+// Export a default instance for backward compatibility
+export const bisComplianceRepository = new BisComplianceRepository({ session: null });

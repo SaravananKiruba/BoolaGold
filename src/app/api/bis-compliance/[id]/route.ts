@@ -108,7 +108,7 @@ export async function PUT(
     });
 
     // Log update
-    await logUpdate(AuditModule.PRODUCTS, params.id, existing, updated);
+    await logUpdate(AuditModule.PRODUCTS, params.id, existing, updated, session!.shopId!);
 
     return NextResponse.json(successResponse(updated), { status: 200 });
   } catch (error: any) {
@@ -139,7 +139,7 @@ export async function DELETE(
     });
 
     // Log deletion
-    await logDelete(AuditModule.PRODUCTS, params.id, record);
+    await logDelete(AuditModule.PRODUCTS, params.id, record, session!.shopId!);
 
     return NextResponse.json(
       successResponse({ message: 'BIS compliance record deleted successfully' }),

@@ -16,7 +16,7 @@ import { createErrorResponse } from '@/utils/response';
  * if (result instanceof NextResponse) return result;
  * const session = result;
  */
-export async function protectRoute(): Promise<SessionPayload | NextResponse> {
+export async function protectRoute(): Promise<SessionPayload | NextResponse | Response> {
   const { session, isValid, message } = await validateSession();
   
   if (!isValid) {
@@ -37,7 +37,7 @@ export async function protectRoute(): Promise<SessionPayload | NextResponse> {
  */
 export async function protectRouteWithPermission(
   permission: Parameters<typeof hasPermission>[1]
-): Promise<SessionPayload | NextResponse> {
+): Promise<SessionPayload | NextResponse | Response> {
   const { session, isValid, message } = await validateSession();
   
   if (!isValid) {

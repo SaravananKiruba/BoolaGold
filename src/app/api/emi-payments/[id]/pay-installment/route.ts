@@ -63,7 +63,7 @@ export async function POST(
     );
 
     // Log the update
-    await logUpdate(AuditModule.EMI, emiPaymentId, emiPayment, result.emiPayment);
+    await logUpdate(AuditModule.EMI, emiPaymentId, emiPayment, result.emiPayment, session!.shopId!);
 
     return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error: any) {

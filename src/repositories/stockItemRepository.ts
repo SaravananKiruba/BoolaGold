@@ -21,12 +21,9 @@ export class StockItemRepository extends BaseRepository {
   /**
    * Create stock item
    */
-  async create(data: Omit<Prisma.StockItemCreateInput, 'shop'>) {
+  async create(data: Prisma.StockItemCreateInput) {
     return prisma.stockItem.create({
-      data: {
-        ...data,
-        shopId: this.getShopId(),
-      },
+      data,
       include: {
         product: true,
       },
@@ -287,3 +284,6 @@ export class StockItemRepository extends BaseRepository {
     return Object.values(grouped);
   }
 }
+
+// Export a default instance for backward compatibility (session must be set before use)
+export const stockItemRepository = new StockItemRepository({ session: null });

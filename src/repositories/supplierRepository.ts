@@ -22,12 +22,12 @@ export class SupplierRepository extends BaseRepository {
   /**
    * Create a new supplier
    */
-  async create(data: Omit<Prisma.SupplierCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.SupplierUncheckedCreateInput, 'shopId'>) {
     return prisma.supplier.create({
       data: {
         ...data,
         shopId: this.getShopId(),
-      },
+      } as Prisma.SupplierUncheckedCreateInput,
     });
   }
 
@@ -288,3 +288,6 @@ export class SupplierRepository extends BaseRepository {
     };
   }
 }
+
+// Export a default instance for backward compatibility
+export const supplierRepository = new SupplierRepository({ session: null });

@@ -129,7 +129,12 @@ export async function POST(request: NextRequest) {
 
     // Check if HUID already exists
     const existing = await prisma.bisCompliance.findUnique({
-      where: { huid: data.huid },
+      where: { 
+        shopId_huid: {
+          shopId: session!.shopId!,
+          huid: data.huid
+        }
+      },
     });
 
     if (existing) {
@@ -142,6 +147,7 @@ export async function POST(request: NextRequest) {
     // Create compliance record
     const record = await prisma.bisCompliance.create({
       data: {
+        shopId: session!.shopId!,
         productId: data.productId || null,
         stockItemId: data.stockItemId || null,
         huid: data.huid,
@@ -158,7 +164,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log creation
-    await logCreate(AuditModule.PRODUCTS, record.id, record);
+    await logCreate(AuditModule.PRODUCTS, record.id, record, session!.shopId!);
 
     return NextResponse.json(successResponse(record), { status: 201 });
   } catch (error: any) {

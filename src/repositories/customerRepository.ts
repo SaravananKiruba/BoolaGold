@@ -22,12 +22,12 @@ export class CustomerRepository extends BaseRepository {
   /**
    * Create a new customer
    */
-  async create(data: Omit<Prisma.CustomerCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.CustomerUncheckedCreateInput, 'shopId'>) {
     return prisma.customer.create({
       data: {
         ...data,
         shopId: this.getShopId(), // Automatically add shopId from session
-      },
+      } as Prisma.CustomerUncheckedCreateInput,
       include: {
         familyMembers: true,
       },
@@ -230,3 +230,6 @@ export class CustomerRepository extends BaseRepository {
     };
   }
 }
+
+// Export a default instance for backward compatibility
+export const customerRepository = new CustomerRepository({ session: null });

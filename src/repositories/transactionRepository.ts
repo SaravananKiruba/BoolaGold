@@ -26,12 +26,12 @@ export class TransactionRepository extends BaseRepository {
   /**
    * Create a new transaction
    */
-  async create(data: Omit<Prisma.TransactionCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.TransactionUncheckedCreateInput, 'shopId'>) {
     return prisma.transaction.create({
       data: {
         ...data,
         shopId: this.getShopId(),
-      },
+      } as Prisma.TransactionUncheckedCreateInput,
       include: {
         customer: true,
         salesOrder: true,
@@ -328,3 +328,6 @@ export class TransactionRepository extends BaseRepository {
     });
   }
 }
+
+// Export a default instance for backward compatibility
+export const transactionRepository = new TransactionRepository({ session: null });

@@ -139,6 +139,7 @@ export async function POST(
 
     // Log audit
     await logAudit({
+      shopId: session!.shopId!,
       action: AuditAction.CREATE,
       module: AuditModule.STOCK,
       entityId: purchaseOrderId,

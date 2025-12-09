@@ -21,12 +21,12 @@ export class EmiPaymentRepository extends BaseRepository {
   /**
    * Create a new EMI payment with installments
    */
-  async create(data: Omit<Prisma.EmiPaymentCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.EmiPaymentUncheckedCreateInput, 'shopId'>) {
     return prisma.emiPayment.create({
       data: {
         ...data,
         shopId: this.getShopId(),
-      },
+      } as Prisma.EmiPaymentUncheckedCreateInput,
       include: {
         customer: true,
         installments: true,
@@ -386,3 +386,6 @@ export class EmiPaymentRepository extends BaseRepository {
     });
   }
 }
+
+// Export a default instance for backward compatibility
+export const emiPaymentRepository = new EmiPaymentRepository({ session: null });

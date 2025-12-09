@@ -153,7 +153,7 @@ export async function PUT(
 
     // Log the update
     try {
-      await logUpdate(AuditModule.RATE_MASTER, params.id, existingRate, updatedRate);
+      await logUpdate(AuditModule.RATE_MASTER, params.id, existingRate, updatedRate, session!.shopId!);
     } catch (auditError) {
       console.error('Audit log failed:', auditError);
       // Don't fail the request if audit logging fails
@@ -196,7 +196,7 @@ export async function DELETE(
 
     // Log the deletion
     try {
-      await logDelete(AuditModule.RATE_MASTER, params.id, existingRate);
+      await logDelete(AuditModule.RATE_MASTER, params.id, existingRate, session!.shopId!);
     } catch (auditError) {
       console.error('Audit log failed:', auditError);
       // Don't fail the request if audit logging fails

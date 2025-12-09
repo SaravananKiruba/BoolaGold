@@ -133,9 +133,7 @@ export async function POST(request: NextRequest) {
     const repository = new PurchaseOrderRepository({ session });
     const purchaseOrder = await repository.create({
       orderNumber,
-      supplier: {
-        connect: { id: supplierId },
-      },
+      supplierId,
       expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : undefined,
       paymentMethod: paymentMethod || PaymentMethod.CASH,
       discountAmount,
@@ -216,6 +214,7 @@ export async function POST(request: NextRequest) {
 
     // Log audit
     await logAudit({
+      shopId: session!.shopId!,
       action: AuditAction.CREATE,
       module: AuditModule.PURCHASE_ORDERS,
       entityId: purchaseOrder.id,

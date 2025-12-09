@@ -23,7 +23,7 @@ export class RateMasterRepository extends BaseRepository {
   /**
    * Create a new rate master entry with transaction support
    */
-  async create(data: Omit<Prisma.RateMasterCreateInput, 'shop'>): Promise<RateMaster> {
+  async create(data: Omit<Prisma.RateMasterUncheckedCreateInput, 'shopId'>): Promise<RateMaster> {
     try {
       return await prisma.$transaction(async (tx) => {
         // If this is set as active, deactivate other rates for the same metal type and purity
@@ -45,7 +45,7 @@ export class RateMasterRepository extends BaseRepository {
           data: {
             ...data,
             shopId: this.getShopId(),
-          },
+          } as Prisma.RateMasterUncheckedCreateInput,
         });
       });
     } catch (error: any) {
@@ -427,3 +427,6 @@ export class RateMasterRepository extends BaseRepository {
     }
   }
 }
+
+// Export a default instance for backward compatibility
+export const rateMasterRepository = new RateMasterRepository({ session: null });

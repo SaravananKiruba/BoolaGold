@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       // Log the release
       for (const item of releasedItems) {
         const originalItem = stockItems.find((si) => si?.id === item.id);
-        await logUpdate(AuditModule.STOCK, item.id, originalItem, item);
+        await logUpdate(AuditModule.STOCK, item.id, originalItem, item, session!.shopId!);
       }
 
       return NextResponse.json(

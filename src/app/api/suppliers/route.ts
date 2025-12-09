@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
       module: AuditModule.SUPPLIERS,
       entityId: supplier.id,
       afterData: supplier,
+      shopId: session!.shopId!,
     });
 
     return NextResponse.json(successResponse(supplier), { status: 201 });

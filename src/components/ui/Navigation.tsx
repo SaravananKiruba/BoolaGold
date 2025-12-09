@@ -357,7 +357,7 @@ export default function Navigation() {
               <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', marginBottom: '8px' }}>
                 {section.title}
               </div>
-              {section.items.map((item) => {
+              {section.items.map((item: { href: string; label: string; icon: string; desc: string }) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link

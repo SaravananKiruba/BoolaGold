@@ -41,7 +41,7 @@ export async function DELETE(
     await emiPaymentRepository.softDelete(params.id);
 
     // Log the deletion
-    await logDelete(AuditModule.EMI, params.id, existingEmi);
+    await logDelete(AuditModule.EMI, params.id, existingEmi, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'EMI payment deleted successfully' }), { status: 200 });
   } catch (error: any) {

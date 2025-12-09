@@ -36,12 +36,12 @@ export class PurchaseOrderRepository extends BaseRepository {
   /**
    * Create purchase order with items
    */
-  async create(data: Omit<Prisma.PurchaseOrderCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.PurchaseOrderUncheckedCreateInput, 'shopId'>) {
     return prisma.purchaseOrder.create({
       data: {
         ...data,
         shopId: this.getShopId(),
-      },
+      } as Prisma.PurchaseOrderUncheckedCreateInput,
       include: {
         supplier: true,
         items: {
@@ -313,8 +313,8 @@ export class PurchaseOrderRepository extends BaseRepository {
    * Get pending purchase orders (for stock receipt)
    */
   async getPendingOrders() {
-    const where = this.withShopContext({
-      status: { in: ['PENDING', 'CONFIRMED', 'PARTIAL'] },
+    const where: Prisma.PurchaseOrderWhereInput = this.withShopContext({
+      status: { in: ['PENDING', 'CONFIRMED', 'PARTIAL'] as PurchaseOrderStatus[] },
       deletedAt: null,
     });
 
@@ -446,3 +446,6 @@ export class PurchaseOrderRepository extends BaseRepository {
     };
   }
 }
+
+// Export a default instance for backward compatibility
+export const purchaseOrderRepository = new PurchaseOrderRepository({ session: null });

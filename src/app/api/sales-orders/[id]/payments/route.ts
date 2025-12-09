@@ -144,6 +144,7 @@ export async function POST(
       if (!existingTransaction) {
         await tx.transaction.create({
           data: {
+            shopId: session!.shopId!,
             transactionDate: new Date(),
             transactionType: TransactionType.INCOME,
             amount: data.amount,
@@ -169,7 +170,7 @@ export async function POST(
     });
 
     // Log the update
-    await logUpdate(AuditModule.SALES_ORDERS, salesOrderId, salesOrder, result.updatedSalesOrder);
+    await logUpdate(AuditModule.SALES_ORDERS, salesOrderId, salesOrder, result.updatedSalesOrder, session!.shopId!);
 
     return NextResponse.json(successResponse(result), { status: 201 });
   } catch (error: any) {

@@ -30,12 +30,12 @@ export class ProductRepository extends BaseRepository {
   /**
    * Create a new product
    */
-  async create(data: Omit<Prisma.ProductCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.ProductUncheckedCreateInput, 'shopId'>) {
     return prisma.product.create({
       data: {
         ...data,
         shopId: this.getShopId(), // Automatically add shopId from session
-      },
+      } as Prisma.ProductUncheckedCreateInput,
       include: {
         rateUsed: true,
       },
@@ -292,3 +292,6 @@ export class ProductRepository extends BaseRepository {
     return summary;
   }
 }
+
+// Export a default instance for backward compatibility
+export const productRepository = new ProductRepository({ session: null });

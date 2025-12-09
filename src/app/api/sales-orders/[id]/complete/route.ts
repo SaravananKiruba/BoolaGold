@@ -66,6 +66,7 @@ export async function POST(
       // Create income transaction
       await tx.transaction.create({
         data: {
+          shopId: session!.shopId!,
           transactionDate: new Date(),
           transactionType: TransactionType.INCOME,
           amount: completedOrder.finalAmount,
@@ -84,7 +85,7 @@ export async function POST(
     });
 
     // Log the update
-    await logUpdate(AuditModule.SALES_ORDERS, salesOrderId, salesOrder, result);
+    await logUpdate(AuditModule.SALES_ORDERS, salesOrderId, salesOrder, result, session!.shopId!);
 
     return NextResponse.json(
       successResponse({

@@ -44,13 +44,14 @@ export interface SessionPayload {
   role: string;
   shopId: string | null;  // NULL for SUPER_ADMIN
   shopName: string | null;  // NULL for SUPER_ADMIN
+  [key: string]: any;  // Index signature for JWTPayload compatibility
 }
 
 /**
  * Generate JWT token for user session
  */
 export async function generateToken(payload: SessionPayload): Promise<string> {
-  return new SignJWT(payload)
+  return new SignJWT(payload as any)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(JWT_EXPIRES_IN)
@@ -63,7 +64,7 @@ export async function generateToken(payload: SessionPayload): Promise<string> {
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as SessionPayload;
+    return payload as any as SessionPayload;
   } catch (error) {
     console.error('Token verification failed:', error);
     return null;

@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // Get supplier statistics
-    const stats = await supplierRepository.getSupplierStats(supplierId);
+    const stats = await repository.getSupplierStats(supplierId);
 
     return NextResponse.json(successResponse({
       ...supplier,
@@ -89,7 +89,7 @@ export async function PATCH(
 
       // Check if phone is already used by another supplier
       if (phone !== existingSupplier.phone) {
-        const phoneExists = await supplierRepository.findByPhone(phone);
+        const phoneExists = await repository.findByPhone(phone);
         if (phoneExists) {
           return NextResponse.json(
             { error: 'Phone number already used by another supplier' },
@@ -111,7 +111,7 @@ export async function PATCH(
     }
 
     // Update supplier
-    const updatedSupplier = await supplierRepository.update(supplierId, {
+    const updatedSupplier = await repository.update(supplierId, {
       name,
       contactPerson,
       phone,
@@ -128,6 +128,7 @@ export async function PATCH(
       entityId: supplierId,
       beforeData: existingSupplier,
       afterData: updatedSupplier,
+      shopId: session!.shopId!,
     });
 
     return NextResponse.json(successResponse(updatedSupplier), { status: 200 });
@@ -145,15 +146,22 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication and permission
+    const session = await getSession();
+    if (!hasPermission(session, 'SUPPLIER_DELETE')) {
+      return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
+    }
+
     const supplierId = params.id;
 
-    const supplier = await supplierRepository.findById(supplierId);
+    const repository = new SupplierRepository({ session });
+    const supplier = await repository.findById(supplierId);
     if (!supplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
     }
 
     // Soft delete supplier
-    await supplierRepository.softDelete(supplierId);
+    await repository.softDelete(supplierId);
 
     // Log audit
     await logAudit({
@@ -161,6 +169,7 @@ export async function DELETE(
       module: AuditModule.SUPPLIERS,
       entityId: supplierId,
       beforeData: supplier,
+      shopId: session!.shopId!,
     });
 
     return NextResponse.json(successResponse({ message: 'Supplier deleted successfully' }), { status: 200 });

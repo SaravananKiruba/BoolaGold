@@ -115,7 +115,7 @@ export async function PUT(
     const updatedCustomer = await repository.update(params.id, updateData);
 
     // Log the update
-    await logUpdate(AuditModule.CUSTOMERS, params.id, existingCustomer, updatedCustomer);
+    await logUpdate(AuditModule.CUSTOMERS, params.id, existingCustomer, updatedCustomer, session!.shopId!);
 
     return NextResponse.json(successResponse(updatedCustomer), { status: 200 });
   } catch (error: any) {
@@ -145,7 +145,7 @@ export async function DELETE(
     await repository.softDelete(params.id);
 
     // Log the deletion
-    await logDelete(AuditModule.CUSTOMERS, params.id, customer);
+    await logDelete(AuditModule.CUSTOMERS, params.id, customer, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Customer deleted successfully' }), { status: 200 });
   } catch (error: any) {

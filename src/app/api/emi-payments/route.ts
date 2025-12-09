@@ -90,9 +90,7 @@ export async function POST(request: NextRequest) {
     // Create EMI payment with installments
     const repository = new EmiPaymentRepository({ session });
     const emiPayment = await repository.create({
-      customer: {
-        connect: { id: data.customerId },
-      },
+      customerId: data.customerId,
       salesOrderId: data.salesOrderId || null,
       totalAmount: data.totalAmount,
       interestRate: data.interestRate,
@@ -109,7 +107,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log the creation
-    await logCreate(AuditModule.EMI, emiPayment.id, emiPayment);
+    await logCreate(AuditModule.EMI, emiPayment.id, emiPayment, session!.shopId!);
 
     return NextResponse.json(successResponse(emiPayment), { status: 201 });
   } catch (error: any) {

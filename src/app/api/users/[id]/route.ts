@@ -198,7 +198,7 @@ export async function DELETE(
       return createErrorResponse('Unauthorized: Cannot delete users from other shops', 403);
     }
 
-    await prisma.user.update(
+    await prisma.user.update({
       where: { id },
       data: { deletedAt: new Date() },
     });

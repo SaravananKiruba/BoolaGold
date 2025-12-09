@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
         // Create record
         const record = await prisma.bisCompliance.create({
           data: {
+            shopId: session!.shopId!,
             productId: item.productId || null,
             stockItemId: item.stockItemId || null,
             huid: item.huid,
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
     await logCreate(AuditModule.PRODUCTS, 'bulk-import', {
       action: 'bulk_import_bis_compliance',
       results,
-    });
+    }, session!.shopId!);
 
     return NextResponse.json(
       successResponse({

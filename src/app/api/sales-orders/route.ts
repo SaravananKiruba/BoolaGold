@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
       // Create sales order
       const order = await tx.salesOrder.create({
         data: {
+          shopId: session!.shopId!,
           invoiceNumber,
           customerId: data.customerId,
           orderTotal,
@@ -239,6 +240,7 @@ export async function POST(request: NextRequest) {
       if (orderStatus === 'COMPLETED') {
         await tx.transaction.create({
           data: {
+            shopId: session!.shopId!,
             transactionDate: new Date(),
             transactionType: TransactionType.INCOME,
             amount: finalAmount,
@@ -274,7 +276,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log the creation
-    await logCreate(AuditModule.SALES_ORDERS, salesOrder.id, salesOrder);
+    await logCreate(AuditModule.SALES_ORDERS, salesOrder.id, salesOrder, session!.shopId!);
 
     return NextResponse.json(successResponse(salesOrder), { status: 201 });
   } catch (error: any) {

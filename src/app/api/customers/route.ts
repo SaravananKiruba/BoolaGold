@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     const customer = await repository.create(customerData);
 
     // Log the creation
-    await logCreate(AuditModule.CUSTOMERS, customer.id, customer);
+    await logCreate(AuditModule.CUSTOMERS, customer.id, customer, session!.shopId!);
 
     return NextResponse.json(successResponse(customer), { status: 201 });
   } catch (error: any) {

@@ -144,7 +144,8 @@ export async function POST(request: NextRequest) {
         AuditModule.PRODUCTS,
         product.id,
         { calculatedPrice: oldPrice },
-        { calculatedPrice: newPrice }
+        { calculatedPrice: newPrice },
+        session!.shopId!
       );
 
       updatedCount++;

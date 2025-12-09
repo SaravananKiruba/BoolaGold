@@ -64,6 +64,9 @@ export async function PATCH(
 
     const data = validation.data;
 
+    // Initialize repository
+    const salesOrderRepository = new SalesOrderRepository({ session });
+
     // Check if sales order exists
     const existingSalesOrder = await salesOrderRepository.findById(params.id);
     if (!existingSalesOrder) {
@@ -152,7 +155,7 @@ export async function DELETE(
     });
 
     // Log the deletion
-    await logDelete(AuditModule.SALES_ORDERS, params.id, existingSalesOrder);
+    await logDelete(AuditModule.SALES_ORDERS, params.id, existingSalesOrder, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Sales order cancelled and deleted successfully' }), { status: 200 });
   } catch (error: any) {

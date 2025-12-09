@@ -66,6 +66,9 @@ export async function PATCH(
       return NextResponse.json(validationErrorResponse(validation.error.errors), { status: 400 });
     }
 
+    // Initialize repository
+    const transactionRepository = new TransactionRepository({ session });
+
     // Check if transaction exists
     const existingTransaction = await transactionRepository.findById(params.id);
     if (!existingTransaction) {
@@ -85,10 +88,10 @@ export async function PATCH(
     }
 
     // Update transaction
-    const transaction = await transactionRepository.update(params.id, updateData);
+    const transaction = await repository.update(params.id, updateData);
 
     // Log the update
-    await logUpdate(AuditModule.TRANSACTIONS, params.id, existingTransaction, transaction);
+    await logUpdate(AuditModule.TRANSACTIONS, params.id, existingTransaction, transaction, session!.shopId!);
 
     return NextResponse.json(successResponse(transaction), { status: 200 });
   } catch (error: any) {
@@ -112,7 +115,7 @@ export async function DELETE(
     await transactionRepository.softDelete(params.id);
 
     // Log the deletion
-    await logDelete(AuditModule.TRANSACTIONS, params.id, existingTransaction);
+    await logDelete(AuditModule.TRANSACTIONS, params.id, existingTransaction, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Transaction deleted successfully' }), { status: 200 });
   } catch (error: any) {

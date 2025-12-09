@@ -17,6 +17,7 @@ export interface AuditLogInput {
   userAgent?: string;
   errorMessage?: string;
   stackTrace?: string;
+  shopId: string;  // Required for audit logs
 }
 
 /**
@@ -38,6 +39,7 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
         errorMessage: input.errorMessage,
         stackTrace: input.stackTrace,
         timestamp: new Date(),
+        shopId: input.shopId,
       },
     });
   } catch (error) {
@@ -52,6 +54,7 @@ export async function logCreate(
   module: AuditModule,
   entityId: string,
   data: any,
+  shopId: string,
   userId?: string
 ): Promise<void> {
   await createAuditLog({
@@ -61,6 +64,7 @@ export async function logCreate(
     entityId,
     afterData: data,
     severity: AuditSeverity.INFO,
+    shopId,
   });
 }
 
@@ -72,6 +76,7 @@ export async function logUpdate(
   entityId: string,
   beforeData: any,
   afterData: any,
+  shopId: string,
   userId?: string
 ): Promise<void> {
   await createAuditLog({
@@ -82,6 +87,7 @@ export async function logUpdate(
     beforeData,
     afterData,
     severity: AuditSeverity.INFO,
+    shopId,
   });
 }
 
@@ -92,6 +98,7 @@ export async function logDelete(
   module: AuditModule,
   entityId: string,
   data: any,
+  shopId: string,
   userId?: string
 ): Promise<void> {
   await createAuditLog({
@@ -101,6 +108,7 @@ export async function logDelete(
     entityId,
     beforeData: data,
     severity: AuditSeverity.WARNING,
+    shopId,
   });
 }
 
@@ -112,6 +120,7 @@ export async function logStatusChange(
   entityId: string,
   oldStatus: string,
   newStatus: string,
+  shopId: string,
   userId?: string
 ): Promise<void> {
   await createAuditLog({
@@ -122,6 +131,7 @@ export async function logStatusChange(
     beforeData: { status: oldStatus },
     afterData: { status: newStatus },
     severity: AuditSeverity.INFO,
+    shopId,
   });
 }
 
@@ -131,6 +141,7 @@ export async function logStatusChange(
 export async function logError(
   module: AuditModule,
   error: Error,
+  shopId: string,
   entityId?: string,
   userId?: string
 ): Promise<void> {
@@ -142,6 +153,7 @@ export async function logError(
     errorMessage: error.message,
     stackTrace: error.stack,
     severity: AuditSeverity.ERROR,
+    shopId,
   });
 }
 

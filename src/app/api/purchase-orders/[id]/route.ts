@@ -101,10 +101,11 @@ export async function PATCH(
       updateData.referenceNumber = body.referenceNumber;
     }
 
-    const updated = await purchaseOrderRepository.update(id, updateData);
+    const updated = await repository.update(id, updateData);
 
     // Log audit
     await logAudit({
+      shopId: session!.shopId!,
       action: AuditAction.UPDATE,
       module: AuditModule.PURCHASE_ORDERS,
       entityId: id,
@@ -132,16 +133,20 @@ export async function PUT(
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
+    const session = await getSession();
+    const repository = new PurchaseOrderRepository({ session });
+
     if (action === 'close') {
-      const existing = await purchaseOrderRepository.findById(id);
+      const existing = await repository.findById(id);
       if (!existing) {
         return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
       }
 
-      const closed = await purchaseOrderRepository.closePurchaseOrder(id);
+      const closed = await repository.closePurchaseOrder(id);
 
       // Log audit
       await logAudit({
+        shopId: session!.shopId!,
         action: AuditAction.STATUS_CHANGE,
         module: AuditModule.PURCHASE_ORDERS,
         entityId: id,
@@ -172,15 +177,19 @@ export async function DELETE(
   try {
     const { id } = params;
 
-    const existing = await purchaseOrderRepository.findById(id);
+    const session = await getSession();
+    const repository = new PurchaseOrderRepository({ session });
+
+    const existing = await repository.findById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
 
-    await purchaseOrderRepository.softDelete(id);
+    await repository.softDelete(id);
 
     // Log audit
     await logAudit({
+      shopId: session!.shopId!,
       action: AuditAction.DELETE,
       module: AuditModule.PURCHASE_ORDERS,
       entityId: id,

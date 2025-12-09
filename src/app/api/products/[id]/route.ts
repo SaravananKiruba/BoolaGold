@@ -145,10 +145,10 @@ export async function PUT(
       }
     }
 
-    const updatedProduct = await productRepository.update(params.id, updateData);
+    const updatedProduct = await repository.update(params.id, updateData);
 
     // Log the update
-    await logUpdate(AuditModule.PRODUCTS, params.id, existingProduct, updatedProduct);
+    await logUpdate(AuditModule.PRODUCTS, params.id, existingProduct, updatedProduct, session!.shopId!);
 
     return NextResponse.json(successResponse(updatedProduct), { status: 200 });
   } catch (error: any) {
@@ -177,10 +177,10 @@ export async function DELETE(
       );
     }
 
-    await productRepository.softDelete(params.id);
+    await repository.softDelete(params.id);
 
     // Log the deletion
-    await logDelete(AuditModule.PRODUCTS, params.id, product);
+    await logDelete(AuditModule.PRODUCTS, params.id, product, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Product deleted successfully' }), { status: 200 });
   } catch (error: any) {

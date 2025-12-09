@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
       category: data.category,
       description: data.description || null,
       referenceNumber: data.referenceNumber || null,
-      customer: data.customerId ? { connect: { id: data.customerId } } : undefined,
-      salesOrder: data.salesOrderId ? { connect: { id: data.salesOrderId } } : undefined,
+      customerId: data.customerId || undefined,
+      salesOrderId: data.salesOrderId || undefined,
       status: data.status,
       currency: data.currency,
       metalType: data.metalType || null,
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log the creation
-    await logCreate(AuditModule.TRANSACTIONS, transaction.id, transaction);
+    await logCreate(AuditModule.TRANSACTIONS, transaction.id, transaction, session!.shopId!);
 
     return NextResponse.json(successResponse(transaction), { status: 201 });
   } catch (error: any) {

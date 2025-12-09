@@ -24,12 +24,12 @@ export class SalesOrderRepository extends BaseRepository {
   /**
    * Create a new sales order with lines
    */
-  async create(data: Omit<Prisma.SalesOrderCreateInput, 'shop'>) {
+  async create(data: Omit<Prisma.SalesOrderUncheckedCreateInput, 'shopId'>) {
     return prisma.salesOrder.create({
       data: {
         ...data,
         shopId: this.getShopId(),
-      },
+      } as Prisma.SalesOrderUncheckedCreateInput,
       include: {
         customer: true,
         lines: {
@@ -253,3 +253,6 @@ export class SalesOrderRepository extends BaseRepository {
     };
   }
 }
+
+// Export a default instance for backward compatibility
+export const salesOrderRepository = new SalesOrderRepository({ session: null });

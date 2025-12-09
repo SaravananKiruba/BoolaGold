@@ -75,6 +75,7 @@ export async function POST(
       // Create expense transaction (User Story 27 requirement)
       const transaction = await tx.transaction.create({
         data: {
+          shopId: session!.shopId!,
           transactionDate: new Date(),
           transactionType: TransactionType.EXPENSE,
           amount,
@@ -92,6 +93,7 @@ export async function POST(
 
     // Log audit
     await logAudit({
+      shopId: session!.shopId!,
       action: AuditAction.UPDATE,
       module: AuditModule.PURCHASE_ORDERS,
       entityId: purchaseOrderId,

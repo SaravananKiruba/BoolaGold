@@ -125,4 +125,30 @@ export abstract class BaseRepository {
     }
     return this.session.shopId;
   }
+
+  /**
+   * Verify ownership of a resource (that it belongs to the current shop)
+   * @param modelName - Name of the Prisma model (lowercase)
+   * @param id - ID of the resource to verify
+   * @throws Error if resource doesn't exist or doesn't belong to shop
+   */
+  protected async verifyOwnership(modelName: string, id: string): Promise<void> {
+    const prisma = (await import('@/lib/prisma')).default;
+    const model = (prisma as any)[modelName];
+    
+    if (!model) {
+      throw new Error(`Model ${modelName} not found`);
+    }
+
+    const resource = await model.findUnique({
+      where: { id },
+      select: { id: true, shopId: true },
+    });
+
+    if (!resource) {
+      throw new Error(`${modelName} not found`);
+    }
+
+    this.ensureShopAccess(resource.shopId);
+  }
 }
