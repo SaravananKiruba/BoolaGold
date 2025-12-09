@@ -438,38 +438,39 @@ export default function Navigation() {
                 );
                 });
               })()}
-              
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding: '8px 14px',
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <span style={{ fontSize: '1.1rem' }}>🚪</span>
-                <span className="nav-label">Logout</span>
-              </button>
             </div>
+            
+            {/* Logout Button - Always visible on desktop and tablet */}
+            <button
+              className="desktop-logout-btn"
+              onClick={handleLogout}
+              style={{
+                padding: '8px 14px',
+                background: 'rgba(255,255,255,0.1)',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <span style={{ fontSize: '1.1rem' }}>🚪</span>
+              <span className="logout-label">Logout</span>
+            </button>
 
             {/* Mobile Menu Button */}
             <button
@@ -574,16 +575,22 @@ export default function Navigation() {
           display: none;
         }
         
-        /* On medium screens, hide nav labels but keep icons */
+        /* On medium screens (tablet), hide nav labels but keep icons and logout */
         @media (max-width: 1200px) {
           .nav-label {
             display: none !important;
           }
+          .logout-label {
+            display: none !important;
+          }
         }
         
-        /* On small screens, hide desktop nav and show mobile menu button */
+        /* On small screens (mobile), hide desktop nav and logout, show mobile menu button */
         @media (max-width: 968px) {
           .desktop-nav {
+            display: none !important;
+          }
+          .desktop-logout-btn {
             display: none !important;
           }
           .mobile-menu-btn {
