@@ -17,7 +17,7 @@ export interface BaseFilter {
 /**
  * Build shopId filter from session
  */
-export function buildShopFilter(session: SessionPayload | null): { shopId: string } | {} {
+export function buildShopFilter(session: SessionPayload | null): { shopId: string } | Record<string, never> {
   if (!session?.shopId) {
     throw new Error('Unauthorized: No shop context available');
   }
