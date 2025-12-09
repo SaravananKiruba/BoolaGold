@@ -244,6 +244,7 @@ export enum TransactionCategory {
   SALES = 'SALES',
   PURCHASE = 'PURCHASE',
   OPERATIONAL = 'OPERATIONAL',
+  OTHER_EXPENSES = 'OTHER_EXPENSES',
   OTHER = 'OTHER',
 }
 

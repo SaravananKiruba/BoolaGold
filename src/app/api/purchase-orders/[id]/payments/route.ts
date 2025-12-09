@@ -21,6 +21,23 @@ export async function POST(
 ) {
   try {
     const session = await getSession();
+    
+    // Check authentication - OWNER and ACCOUNTS can record payments
+    if (!session || !['OWNER', 'ACCOUNTS'].includes(session.role)) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Only OWNER and ACCOUNTS can record payments' },
+        { status: 403 }
+      );
+    }
+    
+    // Validate shop context
+    if (!session.shopId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: No shop context available' },
+        { status: 403 }
+      );
+    }
+    
     const body = await request.json();
     const purchaseOrderId = params.id;
 

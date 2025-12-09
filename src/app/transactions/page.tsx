@@ -32,6 +32,15 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    expenseType: 'SALARY',
+    category: 'OPERATIONAL',
+    amount: '',
+    paymentMode: 'CASH',
+    description: '',
+    referenceNumber: '',
+  });
   const [filters, setFilters] = useState({
     transactionType: '',
     category: '',
@@ -40,24 +49,6 @@ export default function TransactionsPage() {
   });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  useEffect(() => {
-    if (isAuthorized) {
-      fetchTransactions();
-      fetchSummary();
-    }
-  }, [filters, page, isAuthorized]);
-
-  if (authLoading || !isAuthorized) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner"></div>
-          <p>Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
 
   const fetchTransactions = async () => {
     try {
@@ -147,15 +138,301 @@ export default function TransactionsPage() {
     }
   };
 
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchTransactions();
+      fetchSummary();
+    }
+  }, [filters, page, isAuthorized]);
+
+  if (authLoading || !isAuthorized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner"></div>
+          <p>Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container" style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 700 }}>
-          💳 Transactions
-        </h1>
-        <p style={{ color: '#666', marginTop: '8px' }}>
-          Track all income and expense transactions
-        </p>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 700 }}>
+            💳 Transactions
+          </h1>
+          <p style={{ color: '#666', marginTop: '8px' }}>
+            Track all income and expense transactions
+          </p>
+        </div>
+        <button
+          onClick={() => setShowExpenseModal(true)}
+          style={{
+            padding: '12px 24px',
+            background: '#ef4444',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+      </div>
+
+      {/* Other Expense Modal */}
+      {showExpenseModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowExpenseModal(false)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0 }}>💸 Record Other Expense</h2>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                Expense Type *
+              </label>
+              <select
+                value={expenseForm.expenseType}
+                onChange={(e) => setExpenseForm({ ...expenseForm, expenseType: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              >
+                <option value="SALARY">Salary</option>
+                <option value="RENT">Rent</option>
+                <option value="EB">Electricity Bill (EB)</option>
+                <option value="WATER">Water Bill</option>
+                <option value="MAINTENANCE">Maintenance</option>
+                <option value="TRANSPORT">Transport</option>
+                <option value="OFFICE_SUPPLIES">Office Supplies</option>
+                <option value="MARKETING">Marketing</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                Category *
+              </label>
+              <select
+                value={expenseForm.category}
+                onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              >
+                <option value="OPERATIONAL">Operational Expense</option>
+                <option value="OTHER_EXPENSES">Capital Expense</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                Amount *
+              </label>
+              <input
+                type="number"
+                value={expenseForm.amount}
+                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                placeholder="Enter amount"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                Payment Mode *
+              </label>
+              <select
+                value={expenseForm.paymentMode}
+                onChange={(e) => setExpenseForm({ ...expenseForm, paymentMode: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              >
+                <option value="CASH">Cash</option>
+                <option value="UPI">UPI</option>
+                <option value="CARD">Card</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CHEQUE">Cheque</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                Description / Remarks *
+              </label>
+              <textarea
+                value={expenseForm.description}
+                onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                placeholder="Enter description or remarks"
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                Reference Number
+              </label>
+              <input
+                type="text"
+                value={expenseForm.referenceNumber}
+                onChange={(e) => setExpenseForm({ ...expenseForm, referenceNumber: e.target.value })}
+                placeholder="Invoice number, receipt number, etc."
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                onClick={() => {
+                  if (!expenseForm.amount || Number(expenseForm.amount) <= 0) {
+                    alert('Please enter a valid amount');
+                    return;
+                  }
+                  if (!expenseForm.description) {
+                    alert('Please enter description/remarks');
+                    return;
+                  }
+
+                  fetch('/api/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      transactionType: 'EXPENSE',
+                      category: expenseForm.category,
+                      amount: Number(expenseForm.amount),
+                      paymentMode: expenseForm.paymentMode,
+                      description: `${expenseForm.expenseType} - ${expenseForm.description}`,
+                      referenceNumber: expenseForm.referenceNumber || undefined,
+                      status: 'COMPLETED',
+                    }),
+                  })
+                    .then(res => res.json())
+                    .then(result => {
+                      if (result.success) {
+                        alert('Expense recorded successfully!');
+                        setShowExpenseModal(false);
+                        setExpenseForm({
+                          expenseType: 'SALARY',
+                          category: 'OPERATIONAL',
+                          amount: '',
+                          paymentMode: 'CASH',
+                          description: '',
+                          referenceNumber: '',
+                        });
+                        fetchTransactions();
+                        fetchSummary();
+                      } else {
+                        alert('Failed to record expense: ' + (result.error || 'Unknown error'));
+                      }
+                    })
+                    .catch(err => alert('Error: ' + err.message));
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Record Expense
+              </button>
+              <button
+                onClick={() => {
+                  setShowExpenseModal(false);
+                  setExpenseForm({
+                    expenseType: 'SALARY',
+                    category: 'OPERATIONAL',
+                    amount: '',
+                    paymentMode: 'CASH',
+                    description: '',
+                    referenceNumber: '',
+                  });
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Cards */},
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          💸 Record Other Expense
+        </button>
       </div>
 
       {/* Summary Cards */}
@@ -275,6 +552,7 @@ export default function TransactionsPage() {
               <option value="SALES">Sales</option>
               <option value="PURCHASE">Purchase</option>
               <option value="OPERATIONAL">Operational</option>
+              <option value="OTHER_EXPENSES">Other Expenses</option>
               <option value="OTHER">Other</option>
             </select>
           </div>

@@ -585,8 +585,8 @@ export default function Navigation() {
           }
         }
         
-        /* On small screens (mobile), hide desktop nav and logout, show mobile menu button */
-        @media (max-width: 968px) {
+        /* On small screens (mobile phones only), hide desktop nav and logout, show mobile menu */
+        @media (max-width: 767px) {
           .desktop-nav {
             display: none !important;
           }

@@ -605,6 +605,7 @@ enum TransactionCategory {
   SALES
   PURCHASE
   OPERATIONAL
+  OTHER_EXPENSES
   OTHER
 }
 
