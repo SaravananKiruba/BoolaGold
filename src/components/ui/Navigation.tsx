@@ -155,12 +155,17 @@ export default function Navigation() {
     // SUPER ADMIN: Only system navigation
     navSections = superAdminNavSections;
     additionalSections = []; // NO additional sections for super admin
+    console.log('🎛️ Navigation: SUPER_ADMIN mode - showing system nav');
   } else {
     // SHOP USERS: Business navigation + owner section if applicable
     navSections = shopNavSections;
     if (normalizedRole === 'OWNER') {
       additionalSections = [ownerSection];
+      console.log('👑 Navigation: OWNER mode - showing shop nav + admin section');
+    } else {
+      console.log('👤 Navigation: STAFF mode - showing shop nav only');
     }
+    console.log('📋 Shop Navigation Sections:', navSections.length, 'sections with', navSections.flatMap(s => s.items).length, 'items');
   }
 
   const handleLogout = async () => {
@@ -181,7 +186,7 @@ export default function Navigation() {
       {/* DEBUG BANNER - Remove after testing */}
       {userRole && (
         <div style={{
-          background: isSuperAdmin ? '#fbbf24' : '#3b82f6',
+          background: isSuperAdmin ? '#fbbf24' : isOwner ? '#22c55e' : '#3b82f6',
           color: isSuperAdmin ? '#78350f' : 'white',
           padding: '8px 20px',
           textAlign: 'center',
@@ -191,7 +196,7 @@ export default function Navigation() {
           top: 0,
           zIndex: 101,
         }}>
-          🐛 DEBUG MODE | Raw Role: "{userRole}" | Normalized: "{normalizedRole}" | Is Super Admin: {isSuperAdmin ? 'YES ✅' : 'NO ❌'} | Nav Type: {isSuperAdmin ? 'SUPER_ADMIN_NAV' : 'SHOP_NAV'}
+          🐛 DEBUG | Role: "{userRole}" | Nav Sections: {navSections.length} | Additional: {additionalSections.length} | Total Items: {navSections.flatMap(s => s.items).length + additionalSections.flatMap(s => s.items).length} | Is OWNER: {isOwner ? 'YES ✅' : 'NO ❌'}
         </div>
       )}
       
@@ -234,6 +239,20 @@ export default function Navigation() {
                   marginLeft: '8px'
                 }}>
                   🎛️ SUPER ADMIN
+                </span>
+              )}
+              {isOwner && (
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  background: '#22c55e', 
+                  color: '#14532d', 
+                  padding: '4px 8px', 
+                  borderRadius: '4px', 
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  marginLeft: '8px'
+                }}>
+                  👑 OWNER
                 </span>
               )}
             </Link>
