@@ -1,11 +1,12 @@
 // Supplier Detail API - Get, Update, Delete (User Story 9)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { SupplierRepository } from '@/repositories/supplierRepository';
+
 import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/suppliers/[id]
@@ -24,7 +25,8 @@ export async function GET(
 
     const supplierId = params.id;
 
-    const repository = new SupplierRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.supplier;
     const supplier = await repository.findById(supplierId);
     if (!supplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
@@ -61,7 +63,8 @@ export async function PATCH(
     const body = await request.json();
 
     // Get existing supplier
-    const repository = new SupplierRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.supplier;
     const existingSupplier = await repository.findById(supplierId);
     if (!existingSupplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
@@ -154,7 +157,8 @@ export async function DELETE(
 
     const supplierId = params.id;
 
-    const repository = new SupplierRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.supplier;
     const supplier = await repository.findById(supplierId);
     if (!supplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });

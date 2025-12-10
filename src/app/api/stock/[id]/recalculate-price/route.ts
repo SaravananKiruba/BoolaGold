@@ -2,8 +2,9 @@
 // NOTE: This endpoint is deprecated - selling prices are calculated dynamically at checkout
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+
 import { handleApiError } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * POST /api/stock/[id]/recalculate-price
@@ -13,10 +14,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
     const stockItemId = params.id;
 
-    const stockItem = await stockItemRepository.findById(stockItemId);
+    const stockItem = await repos.stockItem.findById(stockItemId);
     if (!stockItem) {
       return NextResponse.json({ error: 'Stock item not found' }, { status: 404 });
     }
@@ -47,7 +49,7 @@ export async function GET(
   try {
     const stockItemId = params.id;
 
-    const stockItem = await stockItemRepository.findById(stockItemId);
+    const stockItem = await repos.stockItem.findById(stockItemId);
     if (!stockItem) {
       return NextResponse.json({ error: 'Stock item not found' }, { status: 404 });
     }
@@ -57,7 +59,7 @@ export async function GET(
     const { rateMasterRepository } = await import('@/repositories/rateMasterRepository');
 
     // Get current rate
-    const rate = await rateMasterRepository.getCurrentRate(
+    const rate = await repos.rateMaster.getCurrentRate(
       stockItem.product.metalType as any,
       stockItem.product.purity
     );

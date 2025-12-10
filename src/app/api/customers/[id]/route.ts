@@ -5,12 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { CustomerRepository } from '@/repositories/customerRepository';
+
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { phoneSchema, emailSchema } from '@/utils/validation';
 import { CustomerType, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const updateCustomerSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -36,7 +37,8 @@ export async function GET(
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const repository = new CustomerRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.customer;
     const customer = await repository.findById(params.id);
 
     if (!customer) {
@@ -79,7 +81,8 @@ export async function PUT(
 
     const data = validation.data;
 
-    const repository = new CustomerRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.customer;
     
     // Check if customer exists
     const existingCustomer = await repository.findById(params.id);
@@ -135,7 +138,8 @@ export async function DELETE(
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const repository = new CustomerRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.customer;
     const customer = await repository.findById(params.id);
 
     if (!customer) {

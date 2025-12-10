@@ -4,8 +4,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { SalesOrderRepository } from '@/repositories/salesOrderRepository';
-import { StockItemRepository } from '@/repositories/stockItemRepository';
+
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { PaymentMethod, OrderType, AuditModule, TransactionType, TransactionCategory } from '@/domain/entities/types';
@@ -13,6 +13,7 @@ import { logCreate } from '@/utils/audit';
 import { generateInvoiceNumber } from '@/utils/barcode';
 import prisma from '@/lib/prisma';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const salesOrderLineSchema = z.object({
   stockItemId: uuidSchema.optional(),
@@ -67,7 +68,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const repository = new SalesOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.salesOrder;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
@@ -111,7 +113,8 @@ export async function POST(request: NextRequest) {
     let orderTotal = 0;
     const lineItemsWithPrices: any[] = [];
 
-    const stockRepository = new StockItemRepository({ session });
+    const repos = await getRepositories(request);
+    const stockRepository = repos.stockItem;
 
     for (const line of data.lines) {
       // Find stock item by ID or Tag ID
@@ -166,7 +169,8 @@ export async function POST(request: NextRequest) {
     const invoiceNumber = generateInvoiceNumber();
 
     // Check for duplicate invoice (very unlikely)
-    const salesRepository = new SalesOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const salesRepository = repos.salesOrder;
     const existingOrder = await salesRepository.findByInvoiceNumber(invoiceNumber);
     if (existingOrder) {
       return NextResponse.json(

@@ -4,11 +4,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { RateMasterRepository } from '@/repositories/rateMasterRepository';
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { MetalType, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const createRateMasterSchema = z.object({
   metalType: z.nativeEnum(MetalType, { 
@@ -97,7 +98,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const repository = new RateMasterRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.rateMaster;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
@@ -165,7 +167,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create rate master with transaction support (handled in repository)
-    const repository = new RateMasterRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.rateMaster;
     const rateMaster = await repository.create({
       metalType: data.metalType,
       purity: data.purity.trim(),

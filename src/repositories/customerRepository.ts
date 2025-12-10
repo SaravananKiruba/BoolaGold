@@ -2,6 +2,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildDateRangeFilter, buildSoftDeleteFilter } from '@/utils/filters';
 import { CustomerType } from '@/domain/entities/types';
@@ -231,5 +232,9 @@ export class CustomerRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const customerRepository = new CustomerRepository({ session: null });
+/**
+ * Factory function to create CustomerRepository with session
+ */
+export function createCustomerRepository(session: SessionPayload | null): CustomerRepository {
+  return new CustomerRepository({ session });
+}

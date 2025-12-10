@@ -4,12 +4,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { EmiPaymentRepository } from '@/repositories/emiPaymentRepository';
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { EmiInstallmentStatus, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const createEmiPaymentSchema = z.object({
   customerId: uuidSchema,
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
       overdue: searchParams.get('overdue') === 'true',
     };
 
-    const repository = new EmiPaymentRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.emiPayment;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
@@ -88,7 +90,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create EMI payment with installments
-    const repository = new EmiPaymentRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.emiPayment;
     const emiPayment = await repository.create({
       customerId: data.customerId,
       salesOrderId: data.salesOrderId || null,

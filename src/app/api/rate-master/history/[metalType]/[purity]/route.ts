@@ -2,14 +2,16 @@
 // GET /api/rate-master/history/[metalType]/[purity] - Get rate history for specific metal and purity
 
 import { NextRequest, NextResponse } from 'next/server';
-import { rateMasterRepository } from '@/repositories/rateMasterRepository';
+
 import { successResponse, errorResponse } from '@/utils/response';
 import { MetalType } from '@/domain/entities/types';
+import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { metalType: string; purity: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
     const { metalType, purity } = params;
 
@@ -34,7 +36,7 @@ export async function GET(
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '50')));
 
-    const result = await rateMasterRepository.getRateHistory(
+    const result = await repos.rateMaster.getRateHistory(
       metalType as MetalType,
       purity.trim(),
       { page, pageSize }

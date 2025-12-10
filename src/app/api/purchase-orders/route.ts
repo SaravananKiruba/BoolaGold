@@ -1,13 +1,14 @@
 // Purchase Orders API - List and Create
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PurchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
+
 import { PurchaseOrderStatus, PaymentStatus, PaymentMethod } from '@/domain/entities/types';
 import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { generatePurchaseOrderNumber } from '@/utils/barcode';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/purchase-orders
@@ -65,7 +66,8 @@ export async function GET(request: NextRequest) {
       filters.endDate = new Date(searchParams.get('endDate')!);
     }
 
-    const repository = new PurchaseOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.purchaseOrder;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result), { status: 200 });
@@ -151,7 +153,8 @@ export async function POST(request: NextRequest) {
     const orderNumber = generatePurchaseOrderNumber();
 
     // Create purchase order with items
-    const repository = new PurchaseOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.purchaseOrder;
     const purchaseOrder = await repository.create({
       orderNumber,
       supplierId,
@@ -188,7 +191,7 @@ export async function POST(request: NextRequest) {
 
       for (const item of items) {
         // Get product details for tag/barcode generation
-        const product = await productRepository.findById(item.productId);
+        const product = await repos.product.findById(item.productId);
         if (!product) {
           throw new Error(`Product ${item.productId} not found`);
         }

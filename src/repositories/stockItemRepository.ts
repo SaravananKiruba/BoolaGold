@@ -2,6 +2,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { StockStatus } from '@/domain/entities/types';
@@ -285,5 +286,9 @@ export class StockItemRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility (session must be set before use)
-export const stockItemRepository = new StockItemRepository({ session: null });
+/**
+ * Factory function to create StockItemRepository with session
+ */
+export function createStockItemRepository(session: SessionPayload | null): StockItemRepository {
+  return new StockItemRepository({ session });
+}

@@ -1,12 +1,13 @@
 // Purchase Order API - Get, Update, Delete by ID
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PurchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
+
 import { PurchaseOrderStatus, PaymentStatus } from '@/domain/entities/types';
 import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/purchase-orders/[id]
@@ -23,7 +24,8 @@ export async function GET(
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const repository = new PurchaseOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.purchaseOrder;
     const purchaseOrder = await repository.findById(params.id);
 
     if (!purchaseOrder) {
@@ -55,7 +57,8 @@ export async function PATCH(
     const { id } = params;
 
     // Get existing purchase order
-    const repository = new PurchaseOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.purchaseOrder;
     const existing = await repository.findById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
@@ -134,7 +137,8 @@ export async function PUT(
     const action = searchParams.get('action');
 
     const session = await getSession();
-    const repository = new PurchaseOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.purchaseOrder;
 
     if (action === 'close') {
       const existing = await repository.findById(id);
@@ -178,7 +182,8 @@ export async function DELETE(
     const { id } = params;
 
     const session = await getSession();
-    const repository = new PurchaseOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.purchaseOrder;
 
     const existing = await repository.findById(id);
     if (!existing) {

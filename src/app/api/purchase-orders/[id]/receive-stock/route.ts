@@ -1,14 +1,11 @@
 // Stock Receipt API - Receive stock from purchase order
 
 import { NextRequest, NextResponse } from 'next/server';
-import { purchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
-import { productRepository } from '@/repositories/productRepository';
+import { getRepositories } from '@/utils/apiRepository';
 import { handleApiError, successResponse } from '@/utils/response';
 import { generateBatchTagIds, generateStockBarcode } from '@/utils/barcode';
 import { logAudit } from '@/utils/audit';
 import { MetalType, AuditAction, AuditModule } from '@/domain/entities/types';
-import { getSession } from '@/lib/auth';
 
 /**
  * POST /api/purchase-orders/[id]/receive-stock
@@ -25,7 +22,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getSession();
+    const repos = await getRepositories(request);
     const body = await request.json();
     const purchaseOrderId = params.id;
 
@@ -54,7 +51,7 @@ export async function POST(
     }
 
     // Get purchase order
-    const purchaseOrder = await purchaseOrderRepository.findById(purchaseOrderId);
+    const purchaseOrder = await repos.purchaseOrder.findById(purchaseOrderId);
     if (!purchaseOrder) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
@@ -73,7 +70,7 @@ export async function POST(
       }
 
       // Get product details for tag/barcode generation
-      const product = await productRepository.findById(productId);
+      const product = await repos.product.findById(productId);
       if (!product) {
         return NextResponse.json(
           { error: `Product ${productId} not found` },
@@ -134,14 +131,14 @@ export async function POST(
     }
 
     // Receive stock in transaction
-    const result = await purchaseOrderRepository.receiveStock(
+    const result = await repos.purchaseOrder.receiveStock(
       purchaseOrderId,
       receiptItems
     );
 
     // Log audit
     await logAudit({
-      shopId: session!.shopId!,
+      shopId: purchaseOrder.shopId,
       action: AuditAction.CREATE,
       module: AuditModule.STOCK,
       entityId: purchaseOrderId,
@@ -172,9 +169,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const repos = await getRepositories(request);
     const purchaseOrderId = params.id;
 
-    const itemsToReceive = await purchaseOrderRepository.getItemsToReceive(purchaseOrderId);
+    const itemsToReceive = await repos.purchaseOrder.getItemsToReceive(purchaseOrderId);
 
     return NextResponse.json(successResponse({
       purchaseOrderId,

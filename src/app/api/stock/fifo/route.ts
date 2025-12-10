@@ -2,10 +2,11 @@
 // GET /api/stock/fifo?productId={id}&quantity={num} - Get FIFO items for a product
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
-import { productRepository } from '@/repositories/productRepository';
+
+
 import { successResponse, errorResponse } from '@/utils/response';
 import { calculateSellingPriceForSale } from '@/utils/sellingPrice';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/stock/fifo
@@ -13,6 +14,7 @@ import { calculateSellingPriceForSale } from '@/utils/sellingPrice';
  * User Story 26: End-to-End Sales Workflow - FIFO Selection
  */
 export async function GET(request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     const { searchParams } = request.nextUrl;
     const productId = searchParams.get('productId');
@@ -33,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get product details
-    const product = await productRepository.findById(productId);
+    const product = await repos.product.findById(productId);
     if (!product) {
       return NextResponse.json(
         errorResponse('Product not found'),
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get available items in FIFO order (oldest first)
-    const availableItems = await stockItemRepository.findAvailableByProduct(productId);
+    const availableItems = await repos.stockItem.findAvailableByProduct(productId);
 
     if (availableItems.length === 0) {
       return NextResponse.json(

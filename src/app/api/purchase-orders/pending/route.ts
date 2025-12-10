@@ -1,16 +1,18 @@
 // Purchase Order Pending List API
 
 import { NextRequest, NextResponse } from 'next/server';
-import { purchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
+
 import { handleApiError, successResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/purchase-orders/pending
  * Get list of pending purchase orders for stock receipt
  */
 export async function GET(_request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
-    const pendingOrders = await purchaseOrderRepository.getPendingOrders();
+    const pendingOrders = await repos.purchaseOrder.getPendingOrders();
 
     // Format response with pending quantities
     const formattedOrders = pendingOrders.map((order) => ({

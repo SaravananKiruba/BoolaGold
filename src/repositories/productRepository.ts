@@ -2,6 +2,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { MetalType } from '@/domain/entities/types';
@@ -293,5 +294,9 @@ export class ProductRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const productRepository = new ProductRepository({ session: null });
+/**
+ * Factory function to create ProductRepository with session
+ */
+export function createProductRepository(session: SessionPayload | null): ProductRepository {
+  return new ProductRepository({ session });
+}

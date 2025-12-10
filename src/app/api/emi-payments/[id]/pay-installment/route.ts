@@ -3,12 +3,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { emiPaymentRepository } from '@/repositories/emiPaymentRepository';
+
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { PaymentMethod, AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const payInstallmentSchema = z.object({
   installmentId: uuidSchema,
@@ -21,6 +22,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
     const session = await getSession();
     const body = await request.json();
@@ -35,13 +37,13 @@ export async function POST(
     const data = validation.data;
 
     // Check if EMI payment exists
-    const emiPayment = await emiPaymentRepository.findById(emiPaymentId);
+    const emiPayment = await repos.emiPayment.findById(emiPaymentId);
     if (!emiPayment) {
       return NextResponse.json(notFoundResponse('EMI Payment'), { status: 404 });
     }
 
     // Check if installment exists
-    const installment = await emiPaymentRepository.findInstallmentById(data.installmentId);
+    const installment = await repos.emiPayment.findInstallmentById(data.installmentId);
     if (!installment || installment.emiPaymentId !== emiPaymentId) {
       return NextResponse.json(notFoundResponse('Installment'), { status: 404 });
     }
@@ -56,7 +58,7 @@ export async function POST(
     }
 
     // Record payment
-    const result = await emiPaymentRepository.recordInstallmentPayment(
+    const result = await repos.emiPayment.recordInstallmentPayment(
       emiPaymentId,
       data.installmentId,
       data.amount,

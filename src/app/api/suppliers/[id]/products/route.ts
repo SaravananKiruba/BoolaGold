@@ -1,8 +1,9 @@
 // Supplier Products API - View supplier-linked products (User Story 9)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supplierRepository } from '@/repositories/supplierRepository';
+
 import { handleApiError, successResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/suppliers/[id]/products
@@ -12,12 +13,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
     const supplierId = params.id;
     const { searchParams } = new URL(request.url);
 
     // Verify supplier exists
-    const supplier = await supplierRepository.findById(supplierId);
+    const supplier = await repos.supplier.findById(supplierId);
     if (!supplier) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
     }
@@ -27,7 +29,7 @@ export async function GET(
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
 
     // Get products
-    const result = await supplierRepository.getSupplierProducts(supplierId, {
+    const result = await repos.supplier.getSupplierProducts(supplierId, {
       page,
       pageSize,
     });

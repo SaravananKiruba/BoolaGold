@@ -1,9 +1,10 @@
 // Stock Availability API - Check available items by product
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
-import { productRepository } from '@/repositories/productRepository';
+
+
 import { handleApiError, successResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic';
  * User Story 8: Stock Availability Check
  */
 export async function GET(request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     const { searchParams } = new URL(request.url);
 
@@ -24,16 +26,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Get product details
-    const product = await productRepository.findById(productId);
+    const product = await repos.product.findById(productId);
     if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
     // Get available items (FIFO order)
-    const availableItems = await stockItemRepository.findAvailableByProduct(productId);
+    const availableItems = await repos.stockItem.findAvailableByProduct(productId);
 
     // Get stock summary by status
-    const summary = await stockItemRepository.getStockSummaryByProduct(productId);
+    const summary = await repos.stockItem.getStockSummaryByProduct(productId);
 
     // Calculate counts by status
     const statusCounts = {

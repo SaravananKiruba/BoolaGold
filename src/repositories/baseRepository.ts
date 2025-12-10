@@ -152,3 +152,8 @@ export abstract class BaseRepository {
     this.ensureShopAccess(resource.shopId);
   }
 }
+
+/**
+ * Factory function type for creating repositories
+ */
+export type RepositoryFactory<T extends BaseRepository> = (session: SessionPayload | null) => T;

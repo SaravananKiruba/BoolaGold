@@ -1,11 +1,12 @@
 // Suppliers API - List and Create (User Story 9)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { SupplierRepository } from '@/repositories/supplierRepository';
+
 import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/suppliers
@@ -48,7 +49,8 @@ export async function GET(request: NextRequest) {
       filters.isActive = searchParams.get('isActive') === 'true';
     }
 
-    const repository = new SupplierRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.supplier;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
@@ -110,7 +112,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if supplier with same phone already exists
-    const repository = new SupplierRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.supplier;
     const existingSupplier = await repository.findByPhone(phone);
     if (existingSupplier) {
       return NextResponse.json(

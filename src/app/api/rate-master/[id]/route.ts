@@ -5,11 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { rateMasterRepository } from '@/repositories/rateMasterRepository';
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { MetalType, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const updateRateMasterSchema = z.object({
   metalType: z.nativeEnum(MetalType, { 
@@ -46,6 +47,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -53,7 +55,7 @@ export async function GET(
       return NextResponse.json(errorResponse('Invalid rate master ID format'), { status: 400 });
     }
 
-    const rateMaster = await rateMasterRepository.findById(params.id);
+    const rateMaster = await repos.rateMaster.findById(params.id);
 
     if (!rateMaster) {
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
@@ -82,7 +84,7 @@ export async function PUT(
     }
 
     // Check if rate master exists
-    const existingRate = await rateMasterRepository.findById(params.id);
+    const existingRate = await repos.rateMaster.findById(params.id);
     if (!existingRate) {
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
     }
@@ -151,7 +153,7 @@ export async function PUT(
     }
 
     // Update with transaction support (handled in repository)
-    const updatedRate = await rateMasterRepository.update(params.id, updateData);
+    const updatedRate = await repos.rateMaster.update(params.id, updateData);
 
     // Log the update
     try {
@@ -184,7 +186,7 @@ export async function DELETE(
     }
 
     // Check if rate master exists
-    const existingRate = await rateMasterRepository.findById(params.id);
+    const existingRate = await repos.rateMaster.findById(params.id);
     if (!existingRate) {
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
     }
@@ -195,7 +197,7 @@ export async function DELETE(
       console.warn(`Deleting active rate master: ${params.id}`);
     }
 
-    await rateMasterRepository.delete(params.id);
+    await repos.rateMaster.delete(params.id);
 
     // Log the deletion
     try {

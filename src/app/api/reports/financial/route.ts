@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { buildDateRangeFilter } from '@/utils/filters';
-import { TransactionRepository } from '@/repositories/transactionRepository';
+
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
     };
 
     // Get income, expense and metal purchase summaries using repository
-    const repository = new TransactionRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.transaction;
     const [incomeSummary, expenseSummary, metalPurchaseSummary] = await Promise.all([
       repository.getIncomeSummary(filters),
       repository.getExpenseSummary(filters),

@@ -2,6 +2,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { BaseRepository, RepositoryOptions } from './baseRepository';
@@ -289,5 +290,9 @@ export class SupplierRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const supplierRepository = new SupplierRepository({ session: null });
+/**
+ * Factory function to create SupplierRepository with session
+ */
+export function createSupplierRepository(session: SessionPayload | null): SupplierRepository {
+  return new SupplierRepository({ session });
+}

@@ -3,12 +3,14 @@
 // POST /api/emi-payments/overdue/mark - Mark overdue installments (admin/scheduled job)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { emiPaymentRepository } from '@/repositories/emiPaymentRepository';
+
 import { successResponse, errorResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(_request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
-    const overdueEmis = await emiPaymentRepository.getOverdueEmis();
+    const overdueEmis = await repos.emiPayment.getOverdueEmis();
 
     // Calculate total overdue amount
     const totalOverdueAmount = overdueEmis.reduce((sum, emi) => {
@@ -36,7 +38,7 @@ export async function GET(_request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Mark overdue installments
-    const result = await emiPaymentRepository.markOverdueInstallments();
+    const result = await repos.emiPayment.markOverdueInstallments();
 
     return NextResponse.json(successResponse(result), { status: 200 });
   } catch (error: any) {

@@ -2,17 +2,19 @@
 // GET /api/products/[id]/price-breakdown - Get detailed price calculation breakdown
 
 import { NextRequest, NextResponse } from 'next/server';
-import { productRepository } from '@/repositories/productRepository';
+
 import { successResponse, errorResponse, notFoundResponse } from '@/utils/response';
 import { calculateProductPrice } from '@/utils/pricing';
 import prisma from '@/lib/prisma';
+import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
-    const product = await productRepository.findById(params.id);
+    const product = await repos.product.findById(params.id);
 
     if (!product) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });

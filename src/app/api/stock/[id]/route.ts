@@ -1,8 +1,9 @@
 // Stock Item Details API - Get specific stock item
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+
 import { handleApiError, successResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/stock/[id]
@@ -12,8 +13,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
-    const stockItem = await stockItemRepository.findById(params.id);
+    const stockItem = await repos.stockItem.findById(params.id);
 
     if (!stockItem) {
       return NextResponse.json({ error: 'Stock item not found' }, { status: 404 });

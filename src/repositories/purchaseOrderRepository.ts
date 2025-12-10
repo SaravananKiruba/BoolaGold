@@ -2,6 +2,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { PurchaseOrderStatus, PaymentStatus } from '@/domain/entities/types';
@@ -447,5 +448,9 @@ export class PurchaseOrderRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const purchaseOrderRepository = new PurchaseOrderRepository({ session: null });
+/**
+ * Factory function to create PurchaseOrderRepository with session
+ */
+export function createPurchaseOrderRepository(session: SessionPayload | null): PurchaseOrderRepository {
+  return new PurchaseOrderRepository({ session });
+}

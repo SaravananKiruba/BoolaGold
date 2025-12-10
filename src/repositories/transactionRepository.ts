@@ -2,6 +2,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildDateRangeFilter, buildSoftDeleteFilter } from '@/utils/filters';
 import { TransactionType, TransactionCategory, TransactionStatus, PaymentMethod, MetalType } from '@/domain/entities/types';
@@ -329,5 +330,9 @@ export class TransactionRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const transactionRepository = new TransactionRepository({ session: null });
+/**
+ * Factory function to create TransactionRepository with session
+ */
+export function createTransactionRepository(session: SessionPayload | null): TransactionRepository {
+  return new TransactionRepository({ session });
+}

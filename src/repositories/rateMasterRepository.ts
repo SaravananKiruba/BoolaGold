@@ -3,6 +3,7 @@
 
 import { Prisma, RateMaster, MetalType } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { BaseRepository, RepositoryOptions } from './baseRepository';
 
@@ -428,5 +429,9 @@ export class RateMasterRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const rateMasterRepository = new RateMasterRepository({ session: null });
+/**
+ * Factory function to create RateMasterRepository with session
+ */
+export function createRateMasterRepository(session: SessionPayload | null): RateMasterRepository {
+  return new RateMasterRepository({ session });
+}

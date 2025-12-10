@@ -4,12 +4,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { TransactionRepository } from '@/repositories/transactionRepository';
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { TransactionType, TransactionCategory, TransactionStatus, PaymentMethod, MetalType, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const createTransactionSchema = z.object({
   transactionDate: z.string().datetime().optional(),
@@ -77,7 +78,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const repository = new TransactionRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.transaction;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result), { status: 200 });
@@ -111,7 +113,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create transaction
-    const repository = new TransactionRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.transaction;
     const transaction = await repository.create({
       transactionDate: data.transactionDate ? new Date(data.transactionDate) : new Date(),
       transactionType: data.transactionType,

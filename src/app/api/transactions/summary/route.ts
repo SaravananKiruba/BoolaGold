@@ -2,10 +2,12 @@
 // GET /api/transactions/summary - Get income, expense, and metal purchase summary
 
 import { NextRequest, NextResponse } from 'next/server';
-import { transactionRepository } from '@/repositories/transactionRepository';
+
 import { successResponse, errorResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     const searchParams = request.nextUrl.searchParams;
 
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
       filters.endDate = new Date(endDate);
     }
 
-    const summary = await transactionRepository.getDashboardSummary(filters);
+    const summary = await repos.transaction.getDashboardSummary(filters);
 
     return NextResponse.json(successResponse(summary), { status: 200 });
   } catch (error: any) {

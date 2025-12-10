@@ -1,7 +1,7 @@
 // Stock Items API - List and Query
 
 import { NextRequest, NextResponse } from 'next/server';
-import { StockItemRepository } from '@/repositories/stockItemRepository';
+import { getRepository } from '@/utils/apiRepository';
 import { StockStatus } from '@/domain/entities/types';
 import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { getSession, hasPermission } from '@/lib/auth';
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       filters.purchaseOrderId = searchParams.get('purchaseOrderId')!;
     }
 
-    const repository = new StockItemRepository({ session });
+    const repository = await getRepository(request, 'stockItem');
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result), { status: 200 });

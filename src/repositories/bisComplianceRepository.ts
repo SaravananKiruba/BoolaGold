@@ -3,6 +3,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { BisComplianceStatus } from '@/domain/entities/types';
 import { BaseRepository, RepositoryOptions } from './baseRepository';
@@ -235,5 +236,9 @@ export class BisComplianceRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const bisComplianceRepository = new BisComplianceRepository({ session: null });
+/**
+ * Factory function to create BisComplianceRepository with session
+ */
+export function createBisComplianceRepository(session: SessionPayload | null): BisComplianceRepository {
+  return new BisComplianceRepository({ session });
+}

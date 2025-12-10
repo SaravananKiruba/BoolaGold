@@ -2,6 +2,7 @@
 
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { buildSoftDeleteFilter } from '@/utils/filters';
 import { EmiInstallmentStatus, PaymentMethod } from '@/domain/entities/types';
@@ -387,5 +388,9 @@ export class EmiPaymentRepository extends BaseRepository {
   }
 }
 
-// Export a default instance for backward compatibility
-export const emiPaymentRepository = new EmiPaymentRepository({ session: null });
+/**
+ * Factory function to create EmiPaymentRepository with session
+ */
+export function createEmiPaymentRepository(session: SessionPayload | null): EmiPaymentRepository {
+  return new EmiPaymentRepository({ session });
+}

@@ -4,14 +4,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { salesOrderRepository } from '@/repositories/salesOrderRepository';
-import { transactionRepository } from '@/repositories/transactionRepository';
+
+
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema } from '@/utils/validation';
 import { PaymentMethod, PaymentStatus, TransactionType, TransactionCategory, AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const recordPaymentSchema = z.object({
   amount: amountSchema,
@@ -25,10 +26,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    
+    // Create repository with session context for GET as well
+    const repos = await getRepositories(request);
+    const salesOrderRepository = repos.salesOrder;
     const salesOrderId = params.id;
 
     // Check if sales order exists
-    const salesOrder = await salesOrderRepository.findById(salesOrderId);
+    const salesOrder = await repos.salesOrder.findById(salesOrderId);
     if (!salesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }
@@ -94,8 +100,12 @@ export async function POST(
 
     const data = validation.data;
 
+    // Create repository instance with session context
+    const repos = await getRepositories(request);
+    const salesOrderRepository = repos.salesOrder;
+    
     // Check if sales order exists
-    const salesOrder = await salesOrderRepository.findById(salesOrderId);
+    const salesOrder = await repos.salesOrder.findById(salesOrderId);
     if (!salesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }

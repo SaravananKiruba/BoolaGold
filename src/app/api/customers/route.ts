@@ -4,12 +4,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { CustomerRepository } from '@/repositories/customerRepository';
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { phoneSchema, emailSchema } from '@/utils/validation';
 import { CustomerType, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 // Validation schema for creating a customer
 const createCustomerSchema = z.object({
@@ -69,7 +70,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Create repository with session for automatic shop filtering
-    const repository = new CustomerRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.customer;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
@@ -98,7 +100,8 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     // Create repository with session
-    const repository = new CustomerRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.customer;
 
     // Check if phone already exists (within this shop)
     const existingCustomer = await repository.findByPhone(data.phone);

@@ -5,12 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { TransactionRepository } from '@/repositories/transactionRepository';
+
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema } from '@/utils/validation';
 import { TransactionStatus, PaymentMethod, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const updateTransactionSchema = z.object({
   amount: amountSchema.optional(),
@@ -33,7 +34,8 @@ export async function GET(
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const repository = new TransactionRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.transaction;
     const transaction = await repository.findById(params.id);
 
     if (!transaction) {
@@ -67,11 +69,12 @@ export async function PATCH(
     }
 
     // Initialize repository
-    const transactionRepository = new TransactionRepository({ session });
+    const repos = await getRepositories(request);
+    const transactionRepository = repos.transaction;
     const repository = transactionRepository;
 
     // Check if transaction exists
-    const existingTransaction = await transactionRepository.findById(params.id);
+    const existingTransaction = await repos.transaction.findById(params.id);
     if (!existingTransaction) {
       return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
     }
@@ -107,15 +110,16 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    const transactionRepository = new TransactionRepository({ session });
+    const repos = await getRepositories(request);
+    const transactionRepository = repos.transaction;
     // Check if transaction exists
-    const existingTransaction = await transactionRepository.findById(params.id);
+    const existingTransaction = await repos.transaction.findById(params.id);
     if (!existingTransaction) {
       return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
     }
 
     // Soft delete
-    await transactionRepository.softDelete(params.id);
+    await repos.transaction.softDelete(params.id);
 
     // Log the deletion
     await logDelete(AuditModule.TRANSACTIONS, params.id, existingTransaction, session!.shopId!);

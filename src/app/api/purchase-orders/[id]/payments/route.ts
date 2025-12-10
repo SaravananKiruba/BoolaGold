@@ -1,14 +1,15 @@
 // Purchase Order Payment API
 
 import { NextRequest, NextResponse } from 'next/server';
-import { purchaseOrderRepository } from '@/repositories/purchaseOrderRepository';
-import { transactionRepository } from '@/repositories/transactionRepository';
+
+
 import { PaymentMethod, PaymentStatus, TransactionType, TransactionCategory } from '@/domain/entities/types';
 import { handleApiError, successResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * POST /api/purchase-orders/[id]/payments
@@ -47,8 +48,12 @@ export async function POST(
       return NextResponse.json({ error: 'Valid payment amount is required' }, { status: 400 });
     }
 
+    // Create repository instances with session context
+    const repos = await getRepositories(request);
+    const purchaseOrderRepository = repos.purchaseOrder;
+    
     // Get purchase order
-    const purchaseOrder = await purchaseOrderRepository.findById(purchaseOrderId);
+    const purchaseOrder = await repos.purchaseOrder.findById(purchaseOrderId);
     if (!purchaseOrder) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
@@ -149,7 +154,7 @@ export async function GET(
   try {
     const purchaseOrderId = params.id;
 
-    const purchaseOrder = await purchaseOrderRepository.findById(purchaseOrderId);
+    const purchaseOrder = await repos.purchaseOrder.findById(purchaseOrderId);
     if (!purchaseOrder) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }

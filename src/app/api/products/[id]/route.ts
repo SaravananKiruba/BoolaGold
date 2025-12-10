@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { productRepository, ProductRepository } from '@/repositories/productRepository';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { weightSchema, amountSchema } from '@/utils/validation';
 import { MetalType, AuditModule } from '@/domain/entities/types';
@@ -14,6 +14,7 @@ import { logUpdate, logDelete } from '@/utils/audit';
 import { calculateProductPrice } from '@/utils/pricing';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const updateProductSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -47,14 +48,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const product = await productRepository.findById(params.id);
+    const product = await repos.product.findById(params.id);
 
     if (!product) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });
     }
 
     // Get stock summary
-    const stockSummary = await stockItemRepository.getStockSummaryByProduct(params.id);
+    const stockSummary = await repos.stockItem.getStockSummaryByProduct(params.id);
 
     return NextResponse.json(
       successResponse({
@@ -76,7 +77,8 @@ export async function PUT(
     const session = await getSession();
     const body = await request.json();
 
-    const repository = new ProductRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.product;
 
     // Validate input
     const validation = updateProductSchema.safeParse(body);
@@ -87,7 +89,7 @@ export async function PUT(
     const data = validation.data;
 
     // Check if product exists
-    const existingProduct = await productRepository.findById(params.id);
+    const existingProduct = await repos.product.findById(params.id);
     if (!existingProduct) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });
     }
@@ -167,14 +169,14 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    const product = await productRepository.findById(params.id);
+    const product = await repos.product.findById(params.id);
 
     if (!product) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });
     }
 
     // Check if product has active stock
-    const activeStock = await stockItemRepository.findAvailableByProduct(params.id, 1);
+    const activeStock = await repos.stockItem.findAvailableByProduct(params.id, 1);
     if (activeStock.length > 0) {
       return NextResponse.json(
         errorResponse('Cannot delete product with active stock items'),
@@ -182,7 +184,8 @@ export async function DELETE(
       );
     }
 
-    const repository = new ProductRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.product;
     await repository.softDelete(params.id);
 
     // Log the deletion

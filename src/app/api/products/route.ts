@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { ProductRepository } from '@/repositories/productRepository';
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { weightSchema, amountSchema } from '@/utils/validation';
 import { MetalType, AuditModule } from '@/domain/entities/types';
@@ -13,6 +13,7 @@ import { generateBarcode } from '@/utils/barcode';
 import { calculateProductPrice } from '@/utils/pricing';
 import prisma from '@/lib/prisma';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const createProductSchema = z.object({
   name: z.string().min(1).max(200),
@@ -78,7 +79,8 @@ export async function GET(request: NextRequest) {
         : undefined,
     };
 
-    const repository = new ProductRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.product;
     const result = await repository.findAll(filters, { page, pageSize });
 
     return NextResponse.json(successResponse(result.data, result.meta), { status: 200 });
@@ -110,7 +112,8 @@ export async function POST(request: NextRequest) {
     const tempId = Math.random().toString(36).substring(7);
     const barcode = generateBarcode('PRD', tempId);
 
-    const repository = new ProductRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.product;
 
     // Check if barcode exists (very unlikely but safe to check)
     const existingProduct = await repository.findByBarcode(barcode);

@@ -3,13 +3,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { rateMasterRepository } from '@/repositories/rateMasterRepository';
+
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { MetalType, AuditModule } from '@/domain/entities/types';
 import { calculateProductPrice } from '@/utils/pricing';
 import prisma from '@/lib/prisma';
 import { logCreate } from '@/utils/audit';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,7 @@ interface PriceChange {
 }
 
 export async function POST(request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     const session = await getSession();
     const body = await request.json();
@@ -61,13 +63,13 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     // Get and validate the rate master
-    const rateMaster = await rateMasterRepository.findById(data.rateId);
+    const rateMaster = await repos.rateMaster.findById(data.rateId);
     if (!rateMaster) {
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
     }
 
     // Check if rate is currently valid
-    const isValid = await rateMasterRepository.isRateValid(data.rateId);
+    const isValid = await repos.rateMaster.isRateValid(data.rateId);
     if (!isValid) {
       return NextResponse.json(
         errorResponse('Selected rate is not currently active or valid'),
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
     
     if (oldRateIds.length > 0) {
       const oldRates = await Promise.all(
-        oldRateIds.map(id => rateMasterRepository.findById(id))
+        oldRateIds.map(id => repos.rateMaster.findById(id))
       );
       oldRates.forEach(rate => {
         if (rate) oldRatesMap.set(rate.id, Number(rate.ratePerGram));

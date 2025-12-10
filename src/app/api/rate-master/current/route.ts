@@ -2,12 +2,14 @@
 // GET /api/rate-master/current - Get all current active rates
 
 import { NextRequest, NextResponse } from 'next/server';
-import { rateMasterRepository } from '@/repositories/rateMasterRepository';
+
 import { successResponse, errorResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(_request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
-    const currentRates = await rateMasterRepository.getAllCurrentRates();
+    const currentRates = await repos.rateMaster.getAllCurrentRates();
 
     // Add metadata about the rates
     const metadata = {

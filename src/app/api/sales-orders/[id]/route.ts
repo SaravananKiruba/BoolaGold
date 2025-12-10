@@ -5,13 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { SalesOrderRepository } from '@/repositories/salesOrderRepository';
-import { StockItemRepository } from '@/repositories/stockItemRepository';
+
+
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { SalesOrderStatus, AuditModule } from '@/domain/entities/types';
 import { logUpdate, logDelete } from '@/utils/audit';
 import prisma from '@/lib/prisma';
 import { getSession, hasPermission } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const updateSalesOrderSchema = z.object({
   status: z.nativeEnum(SalesOrderStatus).optional(),
@@ -29,7 +30,8 @@ export async function GET(
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const repository = new SalesOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const repository = repos.salesOrder;
     const salesOrder = await repository.findById(params.id);
 
     if (!salesOrder) {
@@ -65,10 +67,11 @@ export async function PATCH(
     const data = validation.data;
 
     // Initialize repository
-    const salesOrderRepository = new SalesOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const salesOrderRepository = repos.salesOrder;
 
     // Check if sales order exists
-    const existingSalesOrder = await salesOrderRepository.findById(params.id);
+    const existingSalesOrder = await repos.salesOrder.findById(params.id);
     if (!existingSalesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }
@@ -99,10 +102,10 @@ export async function PATCH(
       });
     } else {
       // Regular update
-      await salesOrderRepository.update(params.id, data);
+      await repos.salesOrder.update(params.id, data);
     }
 
-    const updatedSalesOrder = await salesOrderRepository.findById(params.id);
+    const updatedSalesOrder = await repos.salesOrder.findById(params.id);
 
     // Log the update
     await logUpdate(AuditModule.SALES_ORDERS, params.id, existingSalesOrder, updatedSalesOrder, session!.shopId!);
@@ -120,9 +123,10 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    const salesOrderRepository = new SalesOrderRepository({ session });
+    const repos = await getRepositories(request);
+    const salesOrderRepository = repos.salesOrder;
     // Check if sales order exists
-    const existingSalesOrder = await salesOrderRepository.findById(params.id);
+    const existingSalesOrder = await repos.salesOrder.findById(params.id);
     if (!existingSalesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }

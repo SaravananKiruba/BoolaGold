@@ -4,13 +4,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { uuidSchema } from '@/utils/validation';
 import { AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 const reserveStockSchema = z.object({
   stockItemIds: z.array(uuidSchema).min(1, 'At least one stock item required'),
@@ -22,6 +23,7 @@ const releaseStockSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     const session = await getSession();
     const { searchParams } = new URL(request.url);
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
 
       // Validate all stock items exist and are available
       const stockItems = await Promise.all(
-        data.stockItemIds.map((id) => stockItemRepository.findById(id))
+        data.stockItemIds.map((id) => repos.stockItem.findById(id))
       );
 
       const notFoundItems = stockItems
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
 
       // Validate all stock items exist and are reserved
       const stockItems = await Promise.all(
-        data.stockItemIds.map((id) => stockItemRepository.findById(id))
+        data.stockItemIds.map((id) => repos.stockItem.findById(id))
       );
 
       const notFoundItems = stockItems

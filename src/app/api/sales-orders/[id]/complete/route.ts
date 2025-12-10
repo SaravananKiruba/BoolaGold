@@ -2,24 +2,26 @@
 // POST /api/sales-orders/[id]/complete - Complete pending order and mark stock as SOLD
 
 import { NextRequest, NextResponse } from 'next/server';
-import { salesOrderRepository } from '@/repositories/salesOrderRepository';
-import { transactionRepository } from '@/repositories/transactionRepository';
+
+
 import { successResponse, errorResponse, notFoundResponse } from '@/utils/response';
 import { TransactionType, TransactionCategory, SalesOrderStatus, AuditModule } from '@/domain/entities/types';
 import { logUpdate } from '@/utils/audit';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { getRepositories } from '@/utils/apiRepository';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
     const session = await getSession();
     const salesOrderId = params.id;
 
     // Check if sales order exists
-    const salesOrder = await salesOrderRepository.findById(salesOrderId);
+    const salesOrder = await repos.salesOrder.findById(salesOrderId);
     if (!salesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }

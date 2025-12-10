@@ -3,8 +3,9 @@
 // User Story 26: End-to-End Sales Workflow - Invoice Generation
 
 import { NextRequest, NextResponse } from 'next/server';
-import { salesOrderRepository } from '@/repositories/salesOrderRepository';
+
 import { successResponse, errorResponse, notFoundResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 /**
  * GET /api/sales-orders/[id]/invoice
@@ -21,13 +22,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const repos = await getRepositories(request);
   try {
     const { searchParams } = request.nextUrl;
     const format = searchParams.get('format') || 'json';
     const salesOrderId = params.id;
 
     // Get sales order with all details
-    const salesOrder = await salesOrderRepository.findById(salesOrderId);
+    const salesOrder = await repos.salesOrder.findById(salesOrderId);
     if (!salesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }

@@ -1,10 +1,11 @@
 // Stock Search API - Search by tag ID, barcode, or product name
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+
 import { successResponse } from '@/utils/response';
 import prisma from '@/lib/prisma';
 import { StockStatus } from '@/domain/entities/types';
+import { getRepositories } from '@/utils/apiRepository';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export const dynamic = 'force-dynamic';
  * - limit: Number of results (default: 20)
  */
 export async function GET(request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     const { searchParams } = new URL(request.url);
 
@@ -36,9 +38,9 @@ export async function GET(request: NextRequest) {
       let stockItem = null;
 
       if (tagId) {
-        stockItem = await stockItemRepository.findByTagId(tagId);
+        stockItem = await repos.stockItem.findByTagId(tagId);
       } else if (barcode) {
-        stockItem = await stockItemRepository.findByBarcode(barcode);
+        stockItem = await repos.stockItem.findByBarcode(barcode);
       }
 
       if (!stockItem) {

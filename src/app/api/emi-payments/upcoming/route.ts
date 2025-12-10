@@ -2,15 +2,17 @@
 // GET /api/emi-payments/upcoming - Get upcoming installments for next N days
 
 import { NextRequest, NextResponse } from 'next/server';
-import { emiPaymentRepository } from '@/repositories/emiPaymentRepository';
+
 import { successResponse, errorResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     const searchParams = request.nextUrl.searchParams;
     const days = parseInt(searchParams.get('days') || '7');
 
-    const upcomingInstallments = await emiPaymentRepository.getUpcomingInstallments(days);
+    const upcomingInstallments = await repos.emiPayment.getUpcomingInstallments(days);
 
     // Group by date
     const groupedByDate = upcomingInstallments.reduce((acc, inst) => {

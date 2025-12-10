@@ -1,9 +1,10 @@
 // Stock Summary API - Get overall inventory summary
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
-import { productRepository } from '@/repositories/productRepository';
+
+
 import { handleApiError, successResponse } from '@/utils/response';
+import { getRepositories } from '@/utils/apiRepository';
 
 // Cache duration: 5 minutes for stock summary
 const CACHE_DURATION = 5 * 60 * 1000;
@@ -17,6 +18,7 @@ let cacheTimestamp: number = 0;
  * User Story 8: Stock Availability Check - Stock summary and total inventory value
  */
 export async function GET(_request: NextRequest) {
+    const repos = await getRepositories(request);
   try {
     // Check if we have valid cached data
     const now = Date.now();
@@ -29,13 +31,13 @@ export async function GET(_request: NextRequest) {
     // Get inventory value based on purchase cost ONLY
     // Note: Selling prices are calculated dynamically at sale time using current rates
     // We don't store or aggregate selling prices as they change with market rates
-    const inventoryValue = await stockItemRepository.getInventoryValue();
+    const inventoryValue = await repos.stockItem.getInventoryValue();
 
     // Get low stock products
-    const lowStockProducts = await productRepository.getLowStockProducts();
+    const lowStockProducts = await repos.product.getLowStockProducts();
 
     // Get inventory summary by metal type - Fixed to show actual stock items
-    const inventorySummary = await stockItemRepository.getStockSummaryByMetalType();
+    const inventorySummary = await repos.stockItem.getStockSummaryByMetalType();
 
     const responseData = {
       totalInventory: {
