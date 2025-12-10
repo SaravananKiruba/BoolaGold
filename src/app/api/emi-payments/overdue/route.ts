@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { successResponse, errorResponse } from '@/utils/response';
 import { getRepositories } from '@/utils/apiRepository';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
     const repos = await getRepositories(request);
   try {
     const overdueEmis = await repos.emiPayment.getOverdueEmis();
@@ -37,6 +37,7 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const repos = await getRepositories(request);
     // Mark overdue installments
     const result = await repos.emiPayment.markOverdueInstallments();
 

@@ -9,7 +9,7 @@ import { getRepositories } from '@/utils/apiRepository';
  * GET /api/purchase-orders/pending
  * Get list of pending purchase orders for stock receipt
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
     const repos = await getRepositories(request);
   try {
     const pendingOrders = await repos.purchaseOrder.getPendingOrders();

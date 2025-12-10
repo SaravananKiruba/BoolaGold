@@ -176,6 +176,12 @@ export default function TransactionsPage() {
             border: 'none',
             borderRadius: '8px',
             fontSize: '16px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          💸 Record Other Expense
+        </button>
       </div>
 
       {/* Other Expense Modal */}
@@ -425,15 +431,6 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
-
-      {/* Summary Cards */},
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          💸 Record Other Expense
-        </button>
-      </div>
 
       {/* Summary Cards */}
       {summary && (

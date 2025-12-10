@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     // Auto-generate stock items if requested
     if (autoReceiveStock) {
       const { generateBatchTagIds, generateStockBarcode } = await import('@/utils/barcode');
-      const { productRepository } = await import('@/repositories/productRepository');
+      const { ProductRepository } = await import('@/repositories/productRepository');
       
       const receiptItems = [];
 

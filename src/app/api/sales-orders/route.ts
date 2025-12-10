@@ -169,7 +169,6 @@ export async function POST(request: NextRequest) {
     const invoiceNumber = generateInvoiceNumber();
 
     // Check for duplicate invoice (very unlikely)
-    const repos = await getRepositories(request);
     const salesRepository = repos.salesOrder;
     const existingOrder = await salesRepository.findByInvoiceNumber(invoiceNumber);
     if (existingOrder) {

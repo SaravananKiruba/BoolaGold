@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { productRepository, ProductRepository } from '@/repositories/productRepository';
+import { ProductRepository } from '@/repositories/productRepository';
 
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '@/utils/response';
 import { weightSchema, amountSchema } from '@/utils/validation';
@@ -48,6 +48,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const repos = await getRepositories(request);
     const product = await repos.product.findById(params.id);
 
     if (!product) {
@@ -168,6 +169,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const repos = await getRepositories(request);
     const session = await getSession();
     const product = await repos.product.findById(params.id);
 
@@ -183,8 +185,6 @@ export async function DELETE(
         { status: 400 }
       );
     }
-
-    const repos = await getRepositories(request);
     const repository = repos.product;
     await repository.softDelete(params.id);
 

@@ -20,8 +20,8 @@
  * - SO: Call calculateSellingPriceForSale(tagId) - automatic!
  */
 
-import { rateMasterRepository } from '@/repositories/rateMasterRepository';
-import { stockItemRepository } from '@/repositories/stockItemRepository';
+import { RateMasterRepository } from '@/repositories/rateMasterRepository';
+import { StockItemRepository } from '@/repositories/stockItemRepository';
 import { calculatePriceFromRate } from '@/utils/pricing';
 import { MetalType } from '@prisma/client';
 
@@ -59,11 +59,12 @@ export async function calculateSellingPriceForSale(
   stockItemIdOrTag: string
 ): Promise<SellingPriceResult> {
   // Get stock item with product details
-  let stockItem = await stockItemRepository.findById(stockItemIdOrTag);
+  const stockItemRepo = new StockItemRepository({ session: null });
+  let stockItem = await stockItemRepo.findById(stockItemIdOrTag);
   
   if (!stockItem) {
     // Try by tag ID
-    stockItem = await stockItemRepository.findByTagId(stockItemIdOrTag);
+    stockItem = await stockItemRepo.findByTagId(stockItemIdOrTag);
   }
 
   if (!stockItem) {
@@ -78,7 +79,8 @@ export async function calculateSellingPriceForSale(
   const product = stockItem.product;
 
   // Get LATEST active rate for this metal type and purity
-  const currentRate = await rateMasterRepository.getCurrentRate(
+  const rateMasterRepo = new RateMasterRepository({ session: null });
+  const currentRate = await rateMasterRepo.getCurrentRate(
     product.metalType,
     product.purity
   );

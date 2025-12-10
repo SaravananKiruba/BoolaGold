@@ -35,6 +35,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
+    const repos = await getRepositories(request);
     // Check if EMI payment exists
     const existingEmi = await repos.emiPayment.findById(params.id);
     if (!existingEmi) {

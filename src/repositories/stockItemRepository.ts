@@ -207,21 +207,19 @@ export class StockItemRepository extends BaseRepository {
    */
   async getInventoryValue() {
     const result = await prisma.stockItem.aggregate({
-      where: {
-        status: { in: ['AVAILABLE', 'RESERVED'] },
+      where: this.withShopContext({
+        status: { in: ['AVAILABLE' as any, 'RESERVED' as any] },
         deletedAt: null,
-      },
+      }),
       _sum: {
         purchaseCost: true,
       },
-      _count: {
-        id: true,
-      },
+      _count: true,
     });
 
     return {
-      totalValue: result._sum.purchaseCost || 0,
-      totalItems: result._count.id,
+      totalValue: result._sum?.purchaseCost || 0,
+      totalItems: result._count || 0,
     };
   }
 
@@ -251,10 +249,10 @@ export class StockItemRepository extends BaseRepository {
    */
   async getStockSummaryByMetalType() {
     const summary = await prisma.stockItem.findMany({
-      where: {
-        status: { in: ['AVAILABLE', 'RESERVED'] },
+      where: this.withShopContext({
+        status: { in: ['AVAILABLE' as any, 'RESERVED' as any] },
         deletedAt: null,
-      },
+      }),
       include: {
         product: {
           select: {
@@ -267,8 +265,9 @@ export class StockItemRepository extends BaseRepository {
 
     // Group by metal type
     const grouped = summary.reduce((acc: any, item) => {
-      const metalType = item.product.metalType;
-      if (!acc[metalType]) {
+      const metalType = item.product?.metalType;
+      if (!metalType || !acc[metalType]) {
+        if (!metalType) return acc;
         acc[metalType] = {
           metalType,
           productCount: 0,
@@ -277,7 +276,7 @@ export class StockItemRepository extends BaseRepository {
         };
       }
       acc[metalType].productCount += 1;
-      acc[metalType].totalWeight += Number(item.product.netWeight);
+      acc[metalType].totalWeight += Number(item.product?.netWeight || 0);
       acc[metalType].totalValue += Number(item.purchaseCost);
       return acc;
     }, {});

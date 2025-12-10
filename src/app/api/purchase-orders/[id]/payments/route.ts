@@ -152,6 +152,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const repos = await getRepositories(request);
     const purchaseOrderId = params.id;
 
     const purchaseOrder = await repos.purchaseOrder.findById(purchaseOrderId);
@@ -171,7 +172,7 @@ export async function GET(
         outstandingAmount: totalAmount - paidAmount,
         paymentStatus: purchaseOrder.paymentStatus,
       },
-      payments: purchaseOrder.payments.map((payment) => ({
+      payments: purchaseOrder.payments.map((payment: any) => ({
         id: payment.id,
         amount: Number(payment.amount),
         paymentDate: payment.paymentDate,

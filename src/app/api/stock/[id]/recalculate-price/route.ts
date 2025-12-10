@@ -14,8 +14,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const stockItemId = params.id;
 
     const stockItem = await repos.stockItem.findById(stockItemId);
@@ -47,6 +47,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const repos = await getRepositories(request);
     const stockItemId = params.id;
 
     const stockItem = await repos.stockItem.findById(stockItemId);
@@ -56,7 +57,7 @@ export async function GET(
 
     // Import dependencies
     const { calculatePriceFromRate } = await import('@/utils/pricing');
-    const { rateMasterRepository } = await import('@/repositories/rateMasterRepository');
+    const { RateMasterRepository } = await import('@/repositories/rateMasterRepository');
 
     // Get current rate
     const rate = await repos.rateMaster.getCurrentRate(
