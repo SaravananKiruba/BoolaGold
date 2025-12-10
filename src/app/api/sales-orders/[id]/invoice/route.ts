@@ -33,8 +33,7 @@ export async function GET(
     const salesOrder = await prisma.salesOrder.findFirst({
       where: {
         id: salesOrderId,
-        shopId: session.shopId,
-        deletedAt: null,
+        shopId: session.shopId || undefined,
       },
       include: {
         customer: true,
