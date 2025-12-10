@@ -22,8 +22,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const { searchParams } = request.nextUrl;
     const format = searchParams.get('format') || 'json';
     const salesOrderId = params.id;

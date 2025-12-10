@@ -23,8 +23,8 @@ const releaseStockSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const session = await getSession();
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');

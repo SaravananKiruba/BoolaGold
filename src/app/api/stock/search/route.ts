@@ -21,8 +21,8 @@ export const dynamic = 'force-dynamic';
  * - limit: Number of results (default: 20)
  */
 export async function GET(request: NextRequest) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const { searchParams } = new URL(request.url);
 
     const query = searchParams.get('q');

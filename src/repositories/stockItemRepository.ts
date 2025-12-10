@@ -105,11 +105,11 @@ export class StockItemRepository extends BaseRepository {
    */
   async findAvailableByProduct(productId: string, limit?: number) {
     return prisma.stockItem.findMany({
-      where: {
+      where: this.withShopContext({
         productId,
         status: 'AVAILABLE',
         deletedAt: null,
-      },
+      }),
       orderBy: {
         purchaseDate: 'asc', // FIFO: oldest first
       },
@@ -126,9 +126,9 @@ export class StockItemRepository extends BaseRepository {
   async findAll(filters: StockItemFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.StockItemWhereInput = {
+    const where: Prisma.StockItemWhereInput = this.withShopContext({
       ...buildSoftDeleteFilter(),
-    };
+    });
 
     if (filters.productId) {
       where.productId = filters.productId;
@@ -229,10 +229,10 @@ export class StockItemRepository extends BaseRepository {
   async getStockSummaryByProduct(productId: string) {
     const summary = await prisma.stockItem.groupBy({
       by: ['status'],
-      where: {
+      where: this.withShopContext({
         productId,
         deletedAt: null,
-      },
+      }),
       _count: {
         id: true,
       },

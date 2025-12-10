@@ -18,8 +18,8 @@ let cacheTimestamp: number = 0;
  * User Story 8: Stock Availability Check - Stock summary and total inventory value
  */
 export async function GET(_request: NextRequest) {
-    const repos = await getRepositories(_request);
   try {
+    const repos = await getRepositories(_request);
     // Check if we have valid cached data
     const now = Date.now();
     if (cachedData && (now - cacheTimestamp) < CACHE_DURATION) {

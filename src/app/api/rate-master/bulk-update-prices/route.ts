@@ -49,8 +49,8 @@ interface PriceChange {
 }
 
 export async function POST(request: NextRequest) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const session = await getSession();
     const body = await request.json();
 

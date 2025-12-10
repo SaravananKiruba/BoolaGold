@@ -11,8 +11,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { metalType: string; purity: string } }
 ) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const { metalType, purity } = params;
 
     // Validate metal type

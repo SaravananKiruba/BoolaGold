@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 
-import { PaymentMethod, PaymentStatus, TransactionType, TransactionCategory } from '@/domain/entities/types';
+import { PaymentMethod, PaymentStatus, TransactionType, TransactionCategory, StockStatus } from '@/domain/entities/types';
 import { handleApiError, successResponse } from '@/utils/response';
 import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
@@ -93,8 +93,23 @@ export async function POST(
         data: {
           paidAmount: newPaidAmount,
           paymentStatus: newPaymentStatus,
+          // When payment is fully received, automatically mark as DELIVERED
+          ...(newPaymentStatus === PaymentStatus.PAID ? { status: 'DELIVERED' } : {}),
         },
       });
+
+      // **ISSUE 4 FIX**: Update stock items to AVAILABLE when payment is PAID
+      if (newPaymentStatus === PaymentStatus.PAID) {
+        await tx.stockItem.updateMany({
+          where: {
+            purchaseOrderId: purchaseOrderId,
+            status: 'RECEIVED', // Only update items that were received but not yet available
+          },
+          data: {
+            status: StockStatus.AVAILABLE,
+          },
+        });
+      }
 
       // Create expense transaction (User Story 27 requirement)
       const transaction = await tx.transaction.create({

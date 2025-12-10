@@ -14,8 +14,8 @@ import { getRepositories } from '@/utils/apiRepository';
  * User Story 26: End-to-End Sales Workflow - FIFO Selection
  */
 export async function GET(request: NextRequest) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const { searchParams } = request.nextUrl;
     const productId = searchParams.get('productId');
     const quantity = parseInt(searchParams.get('quantity') || '1');

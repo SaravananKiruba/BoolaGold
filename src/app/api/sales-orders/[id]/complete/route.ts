@@ -15,8 +15,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const session = await getSession();
     const salesOrderId = params.id;
 

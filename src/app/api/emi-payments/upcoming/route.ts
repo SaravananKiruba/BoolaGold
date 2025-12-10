@@ -7,8 +7,8 @@ import { successResponse, errorResponse } from '@/utils/response';
 import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(request: NextRequest) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const searchParams = request.nextUrl.searchParams;
     const days = parseInt(searchParams.get('days') || '7');
 

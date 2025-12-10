@@ -15,8 +15,8 @@ export const dynamic = 'force-dynamic';
  * User Story 8: Stock Availability Check
  */
 export async function GET(request: NextRequest) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const { searchParams } = new URL(request.url);
 
     const productId = searchParams.get('productId');

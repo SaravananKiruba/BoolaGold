@@ -47,8 +47,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(params.id)) {

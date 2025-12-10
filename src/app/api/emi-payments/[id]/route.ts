@@ -14,8 +14,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const emiPayment = await repos.emiPayment.findById(params.id);
 
     if (!emiPayment) {

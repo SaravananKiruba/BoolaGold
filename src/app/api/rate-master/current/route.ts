@@ -7,8 +7,8 @@ import { successResponse, errorResponse } from '@/utils/response';
 import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(request: NextRequest) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const currentRates = await repos.rateMaster.getAllCurrentRates();
 
     // Add metadata about the rates

@@ -78,9 +78,9 @@ export class BisComplianceRepository extends BaseRepository {
   async findAll(filters: BisComplianceFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
 
-    const where: Prisma.BisComplianceWhereInput = {
-      shopId: this.getShopId(),
-    };
+    const where: Prisma.BisComplianceWhereInput = this.withShopContext({
+      ...buildSoftDeleteFilter(),
+    });
 
     if (filters.complianceStatus) {
       where.complianceStatus = filters.complianceStatus;

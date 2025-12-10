@@ -13,8 +13,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const repos = await getRepositories(request);
   try {
+    const repos = await getRepositories(request);
     const supplierId = params.id;
     const { searchParams } = new URL(request.url);
 

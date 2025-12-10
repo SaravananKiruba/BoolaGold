@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from '@/utils/toast';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface SalesOrder {
   id: string;
@@ -54,6 +55,7 @@ interface OrderLine {
 }
 
 export default function SalesOrdersPage() {
+  const { session, hasPermission, loading: permLoading } = usePermissions();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -195,26 +197,38 @@ export default function SalesOrdersPage() {
     try {
       console.log('[Sales Order] Calculating price for item:', stockItem.id);
       const response = await fetch(`/api/stock/calculate-price?stockItemId=${stockItem.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+      
       const result = await response.json();
       
       console.log('[Sales Order] Price calculation result:', result);
       
       if (result.success && result.data) {
-        console.log('[Sales Order] Price calculated:', result.data.sellingPrice);
+        const sellingPrice = result.data.sellingPrice;
+        
+        if (typeof sellingPrice !== 'number' || sellingPrice <= 0) {
+          throw new Error('Invalid selling price returned from server');
+        }
+        
+        console.log('[Sales Order] Price calculated:', sellingPrice);
         // Update line with calculated price
         setOrderLines(prev => prev.map(line => 
           line.stockItemId === stockItem.id 
-            ? { ...line, unitPrice: result.data.sellingPrice, calculatingPrice: false }
+            ? { ...line, unitPrice: sellingPrice, calculatingPrice: false }
             : line
         ));
+        toast.success(`Price calculated: ₹${sellingPrice.toLocaleString('en-IN')}`);
       } else {
-        console.error('[Sales Order] Price calculation failed:', result.error);
-        toast.error(`Failed to calculate price: ${result.error?.message || 'Unknown error'}`);
-        setOrderLines(prev => prev.filter(line => line.stockItemId !== stockItem.id));
+        const errorMsg = result.error?.message || result.error || 'Unknown error';
+        console.error('[Sales Order] Price calculation failed:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (err: any) {
       console.error('[Sales Order] Failed to calculate price:', err);
-      toast.error(`Failed to calculate price for this item: ${err.message}`);
+      toast.error(`Failed to calculate price: ${err.message}`);
       setOrderLines(prev => prev.filter(line => line.stockItemId !== stockItem.id));
     }
   };
@@ -232,6 +246,12 @@ export default function SalesOrdersPage() {
   };
 
   const handleCreateOrder = async () => {
+    // **ISSUE 5 FIX**: Check client-side permission before attempting API call
+    if (!hasPermission('SALES_CREATE')) {
+      toast.error("You don't have permission to create sales orders");
+      return;
+    }
+
     setCreateError(null);
 
     // Validations
@@ -321,13 +341,20 @@ export default function SalesOrdersPage() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ margin: 0 }}>Sales Orders ({orders.length})</h2>
-          <button 
-            className="button" 
-            onClick={() => setShowCreateForm(true)}
-            style={{ background: '#0070f3', color: 'white', padding: '10px 20px' }}
-          >
-            + Create Order
-          </button>
+          {/* **ISSUE 5 FIX**: Only show create button if user has permission */}
+          {hasPermission('SALES_CREATE') ? (
+            <button 
+              className="button" 
+              onClick={() => setShowCreateForm(true)}
+              style={{ background: '#0070f3', color: 'white', padding: '10px 20px' }}
+            >
+              + Create Order
+            </button>
+          ) : (
+            <div style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>
+              No permission to create orders
+            </div>
+          )}
         </div>
 
         {loading && <p>Loading sales orders...</p>}

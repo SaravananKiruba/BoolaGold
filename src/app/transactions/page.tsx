@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePageGuard } from '@/hooks/usePageGuard';
+import { toast } from '@/utils/toast';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface Transaction {
   id: string;
@@ -29,6 +31,7 @@ interface TransactionSummary {
 export default function TransactionsPage() {
   const router = useRouter();
   const { isAuthorized, isLoading: authLoading } = usePageGuard(['OWNER', 'ACCOUNTS']);
+  const { hasPermission } = usePermissions();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,11 +53,12 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (pageNum?: number) => {
     try {
       setLoading(true);
+      const pageToFetch = pageNum || page;
       const params = new URLSearchParams({
-        page: page.toString(),
+        page: pageToFetch.toString(),
         pageSize: '20',
         ...Object.fromEntries(
           Object.entries(filters).filter(([_, v]) => v !== '')
@@ -73,9 +77,11 @@ export default function TransactionsPage() {
         setTotalPages(meta.totalPages || 1);
       } else {
         setTransactions([]);
+        toast.error('Failed to load transactions');
       }
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
+      toast.error('Error loading transactions');
     } finally {
       setLoading(false);
     }
@@ -166,9 +172,14 @@ export default function TransactionsPage() {
           <p style={{ color: '#666', marginTop: '8px' }}>
             Track all income and expense transactions
           </p>
-        </div>
         <button
-          onClick={() => setShowExpenseModal(true)}
+          onClick={() => {
+            if (!hasPermission('TRANSACTION_CREATE')) {
+              toast.error("You don't have permission to record expenses");
+              return;
+            }
+            setShowExpenseModal(true);
+          }}
           style={{
             padding: '12px 24px',
             background: '#ef4444',
@@ -181,6 +192,7 @@ export default function TransactionsPage() {
           }}
         >
           💸 Record Other Expense
+        </button>rd Other Expense
         </button>
       </div>
 
@@ -341,15 +353,12 @@ export default function TransactionsPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button
-                onClick={() => {
                   if (!expenseForm.amount || Number(expenseForm.amount) <= 0) {
-                    alert('Please enter a valid amount');
+                    toast.error('Please enter a valid amount');
                     return;
                   }
                   if (!expenseForm.description) {
-                    alert('Please enter description/remarks');
+                    toast.error('Please enter description/remarks');
                     return;
                   }
 
@@ -369,7 +378,7 @@ export default function TransactionsPage() {
                     .then(res => res.json())
                     .then(result => {
                       if (result.success) {
-                        alert('Expense recorded successfully!');
+                        toast.success('Expense recorded successfully!');
                         setShowExpenseModal(false);
                         setExpenseForm({
                           expenseType: 'SALARY',
@@ -379,11 +388,15 @@ export default function TransactionsPage() {
                           description: '',
                           referenceNumber: '',
                         });
-                        fetchTransactions();
+                        setPage(1);
+                        fetchTransactions(1);
                         fetchSummary();
                       } else {
-                        alert('Failed to record expense: ' + (result.error || 'Unknown error'));
+                        toast.error('Failed to record expense: ' + (result.error?.message || result.error || 'Unknown error'));
                       }
+                    })
+                    .catch(err => toast.error('Error: ' + err.message));
+                }}    }
                     })
                     .catch(err => alert('Error: ' + err.message));
                 }}
@@ -500,7 +513,6 @@ export default function TransactionsPage() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '16px',
           }}
-        >
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
               Transaction Type
@@ -509,7 +521,9 @@ export default function TransactionsPage() {
               value={filters.transactionType}
               onChange={(e) => {
                 setFilters({ ...filters, transactionType: e.target.value });
-                setPage(1);
+                setPage(1); // Reset to page 1 and trigger refetch
+                fetchTransactions(1);
+              }}setPage(1);
               }}
               style={{
                 width: '100%',
@@ -530,12 +544,13 @@ export default function TransactionsPage() {
 
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-              Category
-            </label>
             <select
               value={filters.category}
               onChange={(e) => {
                 setFilters({ ...filters, category: e.target.value });
+                setPage(1);
+                fetchTransactions(1);
+              }}setFilters({ ...filters, category: e.target.value });
                 setPage(1);
               }}
               style={{
@@ -555,13 +570,14 @@ export default function TransactionsPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-              Start Date
-            </label>
             <input
               type="date"
               value={filters.startDate}
               onChange={(e) => {
+                setFilters({ ...filters, startDate: e.target.value });
+                setPage(1);
+                fetchTransactions(1);
+              }}Change={(e) => {
                 setFilters({ ...filters, startDate: e.target.value });
                 setPage(1);
               }}
@@ -574,13 +590,14 @@ export default function TransactionsPage() {
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-              End Date
-            </label>
             <input
               type="date"
               value={filters.endDate}
+              onChange={(e) => {
+                setFilters({ ...filters, endDate: e.target.value });
+                setPage(1);
+                fetchTransactions(1);
+              }}lue={filters.endDate}
               onChange={(e) => {
                 setFilters({ ...filters, endDate: e.target.value });
                 setPage(1);
@@ -604,6 +621,7 @@ export default function TransactionsPage() {
               endDate: '',
             });
             setPage(1);
+            fetchTransactions(1);
           }}
           style={{
             marginTop: '16px',
