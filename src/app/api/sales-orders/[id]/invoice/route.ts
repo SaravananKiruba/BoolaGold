@@ -5,7 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { successResponse, errorResponse, notFoundResponse } from '@/utils/response';
-import { getRepositories } from '@/utils/apiRepository';
+import { getRepositories, getSessionFromRequest } from '@/utils/apiRepository';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/sales-orders/[id]/invoice
@@ -23,19 +24,61 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const repos = await getRepositories(request);
+    const session = await getSessionFromRequest(request);
     const { searchParams } = request.nextUrl;
     const format = searchParams.get('format') || 'json';
     const salesOrderId = params.id;
 
-    // Get sales order with all details
-    const salesOrder = await repos.salesOrder.findById(salesOrderId);
+    // Get sales order with all details including shop
+    const salesOrder = await prisma.salesOrder.findFirst({
+      where: {
+        id: salesOrderId,
+        shopId: session.shopId,
+        deletedAt: null,
+      },
+      include: {
+        customer: true,
+        shop: true,
+        lines: {
+          include: {
+            stockItem: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+        payments: true,
+        transactions: true,
+      },
+    });
+
     if (!salesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }
 
+    if (!salesOrder.shop) {
+      return NextResponse.json(errorResponse('Shop information not found'), { status: 404 });
+    }
+
+    const shop = salesOrder.shop;
+
     // Build invoice data structure
     const invoiceData = {
+      // Shop information
+      shop: {
+        name: shop.name,
+        tagline: shop.tagline || '',
+        address: shop.address,
+        city: shop.city,
+        state: shop.state,
+        pincode: shop.pincode,
+        phone: shop.phone,
+        email: shop.email,
+        gstNumber: shop.gstNumber,
+        panNumber: shop.panNumber,
+      },
+
       // Invoice header
       invoice: {
         number: salesOrder.invoiceNumber,
@@ -536,8 +579,14 @@ function generateInvoiceHTML(data: any): string {
     <!-- Header -->
     <div class="invoice-header">
       <div class="company-info">
-        <h1>BOOLA GOLD</h1>
-        <div class="tagline">Fine Jewelry & Ornaments</div>
+        <h1>${data.shop.name.toUpperCase()}</h1>
+        ${data.shop.tagline ? `<div class="tagline">${data.shop.tagline}</div>` : ''}
+        <div style="font-size: 11px; margin-top: 8px; line-height: 1.5;">
+          <div>${data.shop.address}</div>
+          <div>${data.shop.city}, ${data.shop.state} - ${data.shop.pincode}</div>
+          <div>Phone: ${data.shop.phone} | Email: ${data.shop.email}</div>
+          <div><strong>GSTIN:</strong> ${data.shop.gstNumber}</div>
+        </div>
       </div>
       <div class="invoice-meta">
         <div class="invoice-title">TAX INVOICE</div>

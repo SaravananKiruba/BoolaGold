@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/utils/response';
 import { generateBatchBarcodes } from '@/utils/barcode';
+import { getSession } from '@/lib/auth';
 
 /**
  * GET /api/barcode/labels?stockItemIds=id1,id2,id3
@@ -13,6 +14,15 @@ import { generateBatchBarcodes } from '@/utils/barcode';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Validate session
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        errorResponse('Unauthorized - Valid session required'),
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = request.nextUrl;
     const stockItemIdsParam = searchParams.get('stockItemIds');
 
@@ -32,11 +42,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get stock items with product details
+    // Get stock items with product details - filtered by shop
     const stockItems = await prisma.stockItem.findMany({
       where: {
         id: { in: stockItemIds },
         deletedAt: null,
+        product: {
+          shopId: session.shopId || undefined, // Filter by shop
+        },
       },
       include: {
         product: true,

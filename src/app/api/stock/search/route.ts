@@ -6,6 +6,7 @@ import { successResponse } from '@/utils/response';
 import prisma from '@/lib/prisma';
 import { StockStatus } from '@/domain/entities/types';
 import { getRepositories } from '@/utils/apiRepository';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,6 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const repos = await getRepositories(request);
     const { searchParams } = new URL(request.url);
 
     const query = searchParams.get('q');
@@ -31,7 +31,27 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') as StockStatus | null;
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    console.log('[Stock Search] Params:', { query, tagId, barcode, status, limit });
+    // Get session and repositories - will throw if not authenticated
+    let repos;
+    let session;
+    try {
+      repos = await getRepositories(request);
+      session = await getSession();
+    } catch (authError: any) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Valid session required' },
+        { status: 401 }
+      );
+    }
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Session required' },
+        { status: 401 }
+      );
+    }
+
+    console.log('[Stock Search] Params:', { query, tagId, barcode, status, limit, shopId: session.shopId });
 
     // Single item lookup by exact tag ID or barcode
     if (tagId || barcode) {
@@ -42,15 +62,20 @@ export async function GET(request: NextRequest) {
       } else if (barcode) {
         stockItem = await repos.stockItem.findByBarcode(barcode);
       }
+      
+      // Verify stock item belongs to user's shop (repo already filters, but be explicit)
+      if (stockItem && stockItem.product?.shopId !== session.shopId) {
+        return NextResponse.json(successResponse({ stockItem: null }), { status: 200 });
+      }
 
       if (!stockItem) {
         return NextResponse.json(successResponse({ stockItem: null }), { status: 200 });
       }
 
+      // Return found stock item
       return NextResponse.json(successResponse({ stockItem }), { status: 200 });
     }
 
-    // General search query
     if (!query) {
       return NextResponse.json(
         { error: 'Search query (q), tagId, or barcode is required' },
@@ -96,6 +121,7 @@ export async function GET(request: NextRequest) {
       FROM stock_items si
       INNER JOIN products p ON si.productId = p.id
       WHERE si.deletedAt IS NULL
+        AND p.shopId = ?
         AND (
           si.tagId LIKE ?
           OR si.barcode LIKE ?
@@ -104,7 +130,7 @@ export async function GET(request: NextRequest) {
           OR p.purity LIKE ?
         )`;
     
-    const params: any[] = [likePattern, likePattern, likePattern, likePattern, likePattern];
+    const params: any[] = [session.shopId, likePattern, likePattern, likePattern, likePattern, likePattern];
     
     if (status) {
       sqlQuery += ` AND si.status = ?`;

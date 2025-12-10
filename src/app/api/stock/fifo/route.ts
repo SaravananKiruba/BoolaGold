@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { successResponse, errorResponse } from '@/utils/response';
 import { calculateSellingPriceForSale } from '@/utils/sellingPrice';
 import { getRepositories } from '@/utils/apiRepository';
+import { getSession } from '@/lib/auth';
 
 /**
  * GET /api/stock/fifo
@@ -15,7 +16,16 @@ import { getRepositories } from '@/utils/apiRepository';
  */
 export async function GET(request: NextRequest) {
   try {
-    const repos = await getRepositories(request);
+    let repos;
+    try {
+      repos = await getRepositories(request);
+    } catch (authError: any) {
+      return NextResponse.json(
+        errorResponse('Unauthorized - Valid session required'),
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = request.nextUrl;
     const productId = searchParams.get('productId');
     const quantity = parseInt(searchParams.get('quantity') || '1');

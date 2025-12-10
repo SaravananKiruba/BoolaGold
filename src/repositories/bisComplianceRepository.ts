@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
+import { buildSoftDeleteFilter } from '@/utils/filters';
 import { BisComplianceStatus } from '@/domain/entities/types';
 import { BaseRepository, RepositoryOptions } from './baseRepository';
 

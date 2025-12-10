@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/utils/response';
+import { getSession } from '@/lib/auth';
 
 /**
  * GET /api/barcode/scan?code={barcode_or_tag}
@@ -15,6 +16,15 @@ import { successResponse, errorResponse } from '@/utils/response';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Get session - getSession handles cookies automatically
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        errorResponse('Unauthorized - Valid session required'),
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = request.nextUrl;
     const code = searchParams.get('code');
     const searchType = searchParams.get('type') || 'auto';
@@ -35,6 +45,9 @@ export async function GET(request: NextRequest) {
         where: {
           barcode: code,
           deletedAt: null,
+          product: {
+            shopId: session.shopId || undefined, // Filter by shop
+          },
         },
         include: {
           product: {
@@ -64,6 +77,9 @@ export async function GET(request: NextRequest) {
         where: {
           tagId: code,
           deletedAt: null,
+          product: {
+            shopId: session.shopId || undefined, // Filter by shop
+          },
         },
         include: {
           product: {

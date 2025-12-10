@@ -21,9 +21,7 @@
  */
 
 import { RateMasterRepository } from '@/repositories/rateMasterRepository';
-import { StockItemRepository } from '@/repositories/stockItemRepository';
 import { calculatePriceFromRate } from '@/utils/pricing';
-import { MetalType } from '@prisma/client';
 
 export interface SellingPriceResult {
   stockItemId: string;
@@ -52,77 +50,174 @@ export interface SellingPriceResult {
  * Calculate selling price for a stock item at SALES time
  * This is the ONLY place where selling price is calculated!
  * 
- * @param stockItemId Stock item ID or Tag ID
+ * @param stockItemIdOrTag Stock item ID or Tag ID
+ * @param shopId Shop ID for multi-tenant filtering (optional, derives from product if not provided)
  * @returns Complete selling price calculation with breakdown
  */
 export async function calculateSellingPriceForSale(
-  stockItemIdOrTag: string
+  stockItemIdOrTag: string,
+  shopId?: string
 ): Promise<SellingPriceResult> {
-  // Get stock item with product details
-  const stockItemRepo = new StockItemRepository({ session: null });
-  let stockItem = await stockItemRepo.findById(stockItemIdOrTag);
-  
-  if (!stockItem) {
-    // Try by tag ID
-    stockItem = await stockItemRepo.findByTagId(stockItemIdOrTag);
-  }
+  try {
+    // Validate inputs
+    if (!stockItemIdOrTag || stockItemIdOrTag.trim() === '') {
+      throw new Error('Stock item ID or Tag ID is required');
+    }
 
-  if (!stockItem) {
-    throw new Error(`Stock item not found: ${stockItemIdOrTag}`);
-  }
+    // Get stock item with product details using direct query to handle missing shopId gracefully
+    const stockItem = await getStockItemWithValidation(stockItemIdOrTag, shopId);
 
-  // Validate stock item is available for sale
-  if (stockItem.status === 'SOLD') {
-    throw new Error(`Stock item ${stockItem.tagId} is already sold`);
-  }
+    if (!stockItem) {
+      throw new Error(`Stock item not found: ${stockItemIdOrTag}`);
+    }
 
-  const product = stockItem.product;
+    // Validate stock item is available for sale
+    if (stockItem.status === 'SOLD') {
+      throw new Error(`Stock item ${stockItem.tagId} is already sold`);
+    }
 
-  // Get LATEST active rate for this metal type and purity
-  const rateMasterRepo = new RateMasterRepository({ session: null });
-  const currentRate = await rateMasterRepo.getCurrentRate(
-    product.metalType,
-    product.purity
-  );
+    const product = stockItem.product;
 
-  if (!currentRate) {
-    throw new Error(
-      `No active rate found for ${product.metalType} ${product.purity}. ` +
-      `Please set up rate master before creating sales order.`
+    // Validate product exists and has required fields
+    if (!product) {
+      throw new Error(`Product not found for stock item ${stockItemIdOrTag}`);
+    }
+
+    if (!product.metalType) {
+      throw new Error(`Product has no metal type specified`);
+    }
+
+    if (!product.purity) {
+      throw new Error(`Product has no purity specified`);
+    }
+
+    // Determine which shop to use for rate lookup
+    const effectiveShopId = shopId || product.shopId;
+
+    if (!effectiveShopId) {
+      throw new Error('Shop context is required to calculate price');
+    }
+
+    // Create repository with shop context
+    const rateMasterRepo = new RateMasterRepository({ session: { shopId: effectiveShopId, userId: '' } as any });
+    const currentRate = await rateMasterRepo.getCurrentRate(
+      product.metalType,
+      product.purity
     );
-  }
 
-  // Calculate selling price using product specs + latest rate
-  const { sellingPrice, calculation } = calculatePriceFromRate({
-    netWeight: Number(product.netWeight),
-    wastagePercent: Number(product.wastagePercent),
-    metalRatePerGram: Number(currentRate.ratePerGram),
-    makingCharges: Number(product.makingCharges),
-    stoneValue: product.stoneValue ? Number(product.stoneValue) : 0,
+    if (!currentRate) {
+      throw new Error(
+        `No active rate found for ${product.metalType} ${product.purity}. ` +
+        `Please configure rate master with active rates before calculating prices.`
+      );
+    }
+
+    // Validate rate has required fields
+    if (currentRate.ratePerGram === null || currentRate.ratePerGram === undefined) {
+      throw new Error(`Rate master has invalid rate per gram value`);
+    }
+
+    // Convert all values to numbers and validate
+    const netWeight = Number(product.netWeight);
+    const wastagePercent = Number(product.wastagePercent);
+    const makingCharges = Number(product.makingCharges);
+    const stoneValue = product.stoneValue ? Number(product.stoneValue) : 0;
+    const ratePerGram = Number(currentRate.ratePerGram);
+
+    // Validate all required values are numbers and valid
+    if (isNaN(netWeight) || netWeight <= 0) {
+      throw new Error(`Invalid net weight: ${product.netWeight}`);
+    }
+    if (isNaN(wastagePercent)) {
+      throw new Error(`Invalid wastage percent: ${product.wastagePercent}`);
+    }
+    if (isNaN(makingCharges)) {
+      throw new Error(`Invalid making charges: ${product.makingCharges}`);
+    }
+    if (isNaN(ratePerGram) || ratePerGram <= 0) {
+      throw new Error(`Invalid rate per gram: ${ratePerGram}`);
+    }
+
+    // Calculate selling price
+    const { sellingPrice, calculation } = calculatePriceFromRate({
+      netWeight,
+      wastagePercent,
+      metalRatePerGram: ratePerGram,
+      makingCharges,
+      stoneValue,
+    });
+
+    return {
+      stockItemId: stockItem.id,
+      tagId: stockItem.tagId,
+      productName: product.name,
+      sellingPrice,
+      calculation: {
+        netWeight: calculation.netWeight,
+        wastagePercent: calculation.wastagePercent,
+        effectiveWeight: calculation.effectiveWeight,
+        metalRatePerGram: calculation.metalRatePerGram,
+        metalAmount: calculation.metalAmount,
+        makingCharges: calculation.makingCharges,
+        stoneValue: calculation.stoneValue,
+        totalPrice: calculation.totalPrice,
+      },
+      rateDetails: {
+        metalType: currentRate.metalType,
+        purity: currentRate.purity,
+        ratePerGram: ratePerGram,
+        effectiveDate: currentRate.effectiveDate,
+      },
+    };
+  } catch (error: any) {
+    console.error('Error calculating selling price:', error);
+    throw error;
+  }
+}
+
+/**
+ * Internal helper to get stock item with proper validation
+ * Queries by both ID and tagId, with optional shop filtering
+ */
+async function getStockItemWithValidation(
+  stockItemIdOrTag: string,
+  shopId?: string
+) {
+  const prisma = (await import('@/lib/prisma')).default;
+
+  // First try by ID
+  let stockItem = await prisma.stockItem.findFirst({
+    where: {
+      id: stockItemIdOrTag,
+      deletedAt: null,
+      ...(shopId && { product: { shopId } }),
+    },
+    include: {
+      product: true,
+      purchaseOrder: true,
+      salesOrderLine: true,
+    },
   });
 
-  return {
-    stockItemId: stockItem.id,
-    tagId: stockItem.tagId,
-    productName: product.name,
-    sellingPrice,
-    calculation: {
-      netWeight: calculation.netWeight,
-      wastagePercent: calculation.wastagePercent,
-      effectiveWeight: calculation.effectiveWeight,
-      metalRatePerGram: calculation.metalRatePerGram,
-      metalAmount: calculation.metalAmount,
-      makingCharges: calculation.makingCharges,
-      stoneValue: calculation.stoneValue,
-      totalPrice: calculation.totalPrice,
+  if (stockItem) {
+    return stockItem;
+  }
+
+  // Try by tag ID
+  stockItem = await prisma.stockItem.findFirst({
+    where: {
+      tagId: stockItemIdOrTag,
+      deletedAt: null,
+      ...(shopId && { product: { shopId } }),
     },
-    rateDetails: {
-      metalType: currentRate.metalType,
-      purity: currentRate.purity,
-      ratePerGram: Number(currentRate.ratePerGram),
-      effectiveDate: currentRate.effectiveDate,
+    include: {
+      product: true,
+      purchaseOrder: true,
+      salesOrderLine: true,
     },
-  };
+  });
+
+  return stockItem || null;
 }
 
 /**

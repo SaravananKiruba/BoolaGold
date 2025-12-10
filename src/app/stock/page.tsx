@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePageGuard } from '@/hooks/usePageGuard';
 
 interface StockSummary {
   totalInventory: {
@@ -19,11 +20,13 @@ interface StockSummary {
 }
 
 export default function StockPage() {
+  const { isAuthorized, isLoading: authLoading } = usePageGuard(['OWNER', 'SALES']);
   const [summary, setSummary] = useState<StockSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchPerformed, setSearchPerformed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSummary();
@@ -32,14 +35,18 @@ export default function StockPage() {
   const fetchSummary = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch('/api/stock/summary');
       const result = await response.json();
 
       if (result.success) {
         setSummary(result.data);
+      } else {
+        setError(result.error?.message || 'Failed to fetch stock summary');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch stock summary:', error);
+      setError(error.message || 'Failed to fetch stock summary');
     } finally {
       setLoading(false);
     }
@@ -47,15 +54,16 @@ export default function StockPage() {
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
-      console.warn('Please enter a Tag ID or Barcode to search');
+      setError('Please enter a Tag ID or Barcode to search');
       return;
     }
 
     try {
-      setSearchResult(null); // Clear previous results
+      setSearchResult(null);
       setSearchPerformed(true);
+      setError(null);
       
-      // Try searching by tag ID first, then barcode
+      // Try searching by tag ID first
       const tagResponse = await fetch(`/api/stock/search?tagId=${encodeURIComponent(searchTerm.trim())}`);
       
       if (tagResponse.ok) {
@@ -64,6 +72,10 @@ export default function StockPage() {
           setSearchResult(result.data.stockItem);
           return;
         }
+      } else {
+        const errorData = await tagResponse.json();
+        setError(errorData.error || 'Search failed');
+        return;
       }
 
       // If not found by tag, try barcode
@@ -75,14 +87,27 @@ export default function StockPage() {
           setSearchResult(result.data.stockItem);
           return;
         }
+      } else {
+        const errorData = await barcodeResponse.json();
+        setError(errorData.error || 'Search failed');
+        return;
       }
 
       // Not found
-      console.error('Stock item not found. Please check the Tag ID or Barcode and try again.');
-    } catch (error) {
+      setSearchResult(null);
+    } catch (error: any) {
       console.error('Search failed:', error);
+      setError(error.message || 'Search failed. Please try again.');
     }
   };
+
+  if (authLoading) {
+    return <div className="container"><p>Loading...</p></div>;
+  }
+
+  if (!isAuthorized) {
+    return <div className="container"><p>Access Denied</p></div>;
+  }
 
   return (
     <div className="container">
@@ -90,6 +115,19 @@ export default function StockPage() {
         <h1 style={{ margin: 0 }}>Stock Management</h1>
         <p style={{ color: '#666', marginTop: '5px' }}>Track inventory and stock levels</p>
       </div>
+
+      {error && (
+        <div style={{ 
+          marginBottom: '20px', 
+          padding: '15px', 
+          border: '1px solid #dc3545', 
+          borderRadius: '4px', 
+          background: '#f8d7da', 
+          color: '#721c24' 
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: '20px' }}>
         <h3 style={{ marginTop: 0 }}>Quick Stock Lookup</h3>
@@ -102,6 +140,7 @@ export default function StockPage() {
               if (!e.target.value.trim()) {
                 setSearchResult(null);
                 setSearchPerformed(false);
+                setError(null);
               }
             }}
             placeholder="Enter Tag ID or Barcode"
@@ -116,7 +155,7 @@ export default function StockPage() {
           </button>
         </div>
 
-        {searchPerformed && !searchResult && (
+        {searchPerformed && !searchResult && !error && (
           <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #ffc107', borderRadius: '4px', background: '#fff9e6', color: '#856404' }}>
             No stock item found. Please verify the Tag ID or Barcode.
           </div>
@@ -192,7 +231,6 @@ export default function StockPage() {
             </div>
           )}
 
-          {/* Inventory by Metal Type */}
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Inventory by Metal Type</h2>
             <div className="overflow-x-auto">

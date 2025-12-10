@@ -172,6 +172,7 @@ export default function TransactionsPage() {
           <p style={{ color: '#666', marginTop: '8px' }}>
             Track all income and expense transactions
           </p>
+        </div>
         <button
           onClick={() => {
             if (!hasPermission('TRANSACTION_CREATE')) {
@@ -192,7 +193,6 @@ export default function TransactionsPage() {
           }}
         >
           💸 Record Other Expense
-        </button>rd Other Expense
         </button>
       </div>
 
@@ -353,6 +353,9 @@ export default function TransactionsPage() {
               />
             </div>
 
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
                   if (!expenseForm.amount || Number(expenseForm.amount) <= 0) {
                     toast.error('Please enter a valid amount');
                     return;
@@ -396,9 +399,6 @@ export default function TransactionsPage() {
                       }
                     })
                     .catch(err => toast.error('Error: ' + err.message));
-                }}    }
-                    })
-                    .catch(err => alert('Error: ' + err.message));
                 }}
                 style={{
                   flex: 1,
@@ -513,6 +513,7 @@ export default function TransactionsPage() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '16px',
           }}
+        >
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
               Transaction Type
@@ -521,9 +522,8 @@ export default function TransactionsPage() {
               value={filters.transactionType}
               onChange={(e) => {
                 setFilters({ ...filters, transactionType: e.target.value });
-                setPage(1); // Reset to page 1 and trigger refetch
+                setPage(1);
                 fetchTransactions(1);
-              }}setPage(1);
               }}
               style={{
                 width: '100%',
@@ -544,14 +544,14 @@ export default function TransactionsPage() {
 
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+              Category
+            </label>
             <select
               value={filters.category}
               onChange={(e) => {
                 setFilters({ ...filters, category: e.target.value });
                 setPage(1);
                 fetchTransactions(1);
-              }}setFilters({ ...filters, category: e.target.value });
-                setPage(1);
               }}
               style={{
                 width: '100%',
@@ -570,6 +570,9 @@ export default function TransactionsPage() {
           </div>
 
           <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+              Start Date
+            </label>
             <input
               type="date"
               value={filters.startDate}
@@ -577,9 +580,6 @@ export default function TransactionsPage() {
                 setFilters({ ...filters, startDate: e.target.value });
                 setPage(1);
                 fetchTransactions(1);
-              }}Change={(e) => {
-                setFilters({ ...filters, startDate: e.target.value });
-                setPage(1);
               }}
               style={{
                 width: '100%',
@@ -590,6 +590,10 @@ export default function TransactionsPage() {
             />
           </div>
 
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+              End Date
+            </label>
             <input
               type="date"
               value={filters.endDate}
@@ -597,10 +601,6 @@ export default function TransactionsPage() {
                 setFilters({ ...filters, endDate: e.target.value });
                 setPage(1);
                 fetchTransactions(1);
-              }}lue={filters.endDate}
-              onChange={(e) => {
-                setFilters({ ...filters, endDate: e.target.value });
-                setPage(1);
               }}
               style={{
                 width: '100%',

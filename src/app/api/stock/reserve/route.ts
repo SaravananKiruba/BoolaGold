@@ -24,8 +24,24 @@ const releaseStockSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const repos = await getRepositories(request);
-    const session = await getSession();
+    let repos;
+    let session;
+    try {
+      repos = await getRepositories(request);
+      session = await getSession();
+      if (!session) {
+        return NextResponse.json(
+          validationErrorResponse([{ message: 'Unauthorized - Valid session required' }]),
+          { status: 401 }
+        );
+      }
+    } catch (authError: any) {
+      return NextResponse.json(
+        validationErrorResponse([{ message: 'Unauthorized - Valid session required' }]),
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
@@ -52,6 +68,18 @@ export async function POST(request: NextRequest) {
       if (notFoundItems.length > 0) {
         return NextResponse.json(
           errorResponse(`Stock items not found: ${notFoundItems.join(', ')}`),
+          { status: 404 }
+        );
+      }
+
+      // Verify all stock items belong to user's shop
+      const invalidShopItems = stockItems
+        .filter((item) => item && item.product?.shopId !== session.shopId)
+        .map((item) => item!.tagId);
+
+      if (invalidShopItems.length > 0) {
+        return NextResponse.json(
+          errorResponse(`Stock items not found: ${invalidShopItems.join(', ')}`),
           { status: 404 }
         );
       }

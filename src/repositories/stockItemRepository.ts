@@ -33,15 +33,11 @@ export class StockItemRepository extends BaseRepository {
 
   /**
    * Create multiple stock items
+   * Note: StockItem doesn't have shopId - it inherits shop context through Product relation
    */
-  async createMany(items: Omit<Prisma.StockItemCreateManyInput, 'shopId'>[]) {
-    const itemsWithShop = items.map(item => ({
-      ...item,
-      shopId: this.getShopId(),
-    }));
-
+  async createMany(items: Prisma.StockItemCreateManyInput[]) {
     return prisma.stockItem.createMany({
-      data: itemsWithShop,
+      data: items,
     });
   }
 
@@ -49,10 +45,15 @@ export class StockItemRepository extends BaseRepository {
    * Find stock item by ID
    */
   async findById(id: string, includeDeleted = false) {
-    const where = this.withShopContext({
+    const shopFilter = this.getShopFilter();
+    
+    const where: Prisma.StockItemWhereInput = {
       id,
       ...buildSoftDeleteFilter(includeDeleted),
-    });
+      product: {
+        shopId: shopFilter.shopId,
+      },
+    };
 
     return prisma.stockItem.findFirst({
       where,
@@ -68,10 +69,15 @@ export class StockItemRepository extends BaseRepository {
    * Find stock item by tag ID
    */
   async findByTagId(tagId: string) {
-    const where = this.withShopContext({
+    const shopFilter = this.getShopFilter();
+    
+    const where: Prisma.StockItemWhereInput = {
       tagId,
       deletedAt: null,
-    });
+      product: {
+        shopId: shopFilter.shopId,
+      },
+    };
 
     return prisma.stockItem.findFirst({
       where,
@@ -87,10 +93,15 @@ export class StockItemRepository extends BaseRepository {
    * Find stock item by barcode
    */
   async findByBarcode(barcode: string) {
-    const where = this.withShopContext({
+    const shopFilter = this.getShopFilter();
+    
+    const where: Prisma.StockItemWhereInput = {
       barcode,
       deletedAt: null,
-    });
+      product: {
+        shopId: shopFilter.shopId,
+      },
+    };
 
     return prisma.stockItem.findFirst({
       where,
@@ -104,12 +115,17 @@ export class StockItemRepository extends BaseRepository {
    * Find available stock items for a product (FIFO)
    */
   async findAvailableByProduct(productId: string, limit?: number) {
+    const shopFilter = this.getShopFilter();
+    
     return prisma.stockItem.findMany({
-      where: this.withShopContext({
+      where: {
         productId,
-        status: 'AVAILABLE',
+        status: StockStatus.AVAILABLE,
         deletedAt: null,
-      }),
+        product: {
+          shopId: shopFilter.shopId,
+        },
+      },
       orderBy: {
         purchaseDate: 'asc', // FIFO: oldest first
       },
@@ -125,10 +141,14 @@ export class StockItemRepository extends BaseRepository {
    */
   async findAll(filters: StockItemFilters = {}, pagination: PaginationParams = {}) {
     const { page, pageSize, skip, take } = normalizePagination(pagination);
+    const shopFilter = this.getShopFilter();
 
-    const where: Prisma.StockItemWhereInput = this.withShopContext({
+    const where: Prisma.StockItemWhereInput = {
       ...buildSoftDeleteFilter(),
-    });
+      product: {
+        shopId: shopFilter.shopId,
+      },
+    };
 
     if (filters.productId) {
       where.productId = filters.productId;
@@ -206,11 +226,16 @@ export class StockItemRepository extends BaseRepository {
    * Get inventory value (based on purchase cost)
    */
   async getInventoryValue() {
+    const shopFilter = this.getShopFilter();
+    
     const result = await prisma.stockItem.aggregate({
-      where: this.withShopContext({
+      where: {
         status: { in: ['AVAILABLE' as any, 'RESERVED' as any] },
         deletedAt: null,
-      }),
+        product: {
+          shopId: shopFilter.shopId,
+        },
+      },
       _sum: {
         purchaseCost: true,
       },
@@ -227,12 +252,17 @@ export class StockItemRepository extends BaseRepository {
    * Get stock summary by product
    */
   async getStockSummaryByProduct(productId: string) {
+    const shopFilter = this.getShopFilter();
+    
     const summary = await prisma.stockItem.groupBy({
       by: ['status'],
-      where: this.withShopContext({
+      where: {
         productId,
         deletedAt: null,
-      }),
+        product: {
+          shopId: shopFilter.shopId,
+        },
+      },
       _count: {
         id: true,
       },
@@ -248,11 +278,16 @@ export class StockItemRepository extends BaseRepository {
    * Get stock summary by metal type
    */
   async getStockSummaryByMetalType() {
+    const shopFilter = this.getShopFilter();
+    
     const summary = await prisma.stockItem.findMany({
-      where: this.withShopContext({
+      where: {
         status: { in: ['AVAILABLE' as any, 'RESERVED' as any] },
         deletedAt: null,
-      }),
+        product: {
+          shopId: shopFilter.shopId,
+        },
+      },
       include: {
         product: {
           select: {

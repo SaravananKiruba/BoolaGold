@@ -132,13 +132,20 @@ export class RateMasterRepository extends BaseRepository {
   /**
    * Get current active rate for a metal type and purity
    * Returns the most recent active rate that is currently valid
+   * CRITICAL: Always filters by shopId for multi-tenant safety
    */
   async getCurrentRate(metalType: MetalType, purity: string): Promise<RateMaster | null> {
     try {
       const now = new Date();
+      const shopId = this.getShopId();
+
+      if (!shopId) {
+        throw new Error('Shop context is required to get current rate');
+      }
 
       return await prisma.rateMaster.findFirst({
         where: {
+          shopId,
           metalType,
           purity,
           isActive: true,

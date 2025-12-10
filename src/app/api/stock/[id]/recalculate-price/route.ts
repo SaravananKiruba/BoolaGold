@@ -3,8 +3,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { handleApiError } from '@/utils/response';
+import { handleApiError, errorResponse } from '@/utils/response';
 import { getRepositories } from '@/utils/apiRepository';
+import { getSession } from '@/lib/auth';
 
 /**
  * POST /api/stock/[id]/recalculate-price
@@ -15,7 +16,16 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const repos = await getRepositories(request);
+    let repos;
+    try {
+      repos = await getRepositories(request);
+    } catch (authError: any) {
+      return NextResponse.json(
+        errorResponse('Unauthorized - Valid session required'),
+        { status: 401 }
+      );
+    }
+
     const stockItemId = params.id;
 
     const stockItem = await repos.stockItem.findById(stockItemId);
@@ -47,7 +57,16 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const repos = await getRepositories(request);
+    let repos;
+    try {
+      repos = await getRepositories(request);
+    } catch (authError: any) {
+      return NextResponse.json(
+        errorResponse('Unauthorized - Valid session required'),
+        { status: 401 }
+      );
+    }
+
     const stockItemId = params.id;
 
     const stockItem = await repos.stockItem.findById(stockItemId);

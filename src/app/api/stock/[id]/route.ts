@@ -2,8 +2,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { handleApiError, successResponse } from '@/utils/response';
+import { handleApiError, successResponse, errorResponse } from '@/utils/response';
 import { getRepositories } from '@/utils/apiRepository';
+import { getSession } from '@/lib/auth';
 
 /**
  * GET /api/stock/[id]
@@ -14,7 +15,16 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const repos = await getRepositories(request);
+    let repos;
+    try {
+      repos = await getRepositories(request);
+    } catch (authError: any) {
+      return NextResponse.json(
+        errorResponse('Unauthorized - Valid session required'),
+        { status: 401 }
+      );
+    }
+
     const stockItem = await repos.stockItem.findById(params.id);
 
     if (!stockItem) {

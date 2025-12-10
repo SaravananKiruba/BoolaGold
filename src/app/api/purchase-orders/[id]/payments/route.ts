@@ -98,18 +98,8 @@ export async function POST(
         },
       });
 
-      // **ISSUE 4 FIX**: Update stock items to AVAILABLE when payment is PAID
-      if (newPaymentStatus === PaymentStatus.PAID) {
-        await tx.stockItem.updateMany({
-          where: {
-            purchaseOrderId: purchaseOrderId,
-            status: 'RECEIVED', // Only update items that were received but not yet available
-          },
-          data: {
-            status: StockStatus.AVAILABLE,
-          },
-        });
-      }
+      // Stock items are already created as AVAILABLE when PO is received
+      // No need to update status on payment - they're already in inventory
 
       // Create expense transaction (User Story 27 requirement)
       const transaction = await tx.transaction.create({
