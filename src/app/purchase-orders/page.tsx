@@ -39,7 +39,6 @@ interface OrderItem {
   productName: string;
   quantity: number;
   unitPrice: string;
-  expectedWeight: string;
   purchaseCost?: string;
 }
 
@@ -281,7 +280,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
     productId: '',
     quantity: '1',
     unitPrice: '',
-    expectedWeight: '',
     purchaseCost: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -348,7 +346,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       productName: product.name,
       quantity: parseInt(currentItem.quantity),
       unitPrice: currentItem.unitPrice,
-      expectedWeight: currentItem.expectedWeight,
       purchaseCost: currentItem.purchaseCost,
     };
 
@@ -357,7 +354,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       productId: '',
       quantity: '1',
       unitPrice: '',
-      expectedWeight: '',
       purchaseCost: '',
     });
   };
@@ -403,7 +399,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: parseFloat(item.unitPrice),
-          expectedWeight: item.expectedWeight ? parseFloat(item.expectedWeight) : undefined,
           purchaseCost: item.purchaseCost ? parseFloat(item.purchaseCost) : parseFloat(item.unitPrice),
         })),
       };
@@ -591,16 +586,20 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                     border: '1px solid #ddd', 
                     borderRadius: '4px',
                     cursor: (loadingProducts || products.length === 0) ? 'not-allowed' : 'pointer',
-                    background: (loadingProducts || products.length === 0) ? '#f5f5f5' : 'white'
+                    background: (loadingProducts || products.length === 0) ? '#f5f5f5' : 'white',
+                    fontSize: '14px'
                   }}
                 >
-                  <option value="">-- Select Product --</option>
+                  <option value="">-- Search and Select Product --</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} ({product.metalType} {product.purity}) - {product.netWeight}g
                     </option>
                   ))}
                 </select>
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '3px' }}>
+                  💡 Start typing to filter products
+                </div>
               </div>
 
               <div>
@@ -653,21 +652,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                 </>
               )}
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                  Weight (g)
-                </label>
-                <input
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  value={currentItem.expectedWeight}
-                  onChange={(e) => setCurrentItem({ ...currentItem, expectedWeight: e.target.value })}
-                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  placeholder="Optional"
-                />
-              </div>
-
               <button
                 type="button"
                 onClick={handleAddItem}
@@ -700,7 +684,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                     {formData.autoReceiveStock && (
                       <th>Purchase Cost</th>
                     )}
-                    <th>Weight</th>
                     <th>Total</th>
                     <th>Action</th>
                   </tr>
@@ -714,7 +697,6 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                       {formData.autoReceiveStock && (
                         <td>₹{item.purchaseCost ? parseFloat(item.purchaseCost).toFixed(2) : '-'}</td>
                       )}
-                      <td>{item.expectedWeight ? `${item.expectedWeight}g` : '-'}</td>
                       <td style={{ fontWeight: 500 }}>
                         ₹{(item.quantity * parseFloat(item.unitPrice)).toFixed(2)}
                       </td>

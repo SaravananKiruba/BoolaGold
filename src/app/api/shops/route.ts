@@ -31,28 +31,39 @@ import { getSession, hasPermission, isSuperAdmin } from '@/lib/auth';
 import { createErrorResponse, createSuccessResponse } from '@/utils/response';
 
 /**
- * GET /api/shops - Get all shops (SUPER_ADMIN only)
- * ⚠️ CRITICAL: Only SaaS Provider can view all shops
+ * GET /api/shops - Get shops
+ * SUPER_ADMIN: View all shops
+ * OWNER: View only their own shop
+ * ⚠️ CRITICAL: Shop data isolation enforced
  */
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
     console.log('🔍 GET /api/shops - Session:', JSON.stringify(session, null, 2));
     
-    // 🔒 SECURITY: Only SUPER_ADMIN can view all shops
-    if (!hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE')) {
-      console.error('❌ GET /api/shops - Unauthorized:', {
-        session,
-        hasPermission: hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE'),
-        isSuperAdmin: session?.role === 'SUPER_ADMIN'
-      });
-      return createErrorResponse('Unauthorized: Only Super Admin can view all shops', 403);
+    // 🔒 SECURITY: Must be authenticated
+    if (!session) {
+      return createErrorResponse('Unauthorized: Authentication required', 401);
     }
+
+    // Build query filter based on role
+    const isSuperAdminUser = isSuperAdmin(session);
+    const whereClause: any = { deletedAt: null };
     
-    console.log('✅ GET /api/shops - Permission granted');
+    // 🔒 CRITICAL: Non-SUPER_ADMIN users can only see their own shop
+    if (!isSuperAdminUser) {
+      if (!session.shopId) {
+        console.error('❌ GET /api/shops - No shopId in session for non-SUPER_ADMIN');
+        return createErrorResponse('Unauthorized: No shop context', 403);
+      }
+      whereClause.id = session.shopId;
+      console.log('🔒 GET /api/shops - Filtering by shopId:', session.shopId);
+    } else {
+      console.log('✅ GET /api/shops - SUPER_ADMIN - returning all shops');
+    }
 
     const shops = await prisma.shop.findMany({
-      where: { deletedAt: null },
+      where: whereClause,
       include: {
         _count: {
           select: {
@@ -90,10 +101,10 @@ export async function POST(request: NextRequest) {
     const session = await getSession();
     console.log('🔍 POST /api/shops - Session:', JSON.stringify(session, null, 2));
     
-    // 🔒 SECURITY: Only SUPER_ADMIN can create shops
+    // 🔒 SECURITY: Only SUPER_ADMIN can create new shops
     if (!hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE')) {
       console.error('❌ POST /api/shops - Unauthorized:', {
-        session,
+        sessionRole: session?.role,
         hasPermission: hasPermission(session, 'SUPER_ADMIN_SHOPS_MANAGE'),
         isSuperAdmin: session?.role === 'SUPER_ADMIN'
       });

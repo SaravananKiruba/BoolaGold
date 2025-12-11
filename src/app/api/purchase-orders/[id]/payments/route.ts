@@ -98,8 +98,9 @@ export async function POST(
         },
       });
 
-      // Stock items are already created as AVAILABLE when PO is received
-      // No need to update status on payment - they're already in inventory
+      // Note: Stock receive is a SEPARATE operation from payment recording
+      // Stock items are only created when explicitly received via the receive-stock API
+      // Payment status does not automatically trigger stock receipt
 
       // Create expense transaction (User Story 27 requirement)
       const transaction = await tx.transaction.create({

@@ -32,9 +32,6 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             users: true,
-            customers: true,
-            products: true,
-            salesOrders: true,
           },
         },
       },
@@ -50,19 +47,12 @@ export async function GET(request: NextRequest) {
       where: { deletedAt: null, isActive: true },
     });
 
-    // Calculate aggregated stats
-    const totalCustomers = shops.reduce((sum, shop) => sum + shop._count.customers, 0);
-    const totalProducts = shops.reduce((sum, shop) => sum + shop._count.products, 0);
-    const totalSalesOrders = shops.reduce((sum, shop) => sum + shop._count.salesOrders, 0);
-
+    // Calculate dashboard stats - focus on shops and users only
     const dashboardStats = {
       totalShops: shops.length,
       activeShops: shops.filter(shop => shop.isActive).length,
       totalUsers,
       activeUsers,
-      totalCustomers,
-      totalProducts,
-      totalSalesOrders,
       shops,
     };
 

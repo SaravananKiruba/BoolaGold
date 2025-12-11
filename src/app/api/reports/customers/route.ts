@@ -13,6 +13,18 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Import and validate session
+    const { getSession } = await import('@/lib/auth');
+    const session = await getSession();
+    if (!session || !session.shopId) {
+      return Response.json(
+        { success: false, error: 'Unauthorized: No shop context' },
+        { status: 403 }
+      );
+    }
+
+    const shopId = session.shopId;
+
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -26,10 +38,11 @@ export async function GET(request: NextRequest) {
       } : undefined
     );
 
-    // Build where clause for orders
+    // Build where clause for orders - 🔒 FILTERED BY SHOPID
     const ordersWhere: any = {
       deletedAt: null,
       status: 'COMPLETED',
+      shopId,
     };
 
     if (dateRange) {

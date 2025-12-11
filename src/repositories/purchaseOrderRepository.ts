@@ -24,6 +24,7 @@ export interface StockReceiptItem {
   individualItems: {
     tagId: string;
     barcode: string;
+    huid?: string;
     purchaseCost: number;
     purchaseDate: Date;
   }[];
@@ -250,6 +251,7 @@ export class PurchaseOrderRepository extends BaseRepository {
             productId: receiptItem.productId,
             tagId: item.tagId,
             barcode: item.barcode,
+            huid: item.huid || undefined,
             purchaseCost: item.purchaseCost,
             status: 'AVAILABLE' as const,
             purchaseOrderId: purchaseOrderId,

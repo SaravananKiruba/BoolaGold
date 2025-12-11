@@ -26,7 +26,7 @@ const createRateMasterSchema = z.object({
     z.string().datetime(), // Full ISO string with timezone
     z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format'), // datetime-local format
     z.date()
-  ]),
+  ]).optional().default(new Date().toISOString()),
   validUntil: z.union([
     z.string().datetime(), // Full ISO string with timezone
     z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format'), // datetime-local format
@@ -130,10 +130,10 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
-    // Convert string dates to Date objects
-    const effectiveDate = typeof data.effectiveDate === 'string' 
-      ? new Date(data.effectiveDate) 
-      : data.effectiveDate;
+    // Convert string dates to Date objects, default to now if not provided
+    const effectiveDate = data.effectiveDate 
+      ? (typeof data.effectiveDate === 'string' ? new Date(data.effectiveDate) : data.effectiveDate)
+      : new Date();
     
     // Validate effective date
     if (isNaN(effectiveDate.getTime())) {

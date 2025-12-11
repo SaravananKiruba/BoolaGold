@@ -4,15 +4,28 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { handleApiError, successResponse } from '@/utils/response';
 import { buildDateRangeFilter } from '@/utils/filters';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/reports/sales-summary
  * Get sales summary export for external accounting systems or CA
+ * 🔒 CRITICAL: Filtered by shopId for data isolation
  */
 export async function GET(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Get session and validate shopId
+    const session = await getSession();
+    if (!session || !session.shopId) {
+      return Response.json(
+        { success: false, error: 'Unauthorized: No shop context' },
+        { status: 403 }
+      );
+    }
+
+    const shopId = session.shopId;
+
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -29,6 +42,7 @@ export async function GET(request: NextRequest) {
     const ordersWhere: any = {
       deletedAt: null,
       status: 'COMPLETED',
+      shopId,
     };
 
     if (dateRange) {

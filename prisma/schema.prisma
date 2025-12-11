@@ -203,6 +203,7 @@ model StockItem {
   productId        String
   tagId            String          @unique @db.VarChar(100)
   barcode          String          @unique @db.VarChar(100)
+  huid             String?         @db.VarChar(100)
   purchaseCost     Decimal         @db.Decimal(12, 2)
   status           StockStatus     @default(AVAILABLE)
   purchaseOrderId  String?
@@ -220,6 +221,7 @@ model StockItem {
   @@index([status])
   @@index([tagId])
   @@index([barcode])
+  @@index([huid])
   @@index([purchaseOrderId])
   @@index([deletedAt])
   @@map("stock_items")

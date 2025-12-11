@@ -38,7 +38,8 @@ export async function POST(
      *   productId: string,
      *   quantityToReceive: number,
      *   receiptDetails: [{
-     *     purchaseCost: number
+     *     purchaseCost: number,
+     *     huid?: string  // Optional HUID (Hallmark Unique ID)
      *   }]
      * }]
      */
@@ -117,6 +118,7 @@ export async function POST(
         individualItems.push({
           tagId: tagIds[i],
           barcode: barcodes[i],
+          huid: detail.huid || undefined, // Optional HUID for hallmarked items
           purchaseCost: detail.purchaseCost,
           purchaseDate: new Date(),
         });

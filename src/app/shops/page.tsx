@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { showToast } from '@/utils/toast';
+import { usePageGuard } from '@/hooks/usePageGuard';
 
 interface Shop {
   id: string;
@@ -52,6 +53,9 @@ interface ShopFormData {
 }
 
 export default function ShopsPage() {
+  // 🔒 SECURITY: Only SUPER_ADMIN and OWNER can access shops page
+  const { isAuthorized, isLoading: authLoading } = usePageGuard(['SUPER_ADMIN', 'OWNER']);
+  
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -242,6 +246,21 @@ export default function ShopsPage() {
       setSubmitting(false);
     }
   };
+
+  // 🔒 Show loading during authorization check
+  if (authLoading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '20px' }}>🔒</div>
+        <p style={{ fontSize: '1.1rem', color: '#666' }}>Checking authorization...</p>
+      </div>
+    );
+  }
+
+  // 🔒 Redirect if not authorized (handled by usePageGuard)
+  if (!isAuthorized) {
+    return null;
+  }
 
   if (loading) {
     return (

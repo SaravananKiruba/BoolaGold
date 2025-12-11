@@ -58,13 +58,21 @@ export async function GET(request: NextRequest) {
     const operationalExpenses = totalExpense - metalPurchaseExpense;
     const netProfit = grossProfit - operationalExpenses;
 
-    // Income breakdown by category
+    // 🔒 SECURITY: Validate shopId
+    if (!session.shopId) {
+      return NextResponse.json(errorResponse('No shop context'), { status: 403 });
+    }
+
+    const shopId = session.shopId;
+
+    // Income breakdown by category - 🔒 FILTERED BY SHOPID
     const incomeTransactions = await prisma.transaction.groupBy({
       by: ['category'],
       where: {
         transactionType: 'INCOME',
         status: 'COMPLETED',
         deletedAt: null,
+        shopId,
         ...(dateRange ? { transactionDate: dateRange } : {}),
       },
       _sum: {
@@ -81,13 +89,14 @@ export async function GET(request: NextRequest) {
       totalAmount: Number(item._sum.amount || 0),
     }));
 
-    // Expense breakdown by category
+    // Expense breakdown by category - 🔒 FILTERED BY SHOPID
     const expenseTransactions = await prisma.transaction.groupBy({
       by: ['category'],
       where: {
         transactionType: 'EXPENSE',
         status: 'COMPLETED',
         deletedAt: null,
+        shopId,
         ...(dateRange ? { transactionDate: dateRange } : {}),
       },
       _sum: {
@@ -104,12 +113,13 @@ export async function GET(request: NextRequest) {
       totalAmount: Number(item._sum.amount || 0),
     }));
 
-    // Payment mode distribution
+    // Payment mode distribution - 🔒 FILTERED BY SHOPID
     const paymentModeDistribution = await prisma.transaction.groupBy({
       by: ['paymentMode'],
       where: {
         status: 'COMPLETED',
         deletedAt: null,
+        shopId,
         ...(dateRange ? { transactionDate: dateRange } : {}),
       },
       _sum: {
@@ -126,12 +136,13 @@ export async function GET(request: NextRequest) {
       totalAmount: Number(item._sum.amount || 0),
     }));
 
-    // Cash flow summary (inflow vs outflow)
+    // Cash flow summary (inflow vs outflow) - 🔒 FILTERED BY SHOPID
     const cashFlowData = await prisma.transaction.groupBy({
       by: ['transactionType'],
       where: {
         status: 'COMPLETED',
         deletedAt: null,
+        shopId,
         ...(dateRange ? { transactionDate: dateRange } : {}),
       },
       _sum: {
@@ -147,13 +158,14 @@ export async function GET(request: NextRequest) {
     };
     cashFlow.netCashFlow = cashFlow.inflow - cashFlow.outflow;
 
-    // Metal purchase expenses by metal type
+    // Metal purchase expenses by metal type - 🔒 FILTERED BY SHOPID
     const metalPurchaseByType = await prisma.transaction.groupBy({
       by: ['metalType'],
       where: {
         transactionType: 'METAL_PURCHASE',
         status: 'COMPLETED',
         deletedAt: null,
+        shopId,
         ...(dateRange ? { transactionDate: dateRange } : {}),
       },
       _sum: {
@@ -185,6 +197,7 @@ export async function GET(request: NextRequest) {
       prisma.emiPayment.aggregate({
         where: {
           deletedAt: null,
+          shopId,
           status: { in: ['PENDING', 'OVERDUE'] },
         },
         _sum: {
@@ -207,9 +220,10 @@ export async function GET(request: NextRequest) {
       receivedInPeriod: Number(emiReceived._sum?.paidAmount || 0),
     };
 
-    // Monthly trend (if applicable)
+    // Monthly trend (if applicable) - 🔒 FILTERED BY SHOPID
     const monthlyData = await prisma.transaction.findMany({
       where: {
+        shopId,
         status: 'COMPLETED',
         deletedAt: null,
         ...(dateRange ? { transactionDate: dateRange } : {}),

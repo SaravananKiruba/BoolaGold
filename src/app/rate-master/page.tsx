@@ -43,12 +43,9 @@ interface RateFormData {
   metalType: string;
   purity: string;
   ratePerGram: string;
-  effectiveDate: string;
   validUntil: string;
   rateSource: string;
   isActive: boolean;
-  defaultMakingChargePercent: string;
-  createdBy: string;
 }
 
 interface ApiResponse<T> {
@@ -85,12 +82,9 @@ export default function RateMasterPage() {
     metalType: 'GOLD',
     purity: '22K',
     ratePerGram: '',
-    effectiveDate: new Date().toISOString().slice(0, 16),
     validUntil: '',
     rateSource: 'MANUAL',
     isActive: true,
-    defaultMakingChargePercent: '',
-    createdBy: '',
   });
 
   // Fetch Current Rates
@@ -183,20 +177,7 @@ export default function RateMasterPage() {
       return 'Please select an effective date';
     }
 
-    if (formData.validUntil) {
-      const effective = new Date(formData.effectiveDate);
-      const validUntil = new Date(formData.validUntil);
-      if (validUntil <= effective) {
-        return 'Valid until date must be after effective date';
-      }
-    }
-
-    if (formData.defaultMakingChargePercent) {
-      const percent = parseFloat(formData.defaultMakingChargePercent);
-      if (percent < 0 || percent > 100) {
-        return 'Making charge percent must be between 0 and 100';
-      }
-    }
+    // No additional date validation needed - validUntil is optional
 
     return null;
   };
@@ -222,14 +203,9 @@ export default function RateMasterPage() {
         metalType: formData.metalType,
         purity: formData.purity.trim(),
         ratePerGram: parseFloat(formData.ratePerGram),
-        effectiveDate: formData.effectiveDate,
         validUntil: formData.validUntil || undefined,
         rateSource: formData.rateSource,
         isActive: formData.isActive,
-        defaultMakingChargePercent: formData.defaultMakingChargePercent 
-          ? parseFloat(formData.defaultMakingChargePercent) 
-          : undefined,
-        createdBy: formData.createdBy.trim() || undefined,
       };
 
       const response = await fetch('/api/rate-master', {
@@ -275,12 +251,9 @@ export default function RateMasterPage() {
       metalType: 'GOLD',
       purity: '22K',
       ratePerGram: '',
-      effectiveDate: new Date().toISOString().slice(0, 16),
       validUntil: '',
       rateSource: 'MANUAL',
       isActive: true,
-      defaultMakingChargePercent: '',
-      createdBy: '',
     });
   };
 
@@ -833,22 +806,6 @@ export default function RateMasterPage() {
 
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                      Making Charge (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={formData.defaultMakingChargePercent}
-                      onChange={(e) => handleFormChange('defaultMakingChargePercent', e.target.value)}
-                      className="input"
-                      placeholder="10.00"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                       Rate Source <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
@@ -865,19 +822,6 @@ export default function RateMasterPage() {
 
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                      Effective Date <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={formData.effectiveDate}
-                      onChange={(e) => handleFormChange('effectiveDate', e.target.value)}
-                      className="input"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                       Valid Until (Optional)
                     </label>
                     <input
@@ -885,20 +829,6 @@ export default function RateMasterPage() {
                       value={formData.validUntil}
                       onChange={(e) => handleFormChange('validUntil', e.target.value)}
                       className="input"
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                      Created By
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.createdBy}
-                      onChange={(e) => handleFormChange('createdBy', e.target.value)}
-                      className="input"
-                      placeholder="User name"
-                      maxLength={100}
                     />
                   </div>
 

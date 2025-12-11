@@ -13,15 +13,28 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Import and validate session
+    const { getSession } = await import('@/lib/auth');
+    const session = await getSession();
+    if (!session || !session.shopId) {
+      return Response.json(
+        { success: false, error: 'Unauthorized: No shop context' },
+        { status: 403 }
+      );
+    }
+
+    const shopId = session.shopId;
+
     const searchParams = request.nextUrl.searchParams;
     const valuationBasis = searchParams.get('valuationBasis') || 'PURCHASE'; // PURCHASE or SELLING
     const metalTypeFilter = searchParams.get('metalType') as MetalType | null;
     const collectionFilter = searchParams.get('collection');
 
-    // Build where clause
+    // Build where clause - 🔒 FILTERED BY SHOPID
     const productsWhere: any = {
       deletedAt: null,
       isActive: true,
+      shopId,
     };
 
     if (metalTypeFilter) {
@@ -176,19 +189,21 @@ export async function GET(request: NextRequest) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const [stockAdditions, stockSales] = await Promise.all([
-      // Stock additions from purchase orders (using purchaseDate field)
+      // Stock additions from purchase orders (using purchaseDate field) - 🔒 FILTERED BY SHOPID
       prisma.stockItem.count({
         where: {
           deletedAt: null,
+          product: { shopId },
           purchaseDate: {
             gte: thirtyDaysAgo,
           },
         },
       }),
-      // Stock sales from sales orders
+      // Stock sales from sales orders - 🔒 FILTERED BY SHOPID
       prisma.salesOrderLine.count({
         where: {
           salesOrder: {
+            shopId,
             status: 'COMPLETED',
             orderDate: {
               gte: thirtyDaysAgo,

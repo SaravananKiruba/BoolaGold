@@ -4,15 +4,29 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { handleApiError, successResponse } from '@/utils/response';
 import { buildDateRangeFilter } from '@/utils/filters';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/dashboard
  * Get dashboard overview with key business metrics
+ * 🔒 CRITICAL: Filtered by shopId for data isolation
  */
 export async function GET(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Get session and validate shopId
+    const session = await getSession();
+    if (!session || !session.shopId) {
+      return Response.json(
+        { success: false, error: 'Unauthorized: No shop context' },
+        { status: 403 }
+      );
+    }
+
+    const shopId = session.shopId;
+    console.log('🔒 Dashboard API - Filtering by shopId:', shopId);
+
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -25,19 +39,20 @@ export async function GET(request: NextRequest) {
       } : undefined
     );
 
-    // Get total counts (not date-filtered)
+    // Get total counts (not date-filtered) - 🔒 FILTERED BY SHOPID
     const [totalProducts, totalCustomers] = await Promise.all([
       prisma.product.count({
-        where: { deletedAt: null, isActive: true },
+        where: { deletedAt: null, isActive: true, shopId },
       }),
       prisma.customer.count({
-        where: { deletedAt: null },
+        where: { deletedAt: null, shopId },
       }),
     ]);
 
-    // Get orders with date filter
+    // Get orders with date filter - 🔒 FILTERED BY SHOPID
     const ordersWhere = {
       deletedAt: null,
+      shopId,
       ...(dateRange ? { orderDate: dateRange } : {}),
     };
 
@@ -56,7 +71,7 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.salesOrder.findFirst({
-        where: { deletedAt: null },
+        where: { deletedAt: null, shopId },
         orderBy: { orderDate: 'desc' },
         select: {
           orderDate: true,
@@ -86,6 +101,7 @@ export async function GET(request: NextRequest) {
       prisma.salesOrder.count({
         where: {
           deletedAt: null,
+          shopId,
           orderDate: {
             gte: todayStart,
             lte: todayEnd,
@@ -95,6 +111,7 @@ export async function GET(request: NextRequest) {
       prisma.salesOrder.findMany({
         where: {
           deletedAt: null,
+          shopId,
           status: 'COMPLETED',
           orderDate: {
             gte: todayStart,

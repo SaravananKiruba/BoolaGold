@@ -51,6 +51,16 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
+      // Shop Data Isolation: Verify shopId for non-SUPER_ADMIN users
+      // Note: API routes handle their own validation via repositories
+      const isApiRoute = pathname.startsWith('/api/');
+      if (!isApiRoute && session.role !== 'SUPER_ADMIN' && !session.shopId) {
+        console.error('Shop data isolation violation: User missing shopId', { userId: session.userId, role: session.role });
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
+      }
+
       const userRole = session.role;
       const allowedRoutes = roleRoutes[userRole as keyof typeof roleRoutes] || [];
 

@@ -81,11 +81,7 @@ export default function SuperAdminDashboard() {
     );
   }
 
-  const totalProducts = stats.shops.reduce((sum, shop) => sum + shop._count.products, 0);
-  const totalCustomers = stats.shops.reduce((sum, shop) => sum + shop._count.customers, 0);
-  const totalSales = stats.shops.reduce((sum, shop) => sum + shop._count.salesOrders, 0);
-  const avgProductsPerShop = stats.totalShops > 0 ? Math.round(totalProducts / stats.totalShops) : 0;
-  const avgCustomersPerShop = stats.totalShops > 0 ? Math.round(totalCustomers / stats.totalShops) : 0;
+  // Super Admin dashboard focuses on shops and users management only
 
   return (
     <div className="container">
@@ -272,35 +268,11 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        <div className="card">
-          <div style={{ padding: '24px' }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Total Products</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>{totalProducts.toLocaleString()}</div>
-            <div style={{ marginTop: '12px', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-              Avg {avgProductsPerShop} per shop
-            </div>
-          </div>
-        </div>
 
-        <div className="card">
-          <div style={{ padding: '24px' }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Total Sales</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>{totalSales.toLocaleString()}</div>
-            <div style={{ marginTop: '12px', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-              Across all shops
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Secondary Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ padding: '24px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.9rem', color: '#1e40af', fontWeight: 600, marginBottom: '8px' }}>Total Customers</div>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e3a8a' }}>{totalCustomers.toLocaleString()}</div>
-          <div style={{ fontSize: '0.85rem', color: '#3b82f6', marginTop: '8px' }}>Avg {avgCustomersPerShop} per shop</div>
-        </div>
-
         <div style={{ padding: '24px', background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: '12px' }}>
           <div style={{ fontSize: '0.9rem', color: '#7c3aed', fontWeight: 600, marginBottom: '8px' }}>Platform Health</div>
           <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#5b21b6' }}>
@@ -338,9 +310,6 @@ export default function SuperAdminDashboard() {
                 <th>Location</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Users</th>
-                <th style={{ textAlign: 'right' }}>Customers</th>
-                <th style={{ textAlign: 'right' }}>Products</th>
-                <th style={{ textAlign: 'right' }}>Sales</th>
                 <th>Created</th>
                 <th>Actions</th>
               </tr>
@@ -348,7 +317,7 @@ export default function SuperAdminDashboard() {
             <tbody>
               {stats.shops.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '48px 20px' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '48px 20px' }}>
                     <div style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>No shops found</div>
                     <div style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem', marginTop: '8px' }}>Create your first shop to get started</div>
                   </td>
@@ -365,15 +334,6 @@ export default function SuperAdminDashboard() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <span className="badge badge-info">{shop._count.users}</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="badge" style={{ background: '#f3e8ff', color: '#7c3aed' }}>{shop._count.customers}</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="badge badge-warning">{shop._count.products}</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="badge badge-success">{shop._count.salesOrders}</span>
                     </td>
                     <td style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
                       {new Date(shop.createdAt).toLocaleDateString()}
