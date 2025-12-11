@@ -576,7 +576,6 @@ export default function ProductsPage() {
             )}
 
             <div style={{ fontSize: '12px', color: '#666', marginTop: '15px' }}>
-              <div>Rate Effective Date: {new Date(priceBreakdown.currentRate.effectiveDate).toLocaleString()}</div>
               {priceBreakdown.product.lastPriceUpdate && (
                 <div>
                   Last Price Update: {new Date(priceBreakdown.product.lastPriceUpdate).toLocaleString()}

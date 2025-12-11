@@ -22,11 +22,6 @@ const createRateMasterSchema = z.object({
   ratePerGram: z.number({ required_error: 'Rate per gram is required' })
     .positive('Rate per gram must be a positive number')
     .finite('Rate per gram must be a valid number'),
-  effectiveDate: z.union([
-    z.string().datetime(), // Full ISO string with timezone
-    z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format'), // datetime-local format
-    z.date()
-  ]).optional().default(new Date().toISOString()),
   validUntil: z.union([
     z.string().datetime(), // Full ISO string with timezone
     z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format'), // datetime-local format
@@ -81,23 +76,6 @@ export async function GET(request: NextRequest) {
       filters.isActive = isActive === 'true';
     }
 
-    // Date range filters with validation
-    const effectiveDateFrom = searchParams.get('effectiveDateFrom');
-    if (effectiveDateFrom) {
-      const date = new Date(effectiveDateFrom);
-      if (!isNaN(date.getTime())) {
-        filters.effectiveDateFrom = date;
-      }
-    }
-
-    const effectiveDateTo = searchParams.get('effectiveDateTo');
-    if (effectiveDateTo) {
-      const date = new Date(effectiveDateTo);
-      if (!isNaN(date.getTime())) {
-        filters.effectiveDateTo = date;
-      }
-    }
-
     const repos = await getRepositories(request);
     const repository = repos.rateMaster;
     const result = await repository.findAll(filters, { page, pageSize });
@@ -130,19 +108,7 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
-    // Convert string dates to Date objects, default to now if not provided
-    const effectiveDate = data.effectiveDate 
-      ? (typeof data.effectiveDate === 'string' ? new Date(data.effectiveDate) : data.effectiveDate)
-      : new Date();
-    
-    // Validate effective date
-    if (isNaN(effectiveDate.getTime())) {
-      return NextResponse.json(
-        errorResponse('Invalid effective date'),
-        { status: 400 }
-      );
-    }
-
+    // Convert string date to Date object if provided
     let validUntil: Date | null = null;
     if (data.validUntil) {
       validUntil = typeof data.validUntil === 'string' 
@@ -156,14 +122,6 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-
-      // Validate date logic
-      if (validUntil <= effectiveDate) {
-        return NextResponse.json(
-          errorResponse('Valid until date must be after effective date'),
-          { status: 400 }
-        );
-      }
     }
 
     // Create rate master with transaction support (handled in repository)
@@ -173,7 +131,6 @@ export async function POST(request: NextRequest) {
       metalType: data.metalType,
       purity: data.purity.trim(),
       ratePerGram: data.ratePerGram,
-      effectiveDate,
       validUntil,
       rateSource: data.rateSource,
       isActive: data.isActive,

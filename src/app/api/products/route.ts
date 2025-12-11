@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
           shopId: session!.shopId!, // Filter by shop
         },
         orderBy: {
-          effectiveDate: 'desc',
+          createdAt: 'desc',
         },
       });
 

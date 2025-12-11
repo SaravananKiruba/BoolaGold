@@ -42,7 +42,6 @@ export interface SellingPriceResult {
     metalType: string;
     purity: string;
     ratePerGram: number;
-    effectiveDate: Date;
   };
 }
 
@@ -166,7 +165,6 @@ export async function calculateSellingPriceForSale(
         metalType: currentRate.metalType,
         purity: currentRate.purity,
         ratePerGram: ratePerGram,
-        effectiveDate: currentRate.effectiveDate,
       },
     };
   } catch (error: any) {

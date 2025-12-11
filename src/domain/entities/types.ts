@@ -329,7 +329,6 @@ export interface RateMaster {
   metalType: MetalType;
   purity: string;
   ratePerGram: number;
-  effectiveDate: Date;
   validUntil?: Date | null;
   rateSource: RateSource;
   isActive: boolean;

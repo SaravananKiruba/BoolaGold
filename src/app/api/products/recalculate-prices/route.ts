@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
           isActive: true,
         },
         orderBy: {
-          effectiveDate: 'desc',
+          createdAt: 'desc',
         },
       });
 
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         if (
           product.rateUsedId === currentRate.id &&
           product.lastPriceUpdate &&
-          product.lastPriceUpdate >= currentRate.effectiveDate
+          product.lastPriceUpdate >= currentRate.createdAt
         ) {
           skippedCount++;
           updates.push({
@@ -161,7 +161,6 @@ export async function POST(request: NextRequest) {
         rateUsed: {
           id: currentRate.id,
           ratePerGram: Number(currentRate.ratePerGram),
-          effectiveDate: currentRate.effectiveDate,
         },
       });
     }

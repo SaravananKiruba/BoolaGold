@@ -28,7 +28,7 @@ export async function GET(
         isActive: true,
       },
       orderBy: {
-        effectiveDate: 'desc',
+        createdAt: 'desc',
       },
     });
 
@@ -88,7 +88,6 @@ export async function GET(
         metalType: currentRate.metalType,
         purity: currentRate.purity,
         ratePerGram: Number(currentRate.ratePerGram),
-        effectiveDate: currentRate.effectiveDate,
         rateSource: currentRate.rateSource,
       },
       currentPriceCalculation: currentPriceCalc,
@@ -98,7 +97,6 @@ export async function GET(
           ? {
               id: product.rateUsed.id,
               ratePerGram: Number(product.rateUsed.ratePerGram),
-              effectiveDate: product.rateUsed.effectiveDate,
             }
           : null,
         calculation: storedPriceCalc,

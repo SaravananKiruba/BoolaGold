@@ -116,7 +116,6 @@ export async function GET(
           metalType: rate.metalType,
           purity: rate.purity,
           ratePerGram: Number(rate.ratePerGram),
-          effectiveDate: rate.effectiveDate,
         },
         product: {
           name: stockItem.product.name,

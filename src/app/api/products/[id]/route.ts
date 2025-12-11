@@ -133,7 +133,7 @@ export async function PUT(
           isActive: true,
         },
         orderBy: {
-          effectiveDate: 'desc',
+          createdAt: 'desc',
         },
       });
 

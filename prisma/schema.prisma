@@ -232,7 +232,6 @@ model RateMaster {
   metalType                  MetalType
   purity                     String     @db.VarChar(20)
   ratePerGram                Decimal    @db.Decimal(10, 2)
-  effectiveDate              DateTime
   validUntil                 DateTime?
   rateSource                 RateSource @default(MANUAL)
   isActive                   Boolean    @default(true)
@@ -247,7 +246,6 @@ model RateMaster {
 
   @@index([shopId])
   @@index([metalType, purity, isActive])
-  @@index([effectiveDate])
   @@map("rate_master")
 }
 

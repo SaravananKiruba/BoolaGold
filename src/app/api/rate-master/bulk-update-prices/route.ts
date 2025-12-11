@@ -232,7 +232,6 @@ export async function POST(request: NextRequest) {
             metalType: rateMaster.metalType,
             purity: rateMaster.purity,
             ratePerGram: Number(rateMaster.ratePerGram),
-            effectiveDate: rateMaster.effectiveDate,
             isActive: rateMaster.isActive,
           },
         }, 'Price preview generated successfully')
@@ -289,7 +288,6 @@ export async function POST(request: NextRequest) {
             metalType: rateMaster.metalType,
             purity: rateMaster.purity,
             ratePerGram: Number(rateMaster.ratePerGram),
-            effectiveDate: rateMaster.effectiveDate,
             isActive: rateMaster.isActive,
           },
         }, `Successfully updated ${priceChanges.length} products`)

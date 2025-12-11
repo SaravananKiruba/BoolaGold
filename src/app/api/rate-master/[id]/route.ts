@@ -25,7 +25,6 @@ const updateRateMasterSchema = z.object({
     .positive('Rate per gram must be a positive number')
     .finite('Rate per gram must be a valid number')
     .optional(),
-  effectiveDate: z.string().datetime().or(z.date()).optional(),
   validUntil: z.string().datetime().or(z.date()).optional().nullable(),
   rateSource: z.enum(['MARKET', 'MANUAL', 'API'], {
     errorMap: () => ({ message: 'Rate source must be MARKET, MANUAL, or API' })
@@ -116,17 +115,6 @@ export async function PUT(
     }
 
     // Handle dates with validation
-    if (data.effectiveDate) {
-      const effectiveDate = typeof data.effectiveDate === 'string'
-        ? new Date(data.effectiveDate)
-        : data.effectiveDate;
-      
-      if (isNaN(effectiveDate.getTime())) {
-        return NextResponse.json(errorResponse('Invalid effective date'), { status: 400 });
-      }
-      updateData.effectiveDate = effectiveDate;
-    }
-
     if (data.validUntil !== undefined) {
       if (data.validUntil) {
         const validUntil = typeof data.validUntil === 'string' 
@@ -140,17 +128,6 @@ export async function PUT(
       } else {
         updateData.validUntil = null;
       }
-    }
-
-    // Validate date logic
-    const finalEffectiveDate = updateData.effectiveDate || existingRate.effectiveDate;
-    const finalValidUntil = updateData.validUntil !== undefined ? updateData.validUntil : existingRate.validUntil;
-    
-    if (finalValidUntil && finalValidUntil <= finalEffectiveDate) {
-      return NextResponse.json(
-        errorResponse('Valid until date must be after effective date'),
-        { status: 400 }
-      );
     }
 
     // Update with transaction support (handled in repository)

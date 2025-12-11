@@ -21,7 +21,6 @@ interface RateMaster {
   metalType: string;
   purity: string;
   ratePerGram: number;
-  effectiveDate: string;
   validUntil?: string | null;
   rateSource: string;
   isActive: boolean;
@@ -171,10 +170,6 @@ export default function RateMasterPage() {
   const validateForm = (): string | null => {
     if (!formData.ratePerGram || parseFloat(formData.ratePerGram) <= 0) {
       return 'Please enter a valid rate per gram';
-    }
-
-    if (!formData.effectiveDate) {
-      return 'Please select an effective date';
     }
 
     // No additional date validation needed - validUntil is optional
@@ -580,7 +575,6 @@ export default function RateMasterPage() {
                   <th>Metal</th>
                   <th>Purity</th>
                   <th style={{ textAlign: 'right' }}>Rate/Gram</th>
-                  <th>Effective</th>
                   <th>Valid Until</th>
                   <th style={{ textAlign: 'center' }}>Source</th>
                   <th style={{ textAlign: 'center' }}>Status</th>
@@ -590,7 +584,7 @@ export default function RateMasterPage() {
               <tbody>
                 {rates.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
                       <p style={{ marginBottom: '8px', fontSize: '15px' }}>No rates found</p>
                       <p style={{ fontSize: '13px' }}>Try adjusting your filters</p>
                     </td>
@@ -603,7 +597,6 @@ export default function RateMasterPage() {
                       <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)' }}>
                         {formatCurrency(rate.ratePerGram)}
                       </td>
-                      <td style={{ fontSize: '14px' }}>{formatDate(rate.effectiveDate)}</td>
                       <td style={{ fontSize: '14px' }}>
                         {rate.validUntil ? formatDate(rate.validUntil) : (
                           <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>No expiry</span>
@@ -936,11 +929,11 @@ export default function RateMasterPage() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Effective Date</th>
                       <th style={{ textAlign: 'right' }}>Rate/Gram</th>
                       <th style={{ textAlign: 'center' }}>Source</th>
                       <th style={{ textAlign: 'center' }}>Status</th>
                       <th>Created By</th>
+                      <th>Created At</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -953,7 +946,6 @@ export default function RateMasterPage() {
                     ) : (
                       historyData.map((rate) => (
                         <tr key={rate.id}>
-                          <td style={{ fontSize: '14px' }}>{formatDate(rate.effectiveDate)}</td>
                           <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)' }}>
                             {formatCurrency(rate.ratePerGram)}
                           </td>
@@ -973,6 +965,9 @@ export default function RateMasterPage() {
                           </td>
                           <td style={{ fontSize: '14px' }}>
                             {rate.createdBy || 'System'}
+                          </td>
+                          <td style={{ fontSize: '14px' }}>
+                            {formatDate(rate.createdAt)}
                           </td>
                         </tr>
                       ))

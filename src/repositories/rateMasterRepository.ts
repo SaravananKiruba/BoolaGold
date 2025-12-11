@@ -12,8 +12,6 @@ export interface RateMasterFilters {
   purity?: string;
   rateSource?: 'MARKET' | 'MANUAL' | 'API';
   isActive?: boolean;
-  effectiveDateFrom?: Date;
-  effectiveDateTo?: Date;
 }
 
 export class RateMasterRepository extends BaseRepository {
@@ -97,17 +95,6 @@ export class RateMasterRepository extends BaseRepository {
         where.isActive = filters.isActive;
       }
 
-      // Date range filters
-      if (filters.effectiveDateFrom || filters.effectiveDateTo) {
-        where.effectiveDate = {};
-        if (filters.effectiveDateFrom) {
-          where.effectiveDate.gte = filters.effectiveDateFrom;
-        }
-        if (filters.effectiveDateTo) {
-          where.effectiveDate.lte = filters.effectiveDateTo;
-        }
-      }
-
       // Execute queries in parallel for better performance
       const [rates, totalCount] = await Promise.all([
         prisma.rateMaster.findMany({
@@ -116,7 +103,7 @@ export class RateMasterRepository extends BaseRepository {
           take,
           orderBy: [
             { isActive: 'desc' }, // Active rates first
-            { effectiveDate: 'desc' }, // Then by date descending
+            { createdAt: 'desc' }, // Then by creation date descending
           ],
         }),
         prisma.rateMaster.count({ where }),
@@ -149,14 +136,13 @@ export class RateMasterRepository extends BaseRepository {
           metalType,
           purity,
           isActive: true,
-          effectiveDate: { lte: now },
           OR: [
             { validUntil: null },
             { validUntil: { gte: now } },
           ],
         },
         orderBy: {
-          effectiveDate: 'desc',
+          createdAt: 'desc',
         },
       });
     } catch (error: any) {
@@ -176,7 +162,6 @@ export class RateMasterRepository extends BaseRepository {
       const rates = await prisma.rateMaster.findMany({
         where: {
           isActive: true,
-          effectiveDate: { lte: now },
           OR: [
             { validUntil: null },
             { validUntil: { gte: now } },
@@ -185,7 +170,7 @@ export class RateMasterRepository extends BaseRepository {
         orderBy: [
           { metalType: 'asc' },
           { purity: 'asc' },
-          { effectiveDate: 'desc' },
+          { createdAt: 'desc' },
         ],
       });
 
@@ -227,7 +212,7 @@ export class RateMasterRepository extends BaseRepository {
           where,
           skip,
           take,
-          orderBy: { effectiveDate: 'desc' },
+          orderBy: { createdAt: 'desc' },
         }),
         prisma.rateMaster.count({ where }),
       ]);
@@ -356,12 +341,12 @@ export class RateMasterRepository extends BaseRepository {
         where: {
           metalType,
           purity,
-          effectiveDate: {
+          createdAt: {
             gte: startDate,
             lte: endDate,
           },
         },
-        orderBy: { effectiveDate: 'asc' },
+        orderBy: { createdAt: 'asc' },
       });
 
       if (rates.length === 0) {
@@ -381,7 +366,7 @@ export class RateMasterRepository extends BaseRepository {
         changePercent:
           ((rateValues[rateValues.length - 1] - rateValues[0]) / rateValues[0]) * 100,
         rates: rates.map(r => ({
-          date: r.effectiveDate,
+          date: r.createdAt,
           rate: Number(r.ratePerGram),
         })),
       };
@@ -400,7 +385,6 @@ export class RateMasterRepository extends BaseRepository {
       if (!rate || !rate.isActive) return false;
 
       const now = new Date();
-      if (rate.effectiveDate > now) return false;
       if (rate.validUntil && rate.validUntil < now) return false;
 
       return true;
