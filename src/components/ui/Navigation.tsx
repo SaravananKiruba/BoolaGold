@@ -17,10 +17,8 @@ export default function Navigation() {
       setIsLoading(true);
       
       try {
-        console.log('🔐 Navigation: Fetching session... [pathname changed]');
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
-          console.log('⏱️ Navigation: Session fetch timeout!');
           controller.abort();
         }, 3000); // 3 second timeout
         
@@ -35,12 +33,9 @@ export default function Navigation() {
         });
         clearTimeout(timeoutId);
         
-        console.log('🔐 Navigation: Response status =', response.status);
         if (response.ok) {
           const data = await response.json();
-          console.log('🔐 Navigation: Full Session Response =', JSON.stringify(data, null, 2));
           const role = data.data?.user?.role;
-          console.log('🔐 Navigation: Extracted Role =', role);
           
           if (role) {
             setUserRole(role);
@@ -69,17 +64,7 @@ export default function Navigation() {
   const hasShopConfigPermission = isOwner;
   const hasAdminAccess = isSuperAdmin || isOwner;
 
-  // Debug logging
-  useEffect(() => {
-    if (userRole) {
-      console.log('🔍 DEBUG - Current State:', {
-        userRole,
-        isSuperAdmin,
-        isOwner,
-        pathname
-      });
-    }
-  }, [userRole, isSuperAdmin, isOwner, pathname]);
+
 
   // FORCE REDIRECT: If Super Admin tries to access shop operational pages, redirect them
   // BUT allow access to /shops (shop management) and /users (user management)
@@ -92,16 +77,8 @@ export default function Navigation() {
       const allowedPages = ['/super-admin', '/shops', '/users'];
       const isAllowed = allowedPages.some(page => pathname.startsWith(page));
       
-      console.log('🔐 Super Admin Navigation Check:', {
-        pathname,
-        isAllowed,
-        willBlock: !isAllowed && shopOperationalPages.some(page => pathname.startsWith(page))
-      });
-      
       // Block only operational pages, NOT /shops or /users
       if (!isAllowed && shopOperationalPages.some(page => pathname.startsWith(page))) {
-        console.log('🚫 BLOCKING SUPER ADMIN from shop operational page:', pathname);
-        console.log('🔄 FORCE REDIRECTING to /super-admin');
         router.replace('/super-admin');
       }
     }
@@ -241,36 +218,27 @@ export default function Navigation() {
     // Role not loaded yet - show OWNER navigation as default while loading
     navSections = ownerNavSections;
     additionalSections = [ownerAdminSection];
-    console.log('⏳ Navigation: Loading, showing default owner nav...');
   } else if (normalizedRole === 'SUPER_ADMIN') {
     // SUPER ADMIN: Only system navigation
     navSections = superAdminNavSections;
-    additionalSections = []; // NO additional sections for super admin
-    console.log('🎛️ Navigation: SUPER_ADMIN mode - showing system nav');
+    additionalSections = [];
   } else if (normalizedRole === 'OWNER') {
     // OWNER: Full shop operations + admin section
     navSections = ownerNavSections;
     additionalSections = [ownerAdminSection];
-    console.log('👑 Navigation: OWNER mode - showing full shop nav + admin section');
   } else if (normalizedRole === 'SALES') {
     // SALES: Customer-facing operations only
     navSections = salesNavSections;
     additionalSections = [];
-    console.log('🛒 Navigation: SALES mode - showing sales operations only');
   } else if (normalizedRole === 'ACCOUNTS') {
     // ACCOUNTS: Financial operations only
     navSections = accountsNavSections;
     additionalSections = [];
-    console.log('💰 Navigation: ACCOUNTS mode - showing financial operations only');
   } else {
     // Unknown role - show minimal navigation
     navSections = [{ title: 'Overview', items: [{ href: '/dashboard', label: 'Dashboard', icon: '📊', desc: 'Metrics' }] }];
     additionalSections = [];
-    console.log('⚠️ Navigation: Unknown role - showing minimal nav');
   }
-  
-  console.log('📋 Navigation Sections:', navSections.length, 'sections with', navSections.flatMap(s => s.items).length, 'items');
-  console.log('📋 Full navSections:', JSON.stringify(navSections, null, 2));
 
   const handleLogout = async () => {
     try {

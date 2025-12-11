@@ -54,12 +54,8 @@ export async function middleware(request: NextRequest) {
       const userRole = session.role;
       const allowedRoutes = roleRoutes[userRole as keyof typeof roleRoutes] || [];
 
-      console.log(`🔐 Middleware Check: ${userRole} accessing ${pathname}`);
-      console.log(`📋 Allowed routes for ${userRole}:`, allowedRoutes);
-
       // Check if the current pathname is allowed for this user's role
       const hasAccess = allowedRoutes.some(route => pathname.startsWith(route));
-      console.log(`✅ Has access:`, hasAccess);
       
       // If the user doesn't have access to this route, check if it's a protected route
       if (!hasAccess) {
@@ -70,7 +66,6 @@ export async function middleware(request: NextRequest) {
         
         // Only block if it's a protected route
         if (isProtectedRoute) {
-          console.log(`🚫 BLOCKED: ${userRole} attempted to access ${pathname}`);
           const url = request.nextUrl.clone();
           
           // Redirect to role's default page

@@ -19,8 +19,6 @@ export default function LoginPage() {
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
-    console.log('Attempting login with:', { username: trimmedUsername, password: trimmedPassword ? '***' : 'empty' });
-
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -31,21 +29,17 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
-      console.log('Login response:', { status: response.status, data });
 
       if (data.success) {
-        // Redirect based on role - FIX: The API returns user directly, not nested in data.data
+        // Redirect based on role
         const userRole = data.user?.role;
-        console.log('🔐 User role detected:', userRole);
         
         if (userRole === 'SUPER_ADMIN') {
-          console.log('🎛️ Redirecting to Super Admin dashboard');
           router.push('/super-admin');
         } else {
-          console.log('📊 Redirecting to shop dashboard');
           router.push('/dashboard');
         }
-        router.refresh(); // Force refresh to update middleware
+        router.refresh();
       } else {
         setError(data.message || 'Invalid username or password');
         setLoading(false);
