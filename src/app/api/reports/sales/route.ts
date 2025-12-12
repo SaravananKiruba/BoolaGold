@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
       } : undefined
     );
 
-    // 🔒 SECURITY: Validate shopId
-    if (!session.shopId) {
+    // 🔒 SECURITY: Validate session and shopId
+    if (!session || !session.shopId) {
       return NextResponse.json(errorResponse('No shop context'), { status: 403 });
     }
 
