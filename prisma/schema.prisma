@@ -195,6 +195,8 @@ model Product {
   @@index([deletedAt])
   @@index([rateUsedId], map: "products_rateUsedId_fkey")
   @@index([supplierId], map: "products_supplierId_fkey")
+  @@index([shopId, isActive, deletedAt], name: "product_active_lookup")
+  @@index([shopId, metalType, purity], name: "product_metal_purity")
   @@map("products")
 }
 
@@ -224,6 +226,8 @@ model StockItem {
   @@index([huid])
   @@index([purchaseOrderId])
   @@index([deletedAt])
+  @@index([status, deletedAt], name: "stock_status_lookup")
+  @@index([productId, status, deletedAt], name: "stock_product_status")
   @@map("stock_items")
 }
 
@@ -246,6 +250,8 @@ model RateMaster {
 
   @@index([shopId])
   @@index([metalType, purity, isActive])
+  @@index([shopId, metalType, purity, isActive], name: "rate_fast_lookup")
+  @@index([shopId, isActive, createdAt], name: "rate_active_recent")
   @@map("rate_master")
 }
 
@@ -349,6 +355,9 @@ model SalesOrder {
   @@index([status])
   @@index([orderDate])
   @@index([deletedAt])
+  @@index([shopId, status, deletedAt], name: "sales_shop_status")
+  @@index([shopId, orderDate, deletedAt], name: "sales_date_range")
+  @@index([customerId, orderDate], name: "sales_customer_date")
   @@map("sales_orders")
 }
 

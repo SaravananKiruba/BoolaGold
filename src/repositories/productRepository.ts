@@ -156,9 +156,42 @@ export class ProductRepository extends BaseRepository {
         skip,
         take,
         orderBy: { createdAt: 'desc' },
-        include: {
-          supplier: true,
-          rateUsed: true,
+        // 🚀 Use select instead of include for better performance
+        select: {
+          id: true,
+          name: true,
+          metalType: true,
+          purity: true,
+          grossWeight: true,
+          netWeight: true,
+          barcode: true,
+          huid: true,
+          tagNumber: true,
+          makingCharges: true,
+          wastagePercent: true,
+          stoneValue: true,
+          collectionName: true,
+          design: true,
+          isActive: true,
+          isCustomOrder: true,
+          calculatedPrice: true,
+          reorderLevel: true,
+          createdAt: true,
+          updatedAt: true,
+          shopId: true,
+          supplierId: true,
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+          rateUsed: {
+            select: {
+              id: true,
+              ratePerGram: true,
+            }
+          },
           _count: {
             select: {
               stockItems: {

@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma';
 import { SessionPayload } from '@/lib/auth';
 import { PaginationParams, normalizePagination, createPaginatedResponse } from '@/utils/pagination';
 import { BaseRepository, RepositoryOptions } from './baseRepository';
+import { cache, CacheKeys, cacheOrFetch } from '@/utils/cache';
 
 export interface RateMasterFilters {
   metalType?: MetalType;
@@ -24,7 +25,7 @@ export class RateMasterRepository extends BaseRepository {
    */
   async create(data: Omit<Prisma.RateMasterUncheckedCreateInput, 'shopId'>): Promise<RateMaster> {
     try {
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         // If this is set as active, deactivate other rates for the same metal type and purity
         if (data.isActive) {
           await tx.rateMaster.updateMany({
@@ -47,6 +48,12 @@ export class RateMasterRepository extends BaseRepository {
           } as Prisma.RateMasterUncheckedCreateInput,
         });
       });
+
+      // 🚀 Invalidate cache for this rate
+      const cacheKey = CacheKeys.rate(this.getShopId(), data.metalType, data.purity);
+      cache.delete(cacheKey);
+
+      return result;
     } catch (error: any) {
       console.error('Error creating rate master:', error);
       throw new Error(`Failed to create rate master: ${error.message}`);
@@ -120,6 +127,7 @@ export class RateMasterRepository extends BaseRepository {
    * Get current active rate for a metal type and purity
    * Returns the most recent active rate that is currently valid
    * CRITICAL: Always filters by shopId for multi-tenant safety
+   * 🚀 CACHED for 5 minutes to reduce database load
    */
   async getCurrentRate(metalType: MetalType, purity: string): Promise<RateMaster | null> {
     try {
@@ -130,21 +138,30 @@ export class RateMasterRepository extends BaseRepository {
         throw new Error('Shop context is required to get current rate');
       }
 
-      return await prisma.rateMaster.findFirst({
-        where: {
-          shopId,
-          metalType,
-          purity,
-          isActive: true,
-          OR: [
-            { validUntil: null },
-            { validUntil: { gte: now } },
-          ],
+      // 🚀 Use cache to avoid repeated database queries
+      const cacheKey = CacheKeys.rate(shopId, metalType, purity);
+      
+      return await cacheOrFetch(
+        cacheKey,
+        async () => {
+          return await prisma.rateMaster.findFirst({
+            where: {
+              shopId,
+              metalType,
+              purity,
+              isActive: true,
+              OR: [
+                { validUntil: null },
+                { validUntil: { gte: now } },
+              ],
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          });
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+        300000 // 5 minutes cache
+      );
     } catch (error: any) {
       console.error('Error getting current rate:', error);
       throw new Error(`Failed to get current rate: ${error.message}`);

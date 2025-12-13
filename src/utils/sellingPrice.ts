@@ -18,10 +18,13 @@
  * USAGE:
  * - PO: Only ask purchaseCost
  * - SO: Call calculateSellingPriceForSale(tagId) - automatic!
+ * - BATCH: Call batchCalculateSellingPrices(stockItemIds) for multiple items
  */
 
 import { RateMasterRepository } from '@/repositories/rateMasterRepository';
 import { calculatePriceFromRate } from '@/utils/pricing';
+import prisma from '@/lib/prisma';
+import { MetalType } from '@/domain/entities/types';
 
 export interface SellingPriceResult {
   stockItemId: string;
@@ -219,8 +222,133 @@ async function getStockItemWithValidation(
 }
 
 /**
+ * 🚀 BATCH Calculate selling prices for multiple stock items
+ * Optimized to fetch rates ONCE and reuse for all items with same metal/purity
+ * 
+ * @param stockItemIds Array of stock item IDs
+ * @param shopId Shop ID for rate lookup
+ * @returns Array of selling price results
+ */
+export async function batchCalculateSellingPrices(
+  stockItemIds: string[],
+  shopId: string
+): Promise<SellingPriceResult[]> {
+  if (!stockItemIds || stockItemIds.length === 0) {
+    return [];
+  }
+
+  // 🚀 Fetch all stock items with products in ONE query
+  const stockItems = await prisma.stockItem.findMany({
+    where: {
+      id: { in: stockItemIds },
+      deletedAt: null,
+    },
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          metalType: true,
+          purity: true,
+          netWeight: true,
+          wastagePercent: true,
+          makingCharges: true,
+          stoneValue: true,
+          shopId: true,
+        }
+      }
+    }
+  });
+
+  // Group by metal type and purity to minimize rate lookups
+  const metalPurityGroups = new Map<string, typeof stockItems>();
+  
+  for (const item of stockItems) {
+    if (!item.product) continue;
+    const key = `${item.product.metalType}_${item.product.purity}`;
+    const group = metalPurityGroups.get(key) || [];
+    group.push(item);
+    metalPurityGroups.set(key, group);
+  }
+
+  // 🚀 Fetch rates for all unique metal/purity combinations in ONE query
+  const metalPurityPairs = Array.from(metalPurityGroups.keys()).map(key => {
+    const [metalType, purity] = key.split('_');
+    return { metalType: metalType as MetalType, purity };
+  });
+
+  const prismaClient = (await import('@/lib/prisma')).default;
+  const rates = await prismaClient.rateMaster.findMany({
+    where: {
+      shopId,
+      isActive: true,
+      OR: metalPurityPairs.map(pair => ({
+        metalType: pair.metalType,
+        purity: pair.purity,
+      })),
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Create rate lookup map
+  const rateMap = new Map<string, typeof rates[0]>();
+  for (const rate of rates) {
+    const key = `${rate.metalType}_${rate.purity}`;
+    if (!rateMap.has(key)) {
+      rateMap.set(key, rate);
+    }
+  }
+
+  // Calculate prices for all items
+  const results: SellingPriceResult[] = [];
+
+  for (const stockItem of stockItems) {
+    const product = stockItem.product;
+    if (!product) continue;
+
+    const rateKey = `${product.metalType}_${product.purity}`;
+    const rate = rateMap.get(rateKey);
+
+    if (!rate) {
+      throw new Error(
+        `No active rate found for ${product.metalType} ${product.purity}`
+      );
+    }
+
+    const netWeight = Number(product.netWeight);
+    const wastagePercent = Number(product.wastagePercent);
+    const makingCharges = Number(product.makingCharges);
+    const stoneValue = product.stoneValue ? Number(product.stoneValue) : 0;
+    const ratePerGram = Number(rate.ratePerGram);
+
+    const { sellingPrice, calculation } = calculatePriceFromRate({
+      netWeight,
+      wastagePercent,
+      metalRatePerGram: ratePerGram,
+      makingCharges,
+      stoneValue,
+    });
+
+    results.push({
+      stockItemId: stockItem.id,
+      tagId: stockItem.tagId,
+      productName: product.name,
+      sellingPrice,
+      calculation,
+      rateDetails: {
+        metalType: product.metalType,
+        purity: product.purity,
+        ratePerGram,
+      },
+    });
+  }
+
+  return results;
+}
+
+/**
  * Calculate selling prices for multiple stock items
- * Used when creating sales order with multiple items
+ * Legacy wrapper for backwards compatibility
  */
 export async function calculateSellingPricesForSale(
   stockItemIdsOrTags: string[]

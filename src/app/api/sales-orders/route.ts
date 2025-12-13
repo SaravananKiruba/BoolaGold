@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     // Calculate selling prices automatically from product + latest rate
-    const { calculateSellingPriceForSale } = await import('@/utils/sellingPrice');
+    const { calculateSellingPriceForSale, batchCalculateSellingPrices } = await import('@/utils/sellingPrice');
     
     let orderTotal = 0;
     const lineItemsWithPrices: any[] = [];
@@ -116,16 +116,55 @@ export async function POST(request: NextRequest) {
     const repos = await getRepositories(request);
     const stockRepository = repos.stockItem;
 
-    for (const line of data.lines) {
-      // Find stock item by ID or Tag ID
-      const identifier = line.stockItemId || line.tagId!;
-      let stockItem;
-      
-      if (line.stockItemId) {
-        stockItem = await stockRepository.findById(line.stockItemId);
-      } else if (line.tagId) {
-        stockItem = await stockRepository.findByTagId(line.tagId);
+    // 🚀 OPTIMIZATION: Batch fetch all stock items in ONE query instead of N queries
+    const stockItemIds = data.lines.map(line => line.stockItemId).filter(Boolean) as string[];
+    const tagIds = data.lines.map(line => line.tagId).filter(Boolean) as string[];
+    
+    const stockItems = await prisma.stockItem.findMany({
+      where: {
+        OR: [
+          { id: { in: stockItemIds } },
+          { tagId: { in: tagIds } }
+        ],
+        deletedAt: null,
+        product: {
+          shopId: session!.shopId!,
+        }
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            metalType: true,
+            purity: true,
+            netWeight: true,
+            wastagePercent: true,
+            makingCharges: true,
+            stoneValue: true,
+            shopId: true,
+          }
+        }
       }
+    });
+
+    // Create lookup map for O(1) access
+    const stockItemMap = new Map(stockItems.map(item => [item.id, item]));
+    const tagIdMap = new Map(stockItems.map(item => [item.tagId, item]));
+
+    // 🚀 OPTIMIZATION: Batch calculate all prices (fetches rate ONCE)
+    const priceResults = await batchCalculateSellingPrices(
+      stockItems.map(item => item.id),
+      session!.shopId!
+    );
+    const priceMap = new Map(priceResults.map((p: any) => [p.stockItemId, p]));
+
+    // Validate and build line items
+    for (const line of data.lines) {
+      const identifier = line.stockItemId || line.tagId!;
+      const stockItem = line.stockItemId 
+        ? stockItemMap.get(line.stockItemId)
+        : tagIdMap.get(line.tagId!);
 
       if (!stockItem) {
         return NextResponse.json(
@@ -141,8 +180,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Calculate selling price from product specs + latest rate
-      const priceInfo = await calculateSellingPriceForSale(stockItem.id);
+      // Get pre-calculated price from batch operation
+      const priceInfo = priceMap.get(stockItem.id) as any;
+      
+      if (!priceInfo) {
+        return NextResponse.json(
+          errorResponse(`Failed to calculate price for stock item ${stockItem.tagId}`),
+          { status: 500 }
+        );
+      }
       
       const lineTotal = priceInfo.sellingPrice * line.quantity;
       orderTotal += lineTotal;
@@ -274,8 +320,8 @@ export async function POST(request: NextRequest) {
 
       return order;
     }, {
-      maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
-      timeout: 15000, // Maximum time for transaction execution (15 seconds)
+      maxWait: 5000, // 🚀 Reduced wait time (5 seconds)
+      timeout: 10000, // 🚀 Optimized timeout (10 seconds)
     });
 
     // Log the creation

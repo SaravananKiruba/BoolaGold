@@ -161,9 +161,9 @@ export class TransactionRepository extends BaseRepository {
    * Get income summary
    */
   async getIncomeSummary(filters: { startDate?: Date; endDate?: Date } = {}) {
-    const where = this.withShopContext({
-      transactionType: 'INCOME',
-      status: 'COMPLETED',
+    const where: Prisma.TransactionWhereInput = this.withShopContext({
+      transactionType: TransactionType.INCOME,
+      status: TransactionStatus.COMPLETED,
       deletedAt: null,
     });
 
@@ -192,7 +192,7 @@ export class TransactionRepository extends BaseRepository {
     ]);
 
     return {
-      totalIncome: totalIncome._sum.amount || 0,
+      totalIncome: totalIncome._sum?.amount || 0,
       incomeCount,
       incomeByPaymentMode,
     };
@@ -202,9 +202,9 @@ export class TransactionRepository extends BaseRepository {
    * Get expense summary
    */
   async getExpenseSummary(filters: { startDate?: Date; endDate?: Date } = {}) {
-    const where = this.withShopContext({
-      transactionType: 'EXPENSE',
-      status: 'COMPLETED',
+    const where: Prisma.TransactionWhereInput = this.withShopContext({
+      transactionType: TransactionType.EXPENSE,
+      status: TransactionStatus.COMPLETED,
       deletedAt: null,
     });
 
@@ -233,7 +233,7 @@ export class TransactionRepository extends BaseRepository {
     ]);
 
     return {
-      totalExpense: totalExpense._sum.amount || 0,
+      totalExpense: totalExpense._sum?.amount || 0,
       expenseCount,
       expenseByCategory,
     };
@@ -243,9 +243,9 @@ export class TransactionRepository extends BaseRepository {
    * Get metal purchase summary
    */
   async getMetalPurchaseSummary(filters: { startDate?: Date; endDate?: Date; metalType?: MetalType } = {}) {
-    const where = this.withShopContext({
-      transactionType: 'METAL_PURCHASE',
-      status: 'COMPLETED',
+    const where: Prisma.TransactionWhereInput = this.withShopContext({
+      transactionType: TransactionType.METAL_PURCHASE,
+      status: TransactionStatus.COMPLETED,
       deletedAt: null,
     });
 
@@ -280,8 +280,8 @@ export class TransactionRepository extends BaseRepository {
     ]);
 
     return {
-      totalAmount: totalAmount._sum.amount || 0,
-      totalWeight: totalAmount._sum.metalWeight || 0,
+      totalAmount: totalAmount._sum?.amount || 0,
+      totalWeight: totalAmount._sum?.metalWeight || 0,
       purchaseCount: totalWeight,
       purchasesByMetal,
     };

@@ -374,7 +374,7 @@ export default function Navigation() {
                   )}
                   
                   {/* Section Items */}
-                  {section.items.map((item) => {
+                  {section.items.map((item: any) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                     return (
                       <Link
