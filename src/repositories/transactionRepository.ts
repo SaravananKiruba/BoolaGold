@@ -161,11 +161,11 @@ export class TransactionRepository extends BaseRepository {
    * Get income summary
    */
   async getIncomeSummary(filters: { startDate?: Date; endDate?: Date } = {}) {
-    const where: Prisma.TransactionWhereInput = {
+    const where = this.withShopContext({
       transactionType: 'INCOME',
       status: 'COMPLETED',
       deletedAt: null,
-    };
+    });
 
     if (filters.startDate || filters.endDate) {
       where.transactionDate = buildDateRangeFilter(filters);
@@ -202,11 +202,11 @@ export class TransactionRepository extends BaseRepository {
    * Get expense summary
    */
   async getExpenseSummary(filters: { startDate?: Date; endDate?: Date } = {}) {
-    const where: Prisma.TransactionWhereInput = {
+    const where = this.withShopContext({
       transactionType: 'EXPENSE',
       status: 'COMPLETED',
       deletedAt: null,
-    };
+    });
 
     if (filters.startDate || filters.endDate) {
       where.transactionDate = buildDateRangeFilter(filters);
@@ -243,11 +243,11 @@ export class TransactionRepository extends BaseRepository {
    * Get metal purchase summary
    */
   async getMetalPurchaseSummary(filters: { startDate?: Date; endDate?: Date; metalType?: MetalType } = {}) {
-    const where: Prisma.TransactionWhereInput = {
+    const where = this.withShopContext({
       transactionType: 'METAL_PURCHASE',
       status: 'COMPLETED',
       deletedAt: null,
-    };
+    });
 
     if (filters.startDate || filters.endDate) {
       where.transactionDate = buildDateRangeFilter(filters);

@@ -158,9 +158,15 @@ export class RateMasterRepository extends BaseRepository {
   async getAllCurrentRates(): Promise<RateMaster[]> {
     try {
       const now = new Date();
+      const shopId = this.getShopId();
+
+      if (!shopId) {
+        throw new Error('Shop context is required to get current rates');
+      }
 
       const rates = await prisma.rateMaster.findMany({
         where: {
+          shopId,
           isActive: true,
           OR: [
             { validUntil: null },
@@ -201,8 +207,14 @@ export class RateMasterRepository extends BaseRepository {
   ) {
     try {
       const { page, pageSize, skip, take } = normalizePagination(pagination);
+      const shopId = this.getShopId();
+
+      if (!shopId) {
+        throw new Error('Shop context is required to get rate history');
+      }
 
       const where: Prisma.RateMasterWhereInput = {
+        shopId,
         metalType,
         purity,
       };

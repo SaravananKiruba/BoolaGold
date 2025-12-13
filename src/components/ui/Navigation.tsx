@@ -359,53 +359,63 @@ export default function Navigation() {
               )}
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="desktop-nav" style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {(() => {
-                const allItems = navSections.flatMap(section => section.items)
-                  .concat(additionalSections.flatMap(section => section.items));
-                console.log('🔍 Rendering', allItems.length, 'navigation items:', allItems.map(i => i.label));
-                return allItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    title={item.desc}
-                    style={{
-                      textDecoration: 'none',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      fontSize: '0.85rem',
-                      fontWeight: 500,
-                      color: isActive ? 'var(--color-primary)' : 'white',
-                      background: isActive ? 'white' : 'rgba(255, 255, 255, 0.1)',
-                      transition: 'all 0.2s ease',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      border: isActive ? '2px solid var(--color-gold)' : '2px solid transparent',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseOver={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }
-                    }}
-                  >
-                    <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
-                    <span className="nav-label">{item.label}</span>
-                  </Link>
-                );
-                });
-              })()}
+            {/* Desktop Navigation - Enhanced with Grouping (>1200px) */}
+            <div className="desktop-nav" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flex: 1, overflow: 'auto' }}>
+              {[...navSections, ...additionalSections].map((section, sectionIdx) => (
+                <div key={sectionIdx} className="nav-group" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                  {/* Section Separator */}
+                  {sectionIdx > 0 && (
+                    <div style={{ 
+                      width: '1px', 
+                      height: '20px', 
+                      background: 'rgba(255,255,255,0.3)', 
+                      margin: '0 8px' 
+                    }} />
+                  )}
+                  
+                  {/* Section Items */}
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={`${section.title}: ${item.desc}`}
+                        style={{
+                          textDecoration: 'none',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: 500,
+                          color: isActive ? 'var(--color-primary)' : 'white',
+                          background: isActive ? 'white' : 'rgba(255, 255, 255, 0.1)',
+                          transition: 'all 0.2s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: isActive ? '2px solid var(--color-gold)' : '2px solid transparent',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onMouseOver={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }
+                        }}
+                      >
+                        <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
+                        <span className="nav-label">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
             
             {/* Logout Button - Always visible on desktop and tablet */}
@@ -426,6 +436,7 @@ export default function Navigation() {
                 alignItems: 'center',
                 gap: '6px',
                 whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
@@ -538,22 +549,51 @@ export default function Navigation() {
       )}
 
       <style jsx global>{`
-        /* Hide mobile menu button by default on desktop */
+        /* Default styles - show desktop nav by default */
+        .desktop-nav {
+          display: flex !important;
+          flex-wrap: nowrap !important;
+        }
+        
+        .desktop-logout-btn {
+          display: inline-flex !important;
+        }
+        
         .mobile-menu-btn {
           display: none;
         }
         
-        /* On medium screens (tablet), hide nav labels but keep icons and logout */
-        @media (max-width: 1200px) {
-          .nav-label {
+        /* DESKTOP (>1200px): Full horizontal nav with grouping and labels */
+        @media (min-width: 1201px) {
+          .desktop-nav {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+          }
+          .desktop-logout-btn {
+            display: inline-flex !important;
+          }
+          .mobile-menu-btn {
             display: none !important;
           }
-          .logout-label {
-            display: none !important;
+          .nav-label, .logout-label {
+            display: inline !important;
           }
         }
         
-        /* On small screens (mobile phones only), hide desktop nav and logout, show mobile menu */
+        /* TABLET (768px - 1200px): Hamburger menu like mobile */
+        @media (min-width: 768px) and (max-width: 1200px) {
+          .desktop-nav {
+            display: none !important;
+          }
+          .desktop-logout-btn {
+            display: none !important;
+          }
+          .mobile-menu-btn {
+            display: block !important;
+          }
+        }
+        
+        /* MOBILE (<768px): Hamburger menu */
         @media (max-width: 767px) {
           .desktop-nav {
             display: none !important;
@@ -564,6 +604,18 @@ export default function Navigation() {
           .mobile-menu-btn {
             display: block !important;
           }
+        }
+        
+        /* Scrollbar styling for horizontal nav overflow */
+        .desktop-nav::-webkit-scrollbar {
+          height: 4px;
+        }
+        .desktop-nav::-webkit-scrollbar-track {
+          background: rgba(255,255,255,0.1);
+        }
+        .desktop-nav::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.3);
+          border-radius: 2px;
         }
       `}</style>
     </>
