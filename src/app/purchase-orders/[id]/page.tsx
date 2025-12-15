@@ -750,13 +750,12 @@ function EditPurchaseOrderModal({ purchaseOrder, onClose, onSuccess }: {
   );
 }
 
-// Receive Stock Modal
+// Receive Stock Modal with Product-by-Product Progress
 function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
   purchaseOrder: PurchaseOrder;
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [products, setProducts] = useState<Product[]>([]);
   const [receiptItems, setReceiptItems] = useState<Array<{
     purchaseOrderItemId: string;
     productId: string;
@@ -766,8 +765,12 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
     pendingQty: number;
     quantityToReceive: number;
     purchaseCost: string;
+    status: 'pending' | 'processing' | 'completed' | 'error';
+    error?: string;
+    stockItemsCreated?: number;
   }>>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [currentProductIndex, setCurrentProductIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -783,9 +786,61 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
         pendingQty: item.quantity - item.receivedQuantity,
         quantityToReceive: item.quantity - item.receivedQuantity,
         purchaseCost: item.unitPrice.toString(),
+        status: 'pending' as const,
       }));
     setReceiptItems(items);
   }, [purchaseOrder]);
+
+  // Process single product with proper error handling
+  const processSingleProduct = async (item: typeof receiptItems[0], index: number) => {
+    try {
+      const response = await fetch(`/api/purchase-orders/${purchaseOrder.id}/receive-stock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{
+            purchaseOrderItemId: item.purchaseOrderItemId,
+            productId: item.productId,
+            quantityToReceive: item.quantityToReceive,
+            receiptDetails: [{
+              purchaseCost: parseFloat(item.purchaseCost),
+            }],
+          }],
+          singleProductMode: true,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Mark as completed
+        setReceiptItems(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            status: 'completed',
+            stockItemsCreated: result.data.stockItemsCreated,
+          };
+          return updated;
+        });
+        return { success: true, stockItemsCreated: result.data.stockItemsCreated };
+      } else {
+        throw new Error(result.error?.message || 'Failed to receive stock');
+      }
+    } catch (err: any) {
+      // Mark as error
+      setReceiptItems(prev => {
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          status: 'error',
+          error: err.message,
+        };
+        return updated;
+      });
+      return { success: false, error: err.message };
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -804,35 +859,60 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
       return;
     }
 
-    setSubmitting(true);
+    setProcessing(true);
 
-    try {
-      const response = await fetch(`/api/purchase-orders/${purchaseOrder.id}/receive-stock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: itemsToReceive.map(item => ({
-            purchaseOrderItemId: item.purchaseOrderItemId,
-            productId: item.productId,
-            quantityToReceive: item.quantityToReceive,
-            receiptDetails: [{
-              purchaseCost: parseFloat(item.purchaseCost),
-            }],
-          })),
-        }),
+    // Process products one by one with progress tracking
+    let totalSuccess = 0;
+    let totalFailed = 0;
+    let totalItemsCreated = 0;
+
+    for (let i = 0; i < itemsToReceive.length; i++) {
+      const item = itemsToReceive[i];
+      const actualIndex = receiptItems.findIndex(
+        ri => ri.purchaseOrderItemId === item.purchaseOrderItemId
+      );
+
+      // Update status to processing
+      setCurrentProductIndex(i);
+      setReceiptItems(prev => {
+        const updated = [...prev];
+        updated[actualIndex] = { ...updated[actualIndex], status: 'processing' };
+        return updated;
       });
 
-      const result = await response.json();
+      // Process this product
+      const result = await processSingleProduct(item, actualIndex);
+
       if (result.success) {
-        toast.success(`Stock received successfully! ${result.data.stockItemsCreated} items generated with unique Tag IDs and Barcodes.`, 5000);
-        onSuccess();
+        totalSuccess++;
+        totalItemsCreated += result.stockItemsCreated || 0;
       } else {
-        setError(result.error?.message || 'Failed to receive stock');
+        totalFailed++;
       }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
+
+      // Small delay between products for UI smoothness
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    setProcessing(false);
+    setCurrentProductIndex(-1);
+
+    // Show summary
+    if (totalFailed === 0) {
+      toast.success(
+        `✅ All stock received successfully! ${totalItemsCreated} items generated with unique Tag IDs and Barcodes.`,
+        6000
+      );
+      setTimeout(() => onSuccess(), 1500);
+    } else if (totalSuccess > 0) {
+      toast.warning(
+        `⚠️ Partially completed: ${totalSuccess} products succeeded, ${totalFailed} failed. ${totalItemsCreated} items created.`,
+        7000
+      );
+      // Partial success - still refresh to show what was received
+      setTimeout(() => onSuccess(), 2000);
+    } else {
+      setError(`Failed to receive stock for all ${totalFailed} products. Please check errors below.`);
     }
   };
 
@@ -875,6 +955,7 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
             <table className="table">
               <thead>
                 <tr>
+                  <th>Status</th>
                   <th>Product</th>
                   <th>Ordered</th>
                   <th>Received</th>
@@ -885,8 +966,30 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
               </thead>
               <tbody>
                 {receiptItems.map((item, index) => (
-                  <tr key={item.purchaseOrderItemId}>
-                    <td style={{ fontWeight: 500 }}>{item.productName}</td>
+                  <tr key={item.purchaseOrderItemId} style={{
+                    background: item.status === 'completed' ? '#d4edda' : 
+                               item.status === 'processing' ? '#fff3cd' : 
+                               item.status === 'error' ? '#f8d7da' : 'transparent'
+                  }}>
+                    <td style={{ width: '60px', textAlign: 'center' }}>
+                      {item.status === 'completed' && <span style={{ color: '#28a745', fontSize: '20px' }}>✓</span>}
+                      {item.status === 'processing' && <span style={{ color: '#ffc107', fontSize: '20px' }}>⏳</span>}
+                      {item.status === 'error' && <span style={{ color: '#dc3545', fontSize: '20px' }}>✗</span>}
+                      {item.status === 'pending' && <span style={{ color: '#6c757d', fontSize: '16px' }}>⭕</span>}
+                    </td>
+                    <td style={{ fontWeight: 500 }}>
+                      {item.productName}
+                      {item.status === 'completed' && item.stockItemsCreated && (
+                        <div style={{ fontSize: '11px', color: '#28a745', marginTop: '2px' }}>
+                          {item.stockItemsCreated} items created
+                        </div>
+                      )}
+                      {item.status === 'error' && item.error && (
+                        <div style={{ fontSize: '11px', color: '#dc3545', marginTop: '2px' }}>
+                          {item.error}
+                        </div>
+                      )}
+                    </td>
                     <td>{item.orderedQty}</td>
                     <td style={{ color: '#666' }}>{item.receivedQty}</td>
                     <td style={{ color: '#dc3545', fontWeight: 500 }}>{item.pendingQty}</td>
@@ -901,7 +1004,14 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
                           newItems[index].quantityToReceive = parseInt(e.target.value) || 0;
                           setReceiptItems(newItems);
                         }}
-                        style={{ width: '80px', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                        disabled={processing}
+                        style={{ 
+                          width: '80px', 
+                          padding: '6px', 
+                          border: '1px solid #ddd', 
+                          borderRadius: '4px',
+                          opacity: processing ? 0.6 : 1 
+                        }}
                       />
                     </td>
                     <td>
@@ -915,7 +1025,14 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
                           newItems[index].purchaseCost = e.target.value;
                           setReceiptItems(newItems);
                         }}
-                        style={{ width: '100px', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                        disabled={processing}
+                        style={{ 
+                          width: '100px', 
+                          padding: '6px', 
+                          border: '1px solid #ddd', 
+                          borderRadius: '4px',
+                          opacity: processing ? 0.6 : 1 
+                        }}
                         placeholder="Per piece"
                       />
                     </td>
@@ -925,45 +1042,91 @@ function ReceiveStockModal({ purchaseOrder, onClose, onSuccess }: {
             </table>
           </div>
 
-          <div style={{ padding: '15px', background: '#d5f4e6', borderRadius: '8px', marginBottom: '20px' }}>
-            <strong>Total Items to Receive:</strong> {receiptItems.reduce((sum, item) => sum + item.quantityToReceive, 0)}
-            <div style={{ fontSize: '12px', color: '#00b894', marginTop: '5px' }}>
-              ✓ Unique Tag IDs and Barcodes will be generated for each physical piece
-            </div>
+          <div style={{ 
+            padding: '15px', 
+            background: processing ? '#fff3cd' : '#d5f4e6', 
+            borderRadius: '8px', 
+            marginBottom: '20px',
+            border: processing ? '2px solid #ffc107' : 'none'
+          }}>
+            {processing ? (
+              <div>
+                <strong style={{ color: '#856404' }}>⏳ Processing Products...</strong>
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '14px', marginBottom: '8px' }}>
+                    Progress: {receiptItems.filter(i => i.status === 'completed').length} of {receiptItems.filter(i => i.quantityToReceive > 0).length} completed
+                  </div>
+                  <div style={{ 
+                    background: '#fff', 
+                    height: '8px', 
+                    borderRadius: '4px', 
+                    overflow: 'hidden',
+                    border: '1px solid #ffc107'
+                  }}>
+                    <div style={{
+                      width: `${(receiptItems.filter(i => i.status === 'completed').length / receiptItems.filter(i => i.quantityToReceive > 0).length) * 100}%`,
+                      height: '100%',
+                      background: '#28a745',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                  {currentProductIndex >= 0 && (
+                    <div style={{ fontSize: '12px', color: '#856404', marginTop: '8px' }}>
+                      Currently processing: {receiptItems.filter(i => i.quantityToReceive > 0)[currentProductIndex]?.productName}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <strong>Total Items to Receive:</strong> {receiptItems.reduce((sum, item) => sum + item.quantityToReceive, 0)}
+                <div style={{ fontSize: '12px', color: '#00b894', marginTop: '5px' }}>
+                  ✓ Products will be processed one-by-one with live progress tracking
+                </div>
+                <div style={{ fontSize: '12px', color: '#00b894', marginTop: '2px' }}>
+                  ✓ Unique Tag IDs and Barcodes will be generated for each physical piece
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={processing}
               style={{
                 flex: 1,
                 padding: '12px 20px',
-                background: submitting ? '#ccc' : '#28a745',
+                background: processing ? '#ccc' : '#28a745',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: submitting ? 'not-allowed' : 'pointer',
+                cursor: processing ? 'not-allowed' : 'pointer',
                 fontWeight: 500,
               }}
             >
-              {submitting ? 'Receiving Stock...' : '📦 Receive Stock & Generate Items'}
+              {processing ? (
+                <span>⏳ Processing Products... ({receiptItems.filter(i => i.status === 'completed').length}/{receiptItems.filter(i => i.quantityToReceive > 0).length})</span>
+              ) : (
+                '📦 Start Receiving Stock'
+              )}
             </button>
             <button
               type="button"
               onClick={onClose}
+              disabled={processing}
               style={{
                 flex: 1,
                 padding: '12px 20px',
-                background: '#6c757d',
+                background: processing ? '#ccc' : '#6c757d',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer',
+                cursor: processing ? 'not-allowed' : 'pointer',
                 fontWeight: 500,
               }}
             >
-              Cancel
+              {processing ? 'Processing...' : 'Cancel'}
             </button>
           </div>
         </form>

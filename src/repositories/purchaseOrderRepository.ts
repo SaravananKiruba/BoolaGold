@@ -309,6 +309,9 @@ export class PurchaseOrderRepository extends BaseRepository {
         stockItems,
         purchaseOrder: updatedPO,
       };
+    }, {
+      maxWait: 15000, // Maximum time to wait for transaction to start (15 seconds)
+      timeout: 15000,  // Maximum time for transaction to complete (15 seconds)
     });
   }
 

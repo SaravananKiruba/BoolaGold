@@ -27,8 +27,9 @@ export async function POST(
     const purchaseOrderId = params.id;
 
     const {
-      items, // Array of items to receive
+      items, // Array of items to receive (can be single or multiple)
       receivedBy,
+      singleProductMode = false, // NEW: Process single product for progress tracking
     } = body;
 
     /*
@@ -47,6 +48,14 @@ export async function POST(
     if (!items || items.length === 0) {
       return NextResponse.json(
         { error: 'Items to receive are required' },
+        { status: 400 }
+      );
+    }
+
+    // For single product mode, ensure only one item
+    if (singleProductMode && items.length !== 1) {
+      return NextResponse.json(
+        { error: 'Single product mode requires exactly one item' },
         { status: 400 }
       );
     }
@@ -156,6 +165,8 @@ export async function POST(
       message: 'Stock received successfully',
       purchaseOrder: result.purchaseOrder,
       stockItemsCreated: result.stockItems.length,
+      productName: receiptItems.length === 1 ? (await repos.product.findById(receiptItems[0].productId))?.name : undefined,
+      processedItems: receiptItems.length,
     }), { status: 201 });
   } catch (error) {
     return handleApiError(error);
