@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePageGuard } from '@/hooks/usePageGuard';
 import Link from 'next/link';
 import { toast } from '@/utils/toast';
+import ProductAutocomplete from '@/components/ui/ProductAutocomplete';
 
 interface PurchaseOrder {
   id: string;
@@ -431,7 +432,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '1000px' }}>
+      <div className="modal-content" style={{ maxWidth: '1200px' }}>
         <div className="modal-header">
           <h2 style={{ margin: 0 }}>Create Purchase Order</h2>
           <button onClick={onClose} className="modal-close">×</button>
@@ -565,46 +566,39 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
             </div>
           )}
 
-          <div style={{ background: '#f5f5f5', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
-            <div className="responsive-grid" style={{ 
+          {/* Product Selection Card */}
+          <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '8px', marginBottom: '15px' }}>
+            <h4 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: 600 }}>
+              Add Product
+            </h4>
+            
+            {/* Product Autocomplete - Full Width */}
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                🔍 Product Search {loadingProducts && '(Loading...)'}
+              </label>
+              <ProductAutocomplete
+                value={currentItem.productId}
+                onChange={(productId, product) => {
+                  setCurrentItem({ ...currentItem, productId });
+                }}
+                disabled={loadingProducts || products.length === 0}
+                placeholder="Type to search by name, code, or barcode..."
+              />
+            </div>
+
+            {/* Quantity and Prices - Responsive Grid */}
+            <div style={{ 
+              display: 'grid', 
               gridTemplateColumns: formData.autoReceiveStock 
-                ? 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))' 
-                : 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', 
-              alignItems: 'end' 
+                ? 'repeat(auto-fit, minmax(140px, 1fr))' 
+                : 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: '12px',
+              marginBottom: '15px'
             }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                  Product {loadingProducts && '(Loading...)'}
-                </label>
-                <select
-                  value={currentItem.productId}
-                  onChange={(e) => setCurrentItem({ ...currentItem, productId: e.target.value })}
-                  disabled={loadingProducts || products.length === 0}
-                  style={{ 
-                    width: '100%', 
-                    padding: '8px', 
-                    border: '1px solid #ddd', 
-                    borderRadius: '4px',
-                    cursor: (loadingProducts || products.length === 0) ? 'not-allowed' : 'pointer',
-                    background: (loadingProducts || products.length === 0) ? '#f5f5f5' : 'white',
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="">-- Search and Select Product --</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} ({product.metalType} {product.purity}) - {product.netWeight}g
-                    </option>
-                  ))}
-                </select>
-                <div style={{ fontSize: '11px', color: '#666', marginTop: '3px' }}>
-                  💡 Start typing to filter products
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                  Qty
+                  Quantity
                 </label>
                 <input
                   type="number"
@@ -617,7 +611,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                  Unit Price (₹) - Cost Price
+                  Unit Price (₹)
                 </label>
                 <input
                   type="number"
@@ -626,51 +620,46 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                   value={currentItem.unitPrice}
                   onChange={(e) => setCurrentItem({ ...currentItem, unitPrice: e.target.value })}
                   style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  placeholder="Cost per unit from supplier"
+                  placeholder="Cost per unit"
                 />
-                <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-                  💡 Unit price from supplier. Selling price calculated automatically at sales time.
-                </div>
               </div>
 
               {formData.autoReceiveStock && (
-                <>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
-                      Purchase Cost (₹) <span style={{ color: 'red' }}>*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={currentItem.purchaseCost}
-                      onChange={(e) => setCurrentItem({ ...currentItem, purchaseCost: e.target.value })}
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                      placeholder="Per piece"
-                    />
-                  </div>
-                </>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                    Purchase Cost (₹) <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={currentItem.purchaseCost}
+                    onChange={(e) => setCurrentItem({ ...currentItem, purchaseCost: e.target.value })}
+                    style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                    placeholder="Per piece"
+                  />
+                </div>
               )}
-
-              <button
-                type="button"
-                onClick={handleAddItem}
-                style={{
-                  padding: '8px 16px',
-                  background: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  whiteSpace: 'nowrap',
-                  minWidth: '100px',
-                  gridColumn: formData.autoReceiveStock ? 'span 1' : 'span 1',
-                }}
-              >
-                + Add
-              </button>
             </div>
+
+            {/* Add Button */}
+            <button
+              type="button"
+              onClick={handleAddItem}
+              style={{
+                width: '100%',
+                padding: '10px 20px',
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 500,
+                fontSize: '14px'
+              }}
+            >
+              + Add Item to Order
+            </button>
           </div>
 
           {orderItems.length > 0 && (

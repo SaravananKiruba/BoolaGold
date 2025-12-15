@@ -307,78 +307,175 @@ export default function CustomersPage() {
 
         {!loading && !error && customers.length > 0 && (
           <>
-            <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Total Orders</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td style={{ fontWeight: 500 }}>{customer.name}</td>
-                    <td>{customer.phone}</td>
-                    <td>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', 
+              gap: '16px',
+              marginBottom: '20px'
+            }}>
+              {customers.map((customer) => (
+                <div
+                  key={customer.id}
+                  style={{
+                    background: 'white',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    padding: '18px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  {/* Status & Type Badges */}
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '12px', 
+                    right: '12px', 
+                    display: 'flex', 
+                    gap: '6px',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end'
+                  }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      background: customer.isActive ? '#d5f4e6' : '#ffcdd2',
+                      color: customer.isActive ? '#00b894' : '#d32f2f',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600
+                    }}>
+                      {customer.isActive ? '✓ Active' : '✕ Inactive'}
+                    </span>
+                    <span style={{
+                      padding: '4px 8px',
+                      background: customer.customerType === 'VIP' ? '#ffeaa7' : 
+                                 customer.customerType === 'WHOLESALE' ? '#a29bfe' : '#dfe6e9',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: customer.customerType === 'VIP' ? '#d63031' : 
+                             customer.customerType === 'WHOLESALE' ? '#6c5ce7' : '#2d3436'
+                    }}>
+                      {customer.customerType}
+                    </span>
+                  </div>
+
+                  {/* Customer Name */}
+                  <h3 style={{ 
+                    margin: '0 0 10px 0', 
+                    fontSize: '18px', 
+                    fontWeight: 600,
+                    color: '#333',
+                    paddingRight: '90px'
+                  }}>
+                    👤 {customer.name}
+                  </h3>
+
+                  {/* Contact Info */}
+                  <div style={{ 
+                    marginBottom: '12px',
+                    paddingBottom: '12px',
+                    borderBottom: '1px solid #f0f0f0'
+                  }}>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '6px' }}>
+                      📱 {customer.phone}
+                    </div>
+                    {customer.email && (
+                      <div style={{ fontSize: '13px', color: '#666', wordBreak: 'break-all' }}>
+                        ✉️ {customer.email}
+                      </div>
+                    )}
+                    {customer.city && (
+                      <div style={{ fontSize: '13px', color: '#666', marginTop: '6px' }}>
+                        📍 {customer.city}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Statistics */}
+                  <div style={{ 
+                    background: '#f8f9fa', 
+                    padding: '10px', 
+                    borderRadius: '6px',
+                    marginBottom: '12px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', color: '#666' }}>Total Orders:</span>
                       <span style={{ 
-                        padding: '4px 8px', 
-                        background: customer.customerType === 'VIP' ? '#ffeaa7' : customer.customerType === 'WHOLESALE' ? '#a29bfe' : '#dfe6e9', 
-                        borderRadius: '4px', 
-                        fontSize: '12px' 
+                        fontSize: '16px', 
+                        fontWeight: 700, 
+                        color: '#0070f3',
+                        background: '#e3f2fd',
+                        padding: '4px 10px',
+                        borderRadius: '4px'
                       }}>
-                        {customer.customerType}
+                        {customer._count?.salesOrders || 0}
                       </span>
-                    </td>
-                    <td>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        background: customer.isActive ? '#d5f4e6' : '#ffcdd2', 
-                        color: customer.isActive ? '#00b894' : '#d32f2f',
-                        borderRadius: '4px', 
-                        fontSize: '12px' 
-                      }}>
-                        {customer.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td>{customer._count?.salesOrders || 0}</td>
-                    <td>
-                      <button 
-                        onClick={() => fetchCustomerDetails(customer.id)}
-                        style={{ 
-                          padding: '4px 12px', 
-                          background: 'transparent', 
-                          border: '1px solid #0070f3', 
-                          color: '#0070f3', 
-                          borderRadius: '4px', 
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          marginRight: '5px'
-                        }}>
-                        View
-                      </button>
-                      <button 
-                        onClick={() => handleEditCustomer(customer)}
-                        style={{ 
-                          padding: '4px 12px', 
-                          background: 'transparent', 
-                          border: '1px solid #28a745', 
-                          color: '#28a745', 
-                          borderRadius: '4px', 
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}>
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  {/* Registration Date */}
+                  <div style={{ fontSize: '11px', color: '#999', marginBottom: '12px' }}>
+                    Registered: {new Date(customer.registrationDate).toLocaleDateString()}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '8px', 
+                    marginTop: 'auto' 
+                  }}>
+                    <button
+                      onClick={() => fetchCustomerDetails(customer.id)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        background: '#0070f3',
+                        border: 'none',
+                        color: 'white',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#0051cc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#0070f3'}
+                    >
+                      👁️ View
+                    </button>
+                    <button
+                      onClick={() => handleEditCustomer(customer)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        background: '#28a745',
+                        border: 'none',
+                        color: 'white',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#218838'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#28a745'}
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Infinite Scroll Indicators */}

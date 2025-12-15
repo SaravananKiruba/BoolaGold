@@ -314,132 +314,212 @@ export default function ProductsPage() {
         )}
 
         {!loading && !error && products.length > 0 && (
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Product Details</th>
-                  <th>Metal/Purity</th>
-                  <th>Weight (g)</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id}>
-                    <td>
-                      <div style={{ fontWeight: 500 }}>{product.name}</div>
-                      {product.collectionName && (
-                        <div style={{ fontSize: '11px', color: '#666' }}>
-                          Collection: {product.collectionName}
-                        </div>
-                      )}
-                      {product.isCustomOrder && (
-                        <span style={{ fontSize: '10px', background: '#fff3cd', padding: '2px 6px', borderRadius: '3px', marginTop: '4px', display: 'inline-block' }}>
-                          CUSTOM
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <strong>{product.metalType}</strong> {product.purity}
-                    </td>
-                    <td>
-                      <div>Net: {Number(product.netWeight).toFixed(3)}</div>
-                      <div style={{ fontSize: '11px', color: '#666' }}>
-                        Gross: {Number(product.grossWeight).toFixed(3)}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', 
+            gap: '20px' 
+          }}>
+            {products.map((product) => (
+              <div
+                key={product.id}
+                style={{
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                {/* Status Badges */}
+                <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px' }}>
+                  <span style={{
+                    padding: '4px 8px',
+                    background: product.isActive ? '#d5f4e6' : '#ffcdd2',
+                    color: product.isActive ? '#00b894' : '#d32f2f',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600
+                  }}>
+                    {product.isActive ? '✓ Active' : '✕ Inactive'}
+                  </span>
+                  {product.isCustomOrder && (
+                    <span style={{ 
+                      fontSize: '11px', 
+                      background: '#fff3cd', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px',
+                      fontWeight: 600
+                    }}>
+                      CUSTOM
+                    </span>
+                  )}
+                </div>
+
+                {/* Product Name */}
+                <h3 style={{ 
+                  margin: '0 0 12px 0', 
+                  fontSize: '18px', 
+                  fontWeight: 600,
+                  color: '#333',
+                  paddingRight: product.isCustomOrder ? '140px' : '80px'
+                }}>
+                  {product.name}
+                </h3>
+
+                {/* Collection */}
+                {product.collectionName && (
+                  <div style={{ 
+                    fontSize: '13px', 
+                    color: '#666', 
+                    marginBottom: '12px',
+                    fontWeight: 500
+                  }}>
+                    📚 {product.collectionName}
+                  </div>
+                )}
+
+                {/* Metal & Purity */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '12px', 
+                  marginBottom: '12px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ 
+                    background: '#fff3e0', 
+                    padding: '6px 12px', 
+                    borderRadius: '6px',
+                    flex: '1 1 auto'
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#666' }}>Metal/Purity</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#f57c00' }}>
+                      {product.metalType} {product.purity}
+                    </div>
+                  </div>
+                  <div style={{ 
+                    background: '#e8f5e9', 
+                    padding: '6px 12px', 
+                    borderRadius: '6px',
+                    flex: '1 1 auto'
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#666' }}>Stock</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#2e7d32' }}>
+                      {product._count?.stockItems || 0} items
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weight Details */}
+                <div style={{ 
+                  background: '#f5f5f5', 
+                  padding: '10px', 
+                  borderRadius: '6px',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', color: '#666' }}>Net Weight:</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600 }}>{Number(product.netWeight).toFixed(3)}g</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', color: '#666' }}>Gross Weight:</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600 }}>{Number(product.grossWeight).toFixed(3)}g</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '12px', color: '#666' }}>Wastage:</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600 }}>{Number(product.wastagePercent)}%</span>
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div style={{ 
+                  background: product.priceOverride ? '#fff3e0' : '#e3f2fd', 
+                  padding: '12px', 
+                  borderRadius: '6px',
+                  marginBottom: '15px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+                    {product.priceOverride ? 'OVERRIDE PRICE' : 'Calculated Price'}
+                  </div>
+                  {product.priceOverride ? (
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#f57c00' }}>
+                      ₹{Number(product.priceOverride).toLocaleString('en-IN')}
+                    </div>
+                  ) : product.calculatedPrice ? (
+                    <>
+                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#0070f3' }}>
+                        ₹{Number(product.calculatedPrice).toLocaleString('en-IN')}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#666' }}>
-                        Wastage: {Number(product.wastagePercent)}%
-                      </div>
-                    </td>
-                    <td>
-                      {product.priceOverride ? (
-                        <div>
-                          <div style={{ fontWeight: 500, color: '#ff9800' }}>
-                            ₹{Number(product.priceOverride).toLocaleString('en-IN')}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#ff9800' }}>OVERRIDE</div>
+                      {product.lastPriceUpdate && (
+                        <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>
+                          Updated: {new Date(product.lastPriceUpdate).toLocaleDateString()}
                         </div>
-                      ) : product.calculatedPrice ? (
-                        <div>
-                          <div style={{ fontWeight: 500 }}>
-                            ₹{Number(product.calculatedPrice).toLocaleString('en-IN')}
-                          </div>
-                          {product.lastPriceUpdate && (
-                            <div style={{ fontSize: '10px', color: '#666' }}>
-                              {new Date(product.lastPriceUpdate).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ color: '#999' }}>Not set</span>
                       )}
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          padding: '4px 8px',
-                          background: (product._count?.stockItems || 0) > 0 ? '#d5f4e6' : '#ffcdd2',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {product._count?.stockItems || 0} items
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          padding: '4px 8px',
-                          background: product.isActive ? '#d5f4e6' : '#ffcdd2',
-                          color: product.isActive ? '#00b894' : '#d32f2f',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {product.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => viewPriceBreakdown(product.id)}
-                        style={{
-                          padding: '4px 12px',
-                          background: 'transparent',
-                          border: '1px solid #0070f3',
-                          color: '#0070f3',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          marginRight: '4px',
-                        }}
-                      >
-                        Price 💰
-                      </button>
-                      <button
-                        onClick={() => handleEditProduct(product)}
-                        style={{
-                          padding: '4px 12px',
-                          background: 'transparent',
-                          border: '1px solid #28a745',
-                          color: '#28a745',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                        }}
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '14px', color: '#999' }}>Price not set</div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '8px', 
+                  marginTop: 'auto' 
+                }}>
+                  <button
+                    onClick={() => viewPriceBreakdown(product.id)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      background: '#0070f3',
+                      border: 'none',
+                      color: 'white',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#0051cc'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#0070f3'}
+                  >
+                    💰 Price
+                  </button>
+                  <button
+                    onClick={() => handleEditProduct(product)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      background: '#28a745',
+                      border: 'none',
+                      color: 'white',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#218838'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#28a745'}
+                  >
+                    ✏️ Edit
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

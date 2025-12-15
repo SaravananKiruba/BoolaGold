@@ -206,73 +206,165 @@ export default function SuppliersPage() {
 
         {!loading && !error && suppliers.length > 0 && (
           <>
-            <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Supplier Name</th>
-                  <th>Contact Person</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>City</th>
-                  <th>Status</th>
-                  <th>Registered</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {suppliers.map((supplier) => (
-                  <tr key={supplier.id}>
-                    <td style={{ fontWeight: 500 }}>{supplier.name}</td>
-                    <td>{supplier.contactPerson || '-'}</td>
-                    <td>{supplier.phone}</td>
-                    <td>{supplier.email || '-'}</td>
-                    <td>{supplier.city || '-'}</td>
-                    <td>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        background: supplier.isActive ? '#d5f4e6' : '#ffcdd2', 
-                        color: supplier.isActive ? '#00b894' : '#d32f2f',
-                        borderRadius: '4px', 
-                        fontSize: '12px' 
-                      }}>
-                        {supplier.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td>{new Date(supplier.registrationDate).toLocaleDateString()}</td>
-                    <td>
-                      <button 
-                        onClick={() => fetchSupplierDetails(supplier.id)}
-                        style={{ 
-                          padding: '4px 12px', 
-                          background: 'transparent', 
-                          border: '1px solid #0070f3', 
-                          color: '#0070f3', 
-                          borderRadius: '4px', 
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          marginRight: '5px'
-                        }}>
-                        View
-                      </button>
-                      <button 
-                        onClick={() => handleEditSupplier(supplier)}
-                        style={{ 
-                          padding: '4px 12px', 
-                          background: 'transparent', 
-                          border: '1px solid #28a745', 
-                          color: '#28a745', 
-                          borderRadius: '4px', 
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}>
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', 
+              gap: '16px',
+              marginBottom: '20px'
+            }}>
+              {suppliers.map((supplier) => (
+                <div
+                  key={supplier.id}
+                  style={{
+                    background: 'white',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    padding: '18px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  {/* Status Badge */}
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '12px', 
+                    right: '12px'
+                  }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      background: supplier.isActive ? '#d5f4e6' : '#ffcdd2',
+                      color: supplier.isActive ? '#00b894' : '#d32f2f',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600
+                    }}>
+                      {supplier.isActive ? '✓ Active' : '✕ Inactive'}
+                    </span>
+                  </div>
+
+                  {/* Supplier Name */}
+                  <h3 style={{ 
+                    margin: '0 0 10px 0', 
+                    fontSize: '18px', 
+                    fontWeight: 600,
+                    color: '#333',
+                    paddingRight: '80px'
+                  }}>
+                    🏢 {supplier.name}
+                  </h3>
+
+                  {/* Contact Person */}
+                  {supplier.contactPerson && (
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: '#666', 
+                      marginBottom: '10px',
+                      fontWeight: 500 
+                    }}>
+                      👤 {supplier.contactPerson}
+                    </div>
+                  )}
+
+                  {/* Contact Info */}
+                  <div style={{ 
+                    marginBottom: '12px',
+                    paddingBottom: '12px',
+                    borderBottom: '1px solid #f0f0f0'
+                  }}>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '6px' }}>
+                      📱 {supplier.phone}
+                    </div>
+                    {supplier.email && (
+                      <div style={{ fontSize: '13px', color: '#666', wordBreak: 'break-all' }}>
+                        ✉️ {supplier.email}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Location & Address */}
+                  {(supplier.city || supplier.address) && (
+                    <div style={{ 
+                      background: '#f8f9fa', 
+                      padding: '10px', 
+                      borderRadius: '6px',
+                      marginBottom: '12px'
+                    }}>
+                      {supplier.city && (
+                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>
+                          📍 <strong>{supplier.city}</strong>
+                        </div>
+                      )}
+                      {supplier.address && (
+                        <div style={{ fontSize: '12px', color: '#999' }}>
+                          {supplier.address}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Registration Date */}
+                  <div style={{ fontSize: '11px', color: '#999', marginBottom: '12px' }}>
+                    Registered: {new Date(supplier.registrationDate).toLocaleDateString()}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '8px', 
+                    marginTop: 'auto' 
+                  }}>
+                    <button
+                      onClick={() => fetchSupplierDetails(supplier.id)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        background: '#0070f3',
+                        border: 'none',
+                        color: 'white',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#0051cc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#0070f3'}
+                    >
+                      👁️ View
+                    </button>
+                    <button
+                      onClick={() => handleEditSupplier(supplier)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        background: '#28a745',
+                        border: 'none',
+                        color: 'white',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#218838'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#28a745'}
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Pagination */}
