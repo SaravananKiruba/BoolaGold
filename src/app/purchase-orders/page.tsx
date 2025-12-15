@@ -162,85 +162,180 @@ export default function PurchaseOrdersPage() {
         )}
 
         {!loading && !error && purchaseOrders.length > 0 && (
-          <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Order #</th>
-                <th>Supplier</th>
-                <th>Order Date</th>
-                <th>Status</th>
-                <th>Payment</th>
-                <th>Amount</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {purchaseOrders.map((order) => (
-                <tr key={order.id}>
-                  <td style={{ fontWeight: 500, fontFamily: 'monospace', fontSize: '13px' }}>
-                    {order.orderNumber}
-                  </td>
-                  <td>{order.supplier.name}</td>
-                  <td>{new Date(order.orderDate).toLocaleDateString()}</td>
-                  <td>
-                    <span style={{ 
-                      padding: '4px 8px', 
-                      background: order.status === 'DELIVERED' ? '#d5f4e6' : 
-                                  order.status === 'PARTIAL' ? '#fff4e6' : 
-                                  order.status === 'CANCELLED' ? '#ffcdd2' : '#e3f2fd',
-                      color: order.status === 'DELIVERED' ? '#00b894' : 
-                             order.status === 'PARTIAL' ? '#e67e22' : 
-                             order.status === 'CANCELLED' ? '#d32f2f' : '#0070f3',
-                      borderRadius: '4px', 
-                      fontSize: '12px' 
-                    }}>
-                      {order.status}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 350px), 1fr))', 
+            gap: '20px' 
+          }}>
+            {purchaseOrders.map((order) => (
+              <div
+                key={order.id}
+                style={{
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                {/* Status Badges */}
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '12px', 
+                  right: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                  alignItems: 'flex-end'
+                }}>
+                  <span style={{
+                    padding: '4px 8px',
+                    background: order.status === 'DELIVERED' ? '#d5f4e6' : 
+                               order.status === 'PARTIAL' ? '#fff4e6' : 
+                               order.status === 'CANCELLED' ? '#ffcdd2' : '#e3f2fd',
+                    color: order.status === 'DELIVERED' ? '#00b894' : 
+                           order.status === 'PARTIAL' ? '#e67e22' : 
+                           order.status === 'CANCELLED' ? '#d32f2f' : '#0070f3',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600
+                  }}>
+                    {order.status}
+                  </span>
+                  <span style={{
+                    padding: '4px 8px',
+                    background: order.paymentStatus === 'PAID' ? '#d5f4e6' : 
+                               order.paymentStatus === 'PARTIAL' ? '#fff4e6' : '#ffcdd2',
+                    color: order.paymentStatus === 'PAID' ? '#00b894' : 
+                           order.paymentStatus === 'PARTIAL' ? '#e67e22' : '#d32f2f',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600
+                  }}>
+                    {order.paymentStatus}
+                  </span>
+                </div>
+
+                {/* Order Number */}
+                <h3 style={{ 
+                  margin: '0 0 10px 0', 
+                  fontSize: '18px', 
+                  fontWeight: 600,
+                  color: '#0070f3',
+                  fontFamily: 'monospace',
+                  paddingRight: '100px'
+                }}>
+                  📦 {order.orderNumber}
+                </h3>
+
+                {/* Supplier Info */}
+                <div style={{ 
+                  marginBottom: '12px',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid #f0f0f0'
+                }}>
+                  <div style={{ fontSize: '15px', fontWeight: 500, color: '#333' }}>
+                    🏢 {order.supplier.name}
+                  </div>
+                </div>
+
+                {/* Order Details */}
+                <div style={{ 
+                  background: '#f8f9fa', 
+                  padding: '10px', 
+                  borderRadius: '6px',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    fontSize: '13px',
+                    marginBottom: '6px'
+                  }}>
+                    <span style={{ color: '#666' }}>Order Date:</span>
+                    <span style={{ fontWeight: 600 }}>{new Date(order.orderDate).toLocaleDateString()}</span>
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    fontSize: '13px'
+                  }}>
+                    <span style={{ color: '#666' }}>Items Count:</span>
+                    <span style={{ fontWeight: 600 }}>{order.items?.length || 0}</span>
+                  </div>
+                </div>
+
+                {/* Amount Section */}
+                <div style={{ 
+                  background: '#e3f2fd', 
+                  padding: '12px', 
+                  borderRadius: '6px',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: order.paidAmount > 0 ? '8px' : '0'
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#666', fontWeight: 500 }}>Total Amount:</span>
+                    <span style={{ fontSize: '22px', fontWeight: 700, color: '#0070f3' }}>
+                      ₹{Number(order.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
-                  </td>
-                  <td>
-                    <span style={{ 
-                      padding: '4px 8px', 
-                      background: order.paymentStatus === 'PAID' ? '#d5f4e6' : 
-                                  order.paymentStatus === 'PARTIAL' ? '#fff4e6' : '#ffcdd2',
-                      color: order.paymentStatus === 'PAID' ? '#00b894' : 
-                             order.paymentStatus === 'PARTIAL' ? '#e67e22' : '#d32f2f',
-                      borderRadius: '4px', 
-                      fontSize: '12px' 
+                  </div>
+                  {order.paidAmount > 0 && (
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      fontSize: '12px',
+                      color: '#00b894',
+                      paddingTop: '8px',
+                      borderTop: '1px solid rgba(0,112,243,0.2)'
                     }}>
-                      {order.paymentStatus}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 500 }}>
-                    ₹{Number(order.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    {order.paidAmount > 0 && (
-                      <div style={{ fontSize: '11px', color: '#999' }}>
-                        Paid: ₹{Number(order.paidAmount).toFixed(2)}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <Link 
-                      href={`/purchase-orders/${order.id}`}
-                      style={{ 
-                        display: 'inline-block',
-                        padding: '4px 12px', 
-                        background: 'transparent', 
-                        border: '1px solid #0070f3', 
-                        color: '#0070f3', 
-                        borderRadius: '4px', 
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        textDecoration: 'none'
-                      }}
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <span>Paid Amount:</span>
+                      <span style={{ fontWeight: 600 }}>₹{Number(order.paidAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Button */}
+                <Link 
+                  href={`/purchase-orders/${order.id}`}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    background: '#0070f3',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    display: 'block',
+                    transition: 'background 0.2s',
+                    marginTop: 'auto'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#0051cc'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#0070f3'}
+                >
+                  👁️ View Details
+                </Link>
+              </div>
+            ))}
           </div>
         )}
       </div>

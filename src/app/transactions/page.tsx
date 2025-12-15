@@ -651,113 +651,155 @@ export default function TransactionsPage() {
           </div>
         ) : (
           <>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>Date</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>Type</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>Description</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>Reference</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>Amount</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>Payment</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((transaction) => (
-                    <tr
-                      key={transaction.id}
-                      style={{
-                        borderBottom: '1px solid #eee',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s',
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = '#f9fafb';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'white';
-                      }}
-                      onClick={() => {
-                        if (transaction.salesOrder) {
-                          router.push(`/sales-orders/${transaction.salesOrder.id}`);
-                        }
-                      }}
-                    >
-                      <td style={{ padding: '12px' }}>
-                        {new Date(transaction.transactionDate).toLocaleDateString('en-IN')}
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>{getTypeIcon(transaction.transactionType)}</span>
-                          <span
-                            style={{
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: 500,
-                              color: 'white',
-                              background: getTypeColor(transaction.transactionType),
-                            }}
-                          >
-                            {transaction.transactionType}
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <div style={{ fontSize: '14px' }}>{transaction.description}</div>
-                        {transaction.customer && (
-                          <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                            {transaction.customer.name}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        {transaction.referenceNumber || '-'}
-                      </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          textAlign: 'right',
-                          fontWeight: 600,
-                          color: transaction.transactionType === 'INCOME' ? '#10b981' : '#ef4444',
-                        }}
-                      >
-                        {transaction.transactionType === 'INCOME' ? '+' : '-'}₹
-                        {Number(transaction.amount).toLocaleString('en-IN')}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        {transaction.paymentMode}
-                      </td>
-                      <td style={{ padding: '12px', textAlign: 'center' }}>
-                        <span
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            background:
-                              transaction.status === 'COMPLETED'
-                                ? '#d1fae5'
-                                : transaction.status === 'PENDING'
-                                ? '#fef3c7'
-                                : '#fee2e2',
-                            color:
-                              transaction.status === 'COMPLETED'
-                                ? '#065f46'
-                                : transaction.status === 'PENDING'
-                                ? '#92400e'
-                                : '#991b1b',
-                          }}
-                        >
-                          {transaction.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', 
+              gap: '16px' 
+            }}>
+              {transactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  onClick={() => {
+                    if (transaction.salesOrder) {
+                      router.push(`/sales-orders/${transaction.salesOrder.id}`);
+                    }
+                  }}
+                  style={{
+                    background: 'white',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    padding: '18px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative',
+                    cursor: transaction.salesOrder ? 'pointer' : 'default'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  {/* Type & Status Badges */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>{getTypeIcon(transaction.transactionType)}</span>
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'white',
+                        background: getTypeColor(transaction.transactionType),
+                      }}>
+                        {transaction.transactionType}
+                      </span>
+                    </div>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      background: transaction.status === 'COMPLETED' ? '#d1fae5' :
+                                 transaction.status === 'PENDING' ? '#fef3c7' : '#fee2e2',
+                      color: transaction.status === 'COMPLETED' ? '#065f46' :
+                             transaction.status === 'PENDING' ? '#92400e' : '#991b1b',
+                    }}>
+                      {transaction.status}
+                    </span>
+                  </div>
+
+                  {/* Date */}
+                  <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
+                    📅 {new Date(transaction.transactionDate).toLocaleDateString('en-IN')}
+                  </div>
+
+                  {/* Description */}
+                  <div style={{ 
+                    fontSize: '15px', 
+                    fontWeight: 500, 
+                    color: '#333',
+                    marginBottom: '8px',
+                    lineHeight: '1.4'
+                  }}>
+                    {transaction.description}
+                  </div>
+
+                  {/* Customer */}
+                  {transaction.customer && (
+                    <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
+                      👤 {transaction.customer.name}
+                    </div>
+                  )}
+
+                  {/* Reference & Payment */}
+                  <div style={{ 
+                    background: '#f8f9fa', 
+                    padding: '10px', 
+                    borderRadius: '6px',
+                    marginBottom: '12px'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      fontSize: '12px',
+                      marginBottom: '6px'
+                    }}>
+                      <span style={{ color: '#666' }}>Reference:</span>
+                      <span style={{ fontWeight: 600 }}>{transaction.referenceNumber || '-'}</span>
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      fontSize: '12px'
+                    }}>
+                      <span style={{ color: '#666' }}>Payment:</span>
+                      <span style={{ fontWeight: 600 }}>💳 {transaction.paymentMode}</span>
+                    </div>
+                  </div>
+
+                  {/* Amount */}
+                  <div style={{ 
+                    background: transaction.transactionType === 'INCOME' ? '#d1fae5' : '#fee2e2',
+                    padding: '12px', 
+                    borderRadius: '6px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>Amount</div>
+                    <div style={{
+                      fontSize: '24px',
+                      fontWeight: 700,
+                      color: transaction.transactionType === 'INCOME' ? '#10b981' : '#ef4444',
+                    }}>
+                      {transaction.transactionType === 'INCOME' ? '+' : '-'}₹
+                      {Number(transaction.amount).toLocaleString('en-IN')}
+                    </div>
+                  </div>
+
+                  {/* Clickable indicator */}
+                  {transaction.salesOrder && (
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: '#0070f3', 
+                      marginTop: '10px',
+                      textAlign: 'center',
+                      fontStyle: 'italic'
+                    }}>
+                      Click to view sales order →
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
             {/* Pagination */}
