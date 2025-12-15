@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME, verifyToken } from '@/lib/auth';
 
 // Routes that don't require authentication
-const publicRoutes = ['/login'];
+const publicRoutes = ['/login', '/subscription-expired', '/shop-paused'];
 
 // Debug routes - accessible to all authenticated users
 const debugRoutes = ['/debug-auth'];
@@ -12,7 +12,7 @@ const debugRoutes = ['/debug-auth'];
 const roleRoutes = {
   SUPER_ADMIN: ['/super-admin', '/shops', '/users'],
   OWNER: ['/dashboard', '/customers', '/sales-orders', '/transactions', '/products', '/stock', 
-          '/suppliers', '/purchase-orders', '/rate-master', '/reports', '/users'],
+          '/suppliers', '/purchase-orders', '/rate-master', '/reports', '/users', '/subscription'],
   SALES: ['/dashboard', '/customers', '/sales-orders', '/products', '/stock', '/rate-master', '/reports'],
   ACCOUNTS: ['/dashboard', '/transactions', '/suppliers', '/purchase-orders', '/rate-master', '/reports'],
 };
@@ -59,6 +59,35 @@ export async function middleware(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = '/login';
         return NextResponse.redirect(url);
+      }
+
+      // 🔒 SUBSCRIPTION CHECK: Verify shop subscription status for non-SUPER_ADMIN users
+      // Allow access to subscription page for payment even if expired
+      const allowedPagesForExpired = ['/subscription', '/subscription-expired', '/shop-paused'];
+      const isAllowedPage = allowedPagesForExpired.some(page => pathname.startsWith(page));
+      
+      if (!isApiRoute && !isAllowedPage && session.role !== 'SUPER_ADMIN' && session.shopId) {
+        // Check subscription status from JWT token (no database call needed)
+        // Block access if subscription expired
+        if (session.subscriptionStatus === 'EXPIRED') {
+          const url = request.nextUrl.clone();
+          url.pathname = '/subscription-expired';
+          return NextResponse.redirect(url);
+        }
+        
+        // Block access if shop paused
+        if (session.isPaused) {
+          const url = request.nextUrl.clone();
+          url.pathname = '/shop-paused';
+          return NextResponse.redirect(url);
+        }
+        
+        // Block access if cancelled
+        if (session.subscriptionStatus === 'CANCELLED') {
+          const url = request.nextUrl.clone();
+          url.pathname = '/login';
+          return NextResponse.redirect(url);
+        }
       }
 
       const userRole = session.role;

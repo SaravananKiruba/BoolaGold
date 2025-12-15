@@ -8,44 +8,77 @@ datasource db {
 }
 
 model Shop {
-  id                 String          @id @default(uuid())
-  name               String          @db.VarChar(200)
-  tagline            String?         @db.VarChar(200)
-  address            String          @db.Text
-  city               String          @db.VarChar(100)
-  state              String          @db.VarChar(100)
-  pincode            String          @db.VarChar(10)
-  phone              String          @db.VarChar(15)
-  email              String          @db.VarChar(255)
-  website            String?         @db.VarChar(255)
-  gstNumber          String          @db.VarChar(20)
-  panNumber          String          @db.VarChar(20)
-  logo               String?         @db.Text
-  primaryColor       String?         @db.VarChar(20)
-  invoicePrefix      String          @db.VarChar(20)
-  isActive           Boolean         @default(true)
-  bankName           String?         @db.VarChar(200)
-  accountNumber      String?         @db.VarChar(50)
-  ifscCode           String?         @db.VarChar(20)
-  bankBranch         String?         @db.VarChar(200)
-  termsAndConditions String?         @db.Text
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  deletedAt          DateTime?
-  auditLogs          AuditLog[]
-  bisCompliance      BisCompliance[]
-  customers          Customer[]
-  emiPayments        EmiPayment[]
-  products           Product[]
-  purchaseOrders     PurchaseOrder[]
-  rateMaster         RateMaster[]
-  salesOrders        SalesOrder[]
-  suppliers          Supplier[]
-  transactions       Transaction[]
-  users              User[]
+  id                    String              @id @default(uuid())
+  name                  String              @db.VarChar(200)
+  tagline               String?             @db.VarChar(200)
+  address               String              @db.Text
+  city                  String              @db.VarChar(100)
+  state                 String              @db.VarChar(100)
+  pincode               String              @db.VarChar(10)
+  phone                 String              @db.VarChar(15)
+  email                 String              @db.VarChar(255)
+  website               String?             @db.VarChar(255)
+  gstNumber             String              @db.VarChar(20)
+  panNumber             String              @db.VarChar(20)
+  logo                  String?             @db.Text
+  primaryColor          String?             @db.VarChar(20)
+  invoicePrefix         String              @db.VarChar(20)
+  isActive              Boolean             @default(true)
+  bankName              String?             @db.VarChar(200)
+  accountNumber         String?             @db.VarChar(50)
+  ifscCode              String?             @db.VarChar(20)
+  bankBranch            String?             @db.VarChar(200)
+  termsAndConditions    String?             @db.Text
+  
+  // Subscription Management
+  subscriptionStatus    SubscriptionStatus  @default(TRIAL)
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  trialStartDate        DateTime?
+  trialEndDate          DateTime?
+  
+  // Payment Tracking
+  lastPaymentDate       DateTime?
+  lastPaymentAmount     Decimal?            @db.Decimal(10, 2)
+  nextPaymentDue        DateTime?
+  
+  // AMC Management
+  amcStatus             AmcStatus           @default(NOT_APPLICABLE)
+  amcStartDate          DateTime?
+  amcEndDate            DateTime?
+  amcLastRenewalDate    DateTime?
+  
+  // User Limits
+  maxUsers              Int                 @default(10)
+  currentUserCount      Int                 @default(0)
+  
+  // Business Rules
+  isPaused              Boolean             @default(false)
+  pausedAt              DateTime?
+  pauseReason           String?             @db.Text
+  canReactivate         Boolean             @default(true)
+  
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+  
+  auditLogs             AuditLog[]
+  bisCompliance         BisCompliance[]
+  customers             Customer[]
+  emiPayments           EmiPayment[]
+  products              Product[]
+  purchaseOrders        PurchaseOrder[]
+  rateMaster            RateMaster[]
+  salesOrders           SalesOrder[]
+  suppliers             Supplier[]
+  transactions          Transaction[]
+  users                 User[]
+  payments              ShopPayment[]
 
   @@index([isActive])
   @@index([deletedAt])
+  @@index([subscriptionStatus])
+  @@index([subscriptionEndDate])
   @@map("shops")
 }
 
@@ -659,4 +692,54 @@ enum BisComplianceStatus {
   COMPLIANT
   NON_COMPLIANT
   PENDING
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  PAUSED
+  CANCELLED
+}
+
+enum AmcStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  NOT_APPLICABLE
+}
+
+enum PaymentType {
+  TRIAL
+  SUBSCRIPTION
+  AMC_RENEWAL
+  REACTIVATION
+}
+
+model ShopPayment {
+  id              String        @id @default(uuid())
+  shopId          String
+  shop            Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  amount          Decimal       @db.Decimal(10, 2)
+  paymentType     PaymentType
+  paymentMethod   String        @db.VarChar(50)
+  transactionId   String?       @db.VarChar(200)
+  upiId           String?       @db.VarChar(100)
+  
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  
+  remarks         String?       @db.Text
+  receiptUrl      String?       @db.Text
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([shopId])
+  @@index([status])
+  @@index([paymentType])
+  @@map("shop_payments")
 }

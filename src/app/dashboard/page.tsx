@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [shopInfo, setShopInfo] = useState<any>(null);
 
   // Redirect Super Admin to their own dashboard
   useEffect(() => {
@@ -79,8 +80,21 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchShopInfo = async () => {
+    try {
+      const response = await fetch('/api/shops');
+      const data = await response.json();
+      if (data.success && data.data?.[0]) {
+        setShopInfo(data.data[0]);
+      }
+    } catch (err) {
+      console.error('Error fetching shop info:', err);
+    }
+  };
+
   useEffect(() => {
     fetchMetrics();
+    fetchShopInfo();
   }, []);
 
   const handleApplyFilter = () => {
@@ -159,6 +173,88 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Subscription Status Banner */}
+      {shopInfo && (
+        <>
+          {shopInfo.subscriptionStatus === 'TRIAL' && shopInfo.trialEndDate && (
+            <div style={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              color: 'white',
+              padding: '16px 24px',
+              borderRadius: '12px',
+              marginBottom: '24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '4px' }}>
+                  🎯 Trial Period Active
+                </div>
+                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                  Expires: {new Date(shopInfo.trialEndDate).toLocaleDateString()} 
+                  ({Math.ceil((new Date(shopInfo.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days remaining)
+                </div>
+              </div>
+              <button
+                onClick={() => router.push('/subscription')}
+                style={{
+                  background: 'white',
+                  color: '#3b82f6',
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Subscribe Now
+              </button>
+            </div>
+          )}
+
+          {shopInfo.subscriptionStatus === 'ACTIVE' && shopInfo.subscriptionEndDate && 
+           Math.ceil((new Date(shopInfo.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) < 30 && (
+            <div style={{
+              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+              color: 'white',
+              padding: '16px 24px',
+              borderRadius: '12px',
+              marginBottom: '24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '4px' }}>
+                  ⚠️ Subscription Expiring Soon
+                </div>
+                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                  Expires: {new Date(shopInfo.subscriptionEndDate).toLocaleDateString()} 
+                  ({Math.ceil((new Date(shopInfo.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days remaining)
+                </div>
+              </div>
+              <button
+                onClick={() => router.push('/subscription')}
+                style={{
+                  background: 'white',
+                  color: '#f97316',
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Renew Now
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       <div className="alert alert-info" style={{ marginBottom: '24px' }}>
         <p style={{ margin: 0, fontSize: '1rem', fontWeight: '500' }}>

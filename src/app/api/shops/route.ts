@@ -64,7 +64,43 @@ export async function GET(request: NextRequest) {
 
     const shops = await prisma.shop.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        tagline: true,
+        address: true,
+        city: true,
+        state: true,
+        pincode: true,
+        phone: true,
+        email: true,
+        website: true,
+        gstNumber: true,
+        panNumber: true,
+        logo: true,
+        primaryColor: true,
+        invoicePrefix: true,
+        isActive: true,
+        bankName: true,
+        accountNumber: true,
+        ifscCode: true,
+        bankBranch: true,
+        termsAndConditions: true,
+        subscriptionStatus: true,
+        subscriptionStartDate: true,
+        subscriptionEndDate: true,
+        trialStartDate: true,
+        trialEndDate: true,
+        amcStatus: true,
+        amcEndDate: true,
+        isPaused: true,
+        currentUserCount: true,
+        maxUsers: true,
+        lastPaymentDate: true,
+        lastPaymentAmount: true,
+        nextPaymentDue: true,
+        createdAt: true,
+        updatedAt: true,
         _count: {
           select: {
             users: true,
@@ -142,6 +178,11 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Missing required fields', 400);
     }
 
+    // Calculate trial period dates (7 days from creation)
+    const now = new Date();
+    const trialEnd = new Date(now);
+    trialEnd.setDate(trialEnd.getDate() + 7);
+
     const shop = await prisma.shop.create({
       data: {
         name,
@@ -164,7 +205,19 @@ export async function POST(request: NextRequest) {
         bankBranch,
         termsAndConditions: termsAndConditions ? JSON.stringify(termsAndConditions) : null,
         isActive: true,
+        // 🎯 SUBSCRIPTION: Start with 7-day trial
+        subscriptionStatus: 'TRIAL',
+        trialStartDate: now,
+        trialEndDate: trialEnd,
+        amcStatus: 'NOT_APPLICABLE',
+        maxUsers: 10,
+        currentUserCount: 0,
       },
+    });
+
+    console.log('✅ Shop created with trial subscription:', {
+      shopId: shop.id,
+      trialEndDate: trialEnd,
     });
 
     return createSuccessResponse(shop, 201);

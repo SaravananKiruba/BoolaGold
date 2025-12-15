@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
       role: user.role,
       shopId: user.shopId || null,
       shopName: user.shop?.name || null,
+      subscriptionStatus: user.shop?.subscriptionStatus || null,
+      isPaused: user.shop?.isPaused || false,
     });
 
     // Create response with user data

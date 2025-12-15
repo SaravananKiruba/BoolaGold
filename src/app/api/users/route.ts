@@ -140,6 +140,24 @@ export async function POST(request: NextRequest) {
       if (shopId && shopId !== session?.shopId) {
         return createErrorResponse('Cannot create users for other shops', 403);
       }
+      
+      // 👥 CHECK USER LIMIT: Max 10 users per shop
+      const targetShopId = session.shopId;
+      const shop = await prisma.shop.findUnique({
+        where: { id: targetShopId },
+        select: { currentUserCount: true, maxUsers: true, name: true }
+      });
+      
+      if (!shop) {
+        return createErrorResponse('Shop not found', 404);
+      }
+      
+      if (shop.currentUserCount >= shop.maxUsers) {
+        return createErrorResponse(
+          `User limit reached. Maximum ${shop.maxUsers} users allowed per shop. Currently: ${shop.currentUserCount}/${shop.maxUsers}`,
+          400
+        );
+      }
     } else {
       // SALES and ACCOUNTS cannot create users
       return createErrorResponse('You do not have permission to create users', 403);
@@ -157,36 +175,51 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        name,
-        email,
-        phone,
-        role,
-        // Use provided shopId for SUPER_ADMIN, session shopId for OWNER
-        shopId: isSuperAdmin(session) ? (role === 'SUPER_ADMIN' ? null : shopId) : session?.shopId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        shopId: true,
-        isActive: true,
-        createdAt: true,
-        shop: {
-          select: {
-            id: true,
-            name: true,
+    // Determine target shopId
+    const targetShopId = isSuperAdmin(session) ? (role === 'SUPER_ADMIN' ? null : shopId) : session?.shopId;
+
+    // Create user and increment shop user count in a transaction
+    const user = await prisma.$transaction(async (tx) => {
+      // Create the user
+      const newUser = await tx.user.create({
+        data: {
+          username,
+          password: hashedPassword,
+          name,
+          email,
+          phone,
+          role,
+          shopId: targetShopId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          shopId: true,
+          isActive: true,
+          createdAt: true,
+          shop: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
+      });
+
+      // Increment shop user count (skip for SUPER_ADMIN users)
+      if (targetShopId) {
+        await tx.shop.update({
+          where: { id: targetShopId },
+          data: { currentUserCount: { increment: 1 } }
+        });
+      }
+
+      return newUser;
     });
 
     return createSuccessResponse(user, 201);

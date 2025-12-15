@@ -198,9 +198,21 @@ export async function DELETE(
       return createErrorResponse('Unauthorized: Cannot delete users from other shops', 403);
     }
 
-    await prisma.user.update({
-      where: { id },
-      data: { deletedAt: new Date() },
+    // Soft delete user and decrement shop user count in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Soft delete the user
+      await tx.user.update({
+        where: { id },
+        data: { deletedAt: new Date(), isActive: false },
+      });
+
+      // Decrement shop user count (skip for SUPER_ADMIN users)
+      if (userToDelete.shopId) {
+        await tx.shop.update({
+          where: { id: userToDelete.shopId },
+          data: { currentUserCount: { decrement: 1 } }
+        });
+      }
     });
 
     return createSuccessResponse({ message: 'User deleted successfully' });

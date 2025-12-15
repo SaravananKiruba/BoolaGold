@@ -99,6 +99,13 @@ export default function Navigation() {
         { href: '/users', label: 'All Users', icon: '👥', desc: 'System Users' },
       ],
     },
+    {
+      title: 'Business',
+      items: [
+        { href: '/super-admin/payments', label: 'Payments', icon: '💳', desc: 'Verify Payments' },
+        { href: '/super-admin/subscriptions', label: 'Subscriptions', icon: '📊', desc: 'Manage Subscriptions' },
+      ],
+    },
   ];
 
   // SALES Navigation - Customer-facing operations
@@ -206,6 +213,7 @@ export default function Navigation() {
     title: 'Admin',
     items: [
       { href: '/users', label: 'Users', icon: '👤', desc: 'Manage Shop Users' },
+      { href: '/subscription', label: 'Subscription', icon: '💳', desc: 'Payments & Billing' },
     ],
   };
 
