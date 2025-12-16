@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth';
+import { getSession, isSuperAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { createSuccessResponse, createErrorResponse } from '@/utils/response';
 
@@ -11,8 +11,8 @@ export async function GET(
   try {
     console.log('🔍 [Subscription API] Starting request');
     
-    const authResult = await verifyAuth(req);
-    if (!authResult.success) {
+    const session = await getSession();
+    if (!session) {
       console.log('❌ [Subscription API] Auth failed');
       return createErrorResponse('Unauthorized', 401);
     }
@@ -20,12 +20,10 @@ export async function GET(
     console.log('🔍 [Subscription API] Awaiting params...');
     const { id: shopId } = await params;
     console.log('✅ [Subscription API] Got shopId:', shopId);
-    
-    const user = authResult.user;
 
     // Only OWNER can view their own shop, or SUPER_ADMIN can view any
-    if (user?.role !== 'SUPER_ADMIN' && user?.shopId !== shopId) {
-      console.log('❌ [Subscription API] Permission denied:', { userRole: user?.role, userShopId: user?.shopId, requestedShopId: shopId });
+    if (!isSuperAdmin(session) && session.shopId !== shopId) {
+      console.log('❌ [Subscription API] Permission denied:', { userRole: session.role, userShopId: session.shopId, requestedShopId: shopId });
       return createErrorResponse('You can only view your own shop subscription', 403);
     }
 
