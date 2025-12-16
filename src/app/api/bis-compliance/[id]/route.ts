@@ -28,11 +28,13 @@ const updateBisComplianceSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const record = await prisma.bisCompliance.findUnique({
-      where: { id: params.id },
+    
+    const { id } = await params;
+const record = await prisma.bisCompliance.findUnique({
+      where: { id: id },
     });
 
     if (!record) {
@@ -52,15 +54,17 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;
+const session = await getSession();
     const body = await request.json();
 
     // Get existing record
     const existing = await prisma.bisCompliance.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existing) {
@@ -99,7 +103,7 @@ export async function PUT(
 
     // Update record
     const updated = await prisma.bisCompliance.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         huid: data.huid,
         huidRegistrationDate: data.huidRegistrationDate ? new Date(data.huidRegistrationDate) : undefined,
@@ -115,7 +119,7 @@ export async function PUT(
     });
 
     // Log update
-    await logUpdate(AuditModule.PRODUCTS, params.id, existing, updated, session!.shopId!);
+    await logUpdate(AuditModule.PRODUCTS, id, existing, updated, session!.shopId!);
 
     return NextResponse.json(successResponse(updated), { status: 200 });
   } catch (error: any) {
@@ -130,12 +134,14 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;
+const session = await getSession();
     const record = await prisma.bisCompliance.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!record) {
@@ -143,11 +149,11 @@ export async function DELETE(
     }
 
     await prisma.bisCompliance.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     // Log deletion
-    await logDelete(AuditModule.PRODUCTS, params.id, record, session!.shopId!);
+    await logDelete(AuditModule.PRODUCTS, id, record, session!.shopId!);
 
     return NextResponse.json(
       successResponse({ message: 'BIS compliance record deleted successfully' }),

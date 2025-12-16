@@ -18,10 +18,12 @@ import { getRepositories } from '@/utils/apiRepository';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;
+const session = await getSession();
     
     // Check authentication - OWNER and ACCOUNTS can record payments
     if (!session || !['OWNER', 'ACCOUNTS'].includes(session.role)) {
@@ -40,7 +42,7 @@ export async function POST(
     }
     
     const body = await request.json();
-    const purchaseOrderId = params.id;
+    const purchaseOrderId = id;
 
     const { amount, paymentMethod, referenceNumber, notes } = body;
 
@@ -155,11 +157,13 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
-    const purchaseOrderId = params.id;
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
+    const purchaseOrderId = id;
 
     const purchaseOrder = await repos.purchaseOrder.findById(purchaseOrderId);
     if (!purchaseOrder) {

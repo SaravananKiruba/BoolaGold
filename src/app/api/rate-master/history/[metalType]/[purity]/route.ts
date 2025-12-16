@@ -9,11 +9,11 @@ import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { metalType: string; purity: string } }
+  { params }: { params: Promise<{ metalType: string; purity: string }> }
 ) {
   try {
+    const { metalType, purity } = await params;
     const repos = await getRepositories(request);
-    const { metalType, purity } = params;
 
     // Validate metal type
     if (!Object.values(MetalType).includes(metalType as MetalType)) {

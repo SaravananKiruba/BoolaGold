@@ -21,13 +21,15 @@ import prisma from '@/lib/prisma';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSessionFromRequest(request);
+    
+    const { id } = await params;
+const session = await getSessionFromRequest(request);
     const { searchParams } = request.nextUrl;
     const format = searchParams.get('format') || 'json';
-    const salesOrderId = params.id;
+    const salesOrderId = id;
 
     // Get sales order with all details including shop
     const salesOrder = await prisma.salesOrder.findFirst({

@@ -25,9 +25,11 @@ const updateTransactionSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'TRANSACTION_VIEW')) {
@@ -36,7 +38,7 @@ export async function GET(
 
     const repos = await getRepositories(request);
     const repository = repos.transaction;
-    const transaction = await repository.findById(params.id);
+    const transaction = await repository.findById(id);
 
     if (!transaction) {
       return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
@@ -51,10 +53,12 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and permission
+    
+    const { id } = await params;
+// Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'TRANSACTION_EDIT')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
@@ -74,7 +78,7 @@ export async function PATCH(
     const repository = transactionRepository;
 
     // Check if transaction exists
-    const existingTransaction = await repos.transaction.findById(params.id);
+    const existingTransaction = await repos.transaction.findById(id);
     if (!existingTransaction) {
       return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
     }
@@ -92,10 +96,10 @@ export async function PATCH(
     }
 
     // Update transaction
-    const transaction = await repository.update(params.id, updateData);
+    const transaction = await repository.update(id, updateData);
 
     // Log the update
-    await logUpdate(AuditModule.TRANSACTIONS, params.id, existingTransaction, transaction, session!.shopId!);
+    await logUpdate(AuditModule.TRANSACTIONS, id, existingTransaction, transaction, session!.shopId!);
 
     return NextResponse.json(successResponse(transaction), { status: 200 });
   } catch (error: any) {
@@ -106,23 +110,25 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;
+const session = await getSession();
     const repos = await getRepositories(request);
     const transactionRepository = repos.transaction;
     // Check if transaction exists
-    const existingTransaction = await repos.transaction.findById(params.id);
+    const existingTransaction = await repos.transaction.findById(id);
     if (!existingTransaction) {
       return NextResponse.json(notFoundResponse('Transaction'), { status: 404 });
     }
 
     // Soft delete
-    await repos.transaction.softDelete(params.id);
+    await repos.transaction.softDelete(id);
 
     // Log the deletion
-    await logDelete(AuditModule.TRANSACTIONS, params.id, existingTransaction, session!.shopId!);
+    await logDelete(AuditModule.TRANSACTIONS, id, existingTransaction, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Transaction deleted successfully' }), { status: 200 });
   } catch (error: any) {

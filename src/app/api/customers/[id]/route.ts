@@ -28,9 +28,10 @@ const updateCustomerSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'CUSTOMER_VIEW')) {
@@ -39,14 +40,14 @@ export async function GET(
 
     const repos = await getRepositories(request);
     const repository = repos.customer;
-    const customer = await repository.findById(params.id);
+    const customer = await repository.findById(id);
 
     if (!customer) {
       return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
     }
 
     // Get customer statistics
-    const stats = await repository.getStatistics(params.id);
+    const stats = await repository.getStatistics(id);
 
     return NextResponse.json(
       successResponse({
@@ -62,9 +63,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'CUSTOMER_EDIT')) {
@@ -85,7 +87,7 @@ export async function PUT(
     const repository = repos.customer;
     
     // Check if customer exists
-    const existingCustomer = await repository.findById(params.id);
+    const existingCustomer = await repository.findById(id);
     if (!existingCustomer) {
       return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
     }
@@ -115,10 +117,10 @@ export async function PUT(
     if (data.customerType) updateData.customerType = data.customerType;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-    const updatedCustomer = await repository.update(params.id, updateData);
+    const updatedCustomer = await repository.update(id, updateData);
 
     // Log the update
-    await logUpdate(AuditModule.CUSTOMERS, params.id, existingCustomer, updatedCustomer, session!.shopId!);
+    await logUpdate(AuditModule.CUSTOMERS, id, existingCustomer, updatedCustomer, session!.shopId!);
 
     return NextResponse.json(successResponse(updatedCustomer), { status: 200 });
   } catch (error: any) {
@@ -129,9 +131,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'CUSTOMER_DELETE')) {
@@ -140,16 +143,16 @@ export async function DELETE(
 
     const repos = await getRepositories(request);
     const repository = repos.customer;
-    const customer = await repository.findById(params.id);
+    const customer = await repository.findById(id);
 
     if (!customer) {
       return NextResponse.json(notFoundResponse('Customer'), { status: 404 });
     }
 
-    await repository.softDelete(params.id);
+    await repository.softDelete(id);
 
     // Log the deletion
-    await logDelete(AuditModule.CUSTOMERS, params.id, customer, session!.shopId!);
+    await logDelete(AuditModule.CUSTOMERS, id, customer, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Customer deleted successfully' }), { status: 200 });
   } catch (error: any) {

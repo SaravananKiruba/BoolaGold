@@ -15,10 +15,12 @@ import { getRepositories } from '@/utils/apiRepository';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and permission
+    
+    const { id } = await params;
+// Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'PURCHASE_VIEW')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
@@ -26,7 +28,7 @@ export async function GET(
 
     const repos = await getRepositories(request);
     const repository = repos.purchaseOrder;
-    const purchaseOrder = await repository.findById(params.id);
+    const purchaseOrder = await repository.findById(id);
 
     if (!purchaseOrder) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
@@ -44,10 +46,12 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and permission
+    
+    const { id } = await params;
+// Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'PURCHASE_EDIT')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
@@ -129,10 +133,12 @@ export async function PATCH(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    
+    const { id } = await params;
+const { id } = params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
@@ -176,10 +182,12 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    
+    const { id } = await params;
+const { id } = params;
 
     const session = await getSession();
     const repos = await getRepositories(request);

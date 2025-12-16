@@ -23,40 +23,32 @@ model Shop {
   logo                  String?             @db.Text
   primaryColor          String?             @db.VarChar(20)
   invoicePrefix         String              @db.VarChar(20)
-  isActive              Boolean             @default(true)
   bankName              String?             @db.VarChar(200)
   accountNumber         String?             @db.VarChar(50)
   ifscCode              String?             @db.VarChar(20)
   bankBranch            String?             @db.VarChar(200)
   termsAndConditions    String?             @db.Text
   
-  // Subscription Management
-  subscriptionStatus    SubscriptionStatus  @default(TRIAL)
-  subscriptionStartDate DateTime?
-  subscriptionEndDate   DateTime?
+  // Subscription Management (Simplified)
+  subscriptionType      SubscriptionType    @default(TRIAL)
   trialStartDate        DateTime?
   trialEndDate          DateTime?
+  lifetimeAmount        Decimal?            @db.Decimal(10, 2) // Discounted amount for lifetime
+  lifetimePaidAt        DateTime?
   
-  // Payment Tracking
-  lastPaymentDate       DateTime?
-  lastPaymentAmount     Decimal?            @db.Decimal(10, 2)
-  nextPaymentDue        DateTime?
-  
-  // AMC Management
-  amcStatus             AmcStatus           @default(NOT_APPLICABLE)
-  amcStartDate          DateTime?
-  amcEndDate            DateTime?
+  // AMC Management (Mandatory)
+  amcRenewalDate        DateTime?
   amcLastRenewalDate    DateTime?
+  amcAmount             Decimal             @default(10000.00) @db.Decimal(10, 2)
   
   // User Limits
   maxUsers              Int                 @default(10)
   currentUserCount      Int                 @default(0)
   
-  // Business Rules
-  isPaused              Boolean             @default(false)
-  pausedAt              DateTime?
-  pauseReason           String?             @db.Text
-  canReactivate         Boolean             @default(true)
+  // Activation Status
+  isActive              Boolean             @default(true)
+  deactivatedAt         DateTime?
+  deactivationReason    String?             @db.Text
   
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
@@ -73,12 +65,12 @@ model Shop {
   suppliers             Supplier[]
   transactions          Transaction[]
   users                 User[]
-  payments              ShopPayment[]
 
   @@index([isActive])
   @@index([deletedAt])
-  @@index([subscriptionStatus])
-  @@index([subscriptionEndDate])
+  @@index([subscriptionType])
+  @@index([trialEndDate])
+  @@index([amcRenewalDate])
   @@map("shops")
 }
 
@@ -694,52 +686,7 @@ enum BisComplianceStatus {
   PENDING
 }
 
-enum SubscriptionStatus {
+enum SubscriptionType {
   TRIAL
-  ACTIVE
-  EXPIRED
-  PAUSED
-  CANCELLED
-}
-
-enum AmcStatus {
-  PENDING
-  ACTIVE
-  EXPIRED
-  NOT_APPLICABLE
-}
-
-enum PaymentType {
-  TRIAL
-  SUBSCRIPTION
-  AMC_RENEWAL
-  REACTIVATION
-}
-
-model ShopPayment {
-  id              String        @id @default(uuid())
-  shopId          String
-  shop            Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  
-  amount          Decimal       @db.Decimal(10, 2)
-  paymentType     PaymentType
-  paymentMethod   String        @db.VarChar(50)
-  transactionId   String?       @db.VarChar(200)
-  upiId           String?       @db.VarChar(100)
-  
-  status          PaymentStatus @default(PENDING)
-  paidAt          DateTime?
-  verifiedAt      DateTime?
-  verifiedBy      String?
-  
-  remarks         String?       @db.Text
-  receiptUrl      String?       @db.Text
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@index([shopId])
-  @@index([status])
-  @@index([paymentType])
-  @@map("shop_payments")
+  LIFETIME
 }

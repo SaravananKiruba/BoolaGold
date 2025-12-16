@@ -13,12 +13,14 @@ import { getRepositories } from '@/utils/apiRepository';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
     const session = await getSession();
-    const salesOrderId = params.id;
+    const salesOrderId = id;
 
     // Check if sales order exists
     const salesOrder = await repos.salesOrder.findById(salesOrderId);

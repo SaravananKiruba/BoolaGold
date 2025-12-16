@@ -44,17 +44,19 @@ const updateRateMasterSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(params.id)) {
+    if (!uuidRegex.test(id)) {
       return NextResponse.json(errorResponse('Invalid rate master ID format'), { status: 400 });
     }
 
-    const rateMaster = await repos.rateMaster.findById(params.id);
+    const rateMaster = await repos.rateMaster.findById(id);
 
     if (!rateMaster) {
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
@@ -72,19 +74,21 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
     const session = await getSession();
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(params.id)) {
+    if (!uuidRegex.test(id)) {
       return NextResponse.json(errorResponse('Invalid rate master ID format'), { status: 400 });
     }
 
     // Check if rate master exists
-    const existingRate = await repos.rateMaster.findById(params.id);
+    const existingRate = await repos.rateMaster.findById(id);
     if (!existingRate) {
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
     }
@@ -131,11 +135,11 @@ export async function PUT(
     }
 
     // Update with transaction support (handled in repository)
-    const updatedRate = await repos.rateMaster.update(params.id, updateData);
+    const updatedRate = await repos.rateMaster.update(id, updateData);
 
     // Log the update
     try {
-      await logUpdate(AuditModule.RATE_MASTER, params.id, existingRate, updatedRate, session!.shopId!);
+      await logUpdate(AuditModule.RATE_MASTER, id, existingRate, updatedRate, session!.shopId!);
     } catch (auditError) {
       console.error('Audit log failed:', auditError);
       // Don't fail the request if audit logging fails
@@ -153,19 +157,21 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
     const session = await getSession();
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(params.id)) {
+    if (!uuidRegex.test(id)) {
       return NextResponse.json(errorResponse('Invalid rate master ID format'), { status: 400 });
     }
 
     // Check if rate master exists
-    const existingRate = await repos.rateMaster.findById(params.id);
+    const existingRate = await repos.rateMaster.findById(id);
     if (!existingRate) {
       return NextResponse.json(errorResponse('Rate master not found'), { status: 404 });
     }
@@ -173,14 +179,14 @@ export async function DELETE(
     // Check if this is an active rate
     if (existingRate.isActive) {
       // Warn but allow deletion
-      console.warn(`Deleting active rate master: ${params.id}`);
+      console.warn(`Deleting active rate master: ${id}`);
     }
 
-    await repos.rateMaster.delete(params.id);
+    await repos.rateMaster.delete(id);
 
     // Log the deletion
     try {
-      await logDelete(AuditModule.RATE_MASTER, params.id, existingRate, session!.shopId!);
+      await logDelete(AuditModule.RATE_MASTER, id, existingRate, session!.shopId!);
     } catch (auditError) {
       console.error('Audit log failed:', auditError);
       // Don't fail the request if audit logging fails
@@ -188,7 +194,7 @@ export async function DELETE(
 
     return NextResponse.json(
       successResponse(
-        { id: params.id, message: 'Rate master deleted successfully' },
+        { id: id, message: 'Rate master deleted successfully' },
         'Rate master deleted successfully'
       ), 
       { status: 200 }

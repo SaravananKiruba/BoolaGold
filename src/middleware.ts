@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME, verifyToken } from '@/lib/auth';
 
 // Routes that don't require authentication
-const publicRoutes = ['/login', '/subscription-expired', '/shop-paused'];
+const publicRoutes = ['/login', '/shop-deactivated'];
 
 // Debug routes - accessible to all authenticated users
 const debugRoutes = ['/debug-auth'];
@@ -61,31 +61,18 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // 🔒 SUBSCRIPTION CHECK: Verify shop subscription status for non-SUPER_ADMIN users
-      // Allow access to subscription page for payment even if expired
-      const allowedPagesForExpired = ['/subscription', '/subscription-expired', '/shop-paused'];
-      const isAllowedPage = allowedPagesForExpired.some(page => pathname.startsWith(page));
+      // 🔒 SHOP ACTIVATION CHECK: Verify shop is active for non-SUPER_ADMIN users
+      // Allow access to subscription page for payment even if deactivated
+      const allowedPagesForDeactivated = ['/subscription', '/shop-deactivated'];
+      const isAllowedPage = allowedPagesForDeactivated.some(page => pathname.startsWith(page));
       
       if (!isApiRoute && !isAllowedPage && session.role !== 'SUPER_ADMIN' && session.shopId) {
-        // Check subscription status from JWT token (no database call needed)
-        // Block access if subscription expired
-        if (session.subscriptionStatus === 'EXPIRED') {
+        // Check shop active status from the JWT token (no database call needed)
+        // The isActive flag is set during login and stored in the JWT
+        if (session.isActive === false) {
+          // Shop is deactivated, redirect to subscription page
           const url = request.nextUrl.clone();
-          url.pathname = '/subscription-expired';
-          return NextResponse.redirect(url);
-        }
-        
-        // Block access if shop paused
-        if (session.isPaused) {
-          const url = request.nextUrl.clone();
-          url.pathname = '/shop-paused';
-          return NextResponse.redirect(url);
-        }
-        
-        // Block access if cancelled
-        if (session.subscriptionStatus === 'CANCELLED') {
-          const url = request.nextUrl.clone();
-          url.pathname = '/login';
+          url.pathname = '/subscription';
           return NextResponse.redirect(url);
         }
       }

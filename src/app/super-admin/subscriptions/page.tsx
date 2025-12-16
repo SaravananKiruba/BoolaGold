@@ -1,7 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Button,
+  Badge,
+  Input,
+  Textarea,
+  SimpleGrid,
+  Field,
+  DialogRoot,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogCloseTrigger,
+  DialogTitle,
+  NativeSelectRoot,
+  NativeSelectField,
+  TableRoot,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableColumnHeader,
+  TableCell,
+} from '@chakra-ui/react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { toast } from '@/utils/toast';
 
 interface Shop {
   id: string;
@@ -9,479 +39,432 @@ interface Shop {
   email: string;
   phone: string;
   city: string;
-  subscriptionStatus: string;
-  subscriptionStartDate: string | null;
-  subscriptionEndDate: string | null;
-  trialEndDate: string | null;
-  amcStatus: string;
-  amcEndDate: string | null;
-  isPaused: boolean;
-  pausedAt: string | null;
-  currentUserCount: number;
+  subscriptionType: 'TRIAL' | 'LIFETIME';
+  trialStartDate?: string;
+  trialEndDate?: string;
+  lifetimeAmount?: number;
+  lifetimePaidAt?: string;
+  amcRenewalDate?: string;
+  amcLastRenewalDate?: string;
+  amcAmount: number;
   maxUsers: number;
-  lastPaymentDate: string | null;
-  lastPaymentAmount: number | null;
-  _count: {
-    users: number;
-    customers: number;
-    salesOrders: number;
-  };
+  currentUserCount: number;
+  isActive: boolean;
+  deactivatedAt?: string;
+  deactivationReason?: string;
+  activeUserCount: number;
+  trialDaysRemaining?: number;
+  amcDaysRemaining?: number;
+  isTrialExpired: boolean;
+  isAmcExpired: boolean;
+}
+
+interface Stats {
+  total: number;
+  trial: number;
+  lifetime: number;
+  active: number;
+  deactivated: number;
 }
 
 export default function SuperAdminSubscriptionsPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [shops, setShops] = useState<Shop[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [action, setAction] = useState('');
-  const [actionData, setActionData] = useState({ reason: '', extendDays: 30 });
-  const [submitting, setSubmitting] = useState(false);
+  const [action, setAction] = useState<string>('');
+  const [lifetimeAmount, setLifetimeAmount] = useState('65000');
+  const [extendDays, setExtendDays] = useState('7');
+  const [amcDate, setAmcDate] = useState('');
+  const [deactivateReason, setDeactivateReason] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const onOpen = () => setIsOpen(true);
+  const onClose = () => setIsOpen(false);
 
   useEffect(() => {
     fetchShops();
-  }, [filter]);
+  }, [filter, search]);
 
   const fetchShops = async () => {
     try {
       setLoading(true);
-      const url = filter === 'ALL'
-        ? '/api/super-admin/subscriptions'
-        : `/api/super-admin/subscriptions?status=${filter}`;
+      const params = new URLSearchParams();
+      if (filter !== 'ALL') params.append('filter', filter);
+      if (search) params.append('search', search);
 
-      const response = await fetch(url);
-      const data = await response.json();
+      const res = await fetch(`/api/super-admin/subscriptions?${params.toString()}`);
+      const data = await res.json();
 
       if (data.success) {
         setShops(data.data.shops);
+        setStats(data.data.stats);
+      } else {
+        toast.error(data.message || 'Failed to fetch shops');
       }
-    } catch (error) {
-      console.error('Error fetching shops:', error);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch shops');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAction = async () => {
-    if (!selectedShop || !action) return;
-
-    setSubmitting(true);
+    if (!selectedShop) return;
 
     try {
-      const response = await fetch('/api/super-admin/subscriptions', {
+      setActionLoading(true);
+      
+      const body: any = {
+        action,
+        shopId: selectedShop.id,
+        data: {},
+      };
+
+      if (action === 'convertToLifetime') {
+        body.data.lifetimeAmount = parseFloat(lifetimeAmount);
+      } else if (action === 'extendTrial') {
+        body.data.days = parseInt(extendDays);
+      } else if (action === 'updateAMC') {
+        body.data.amcRenewalDate = amcDate;
+      } else if (action === 'deactivate') {
+        body.data.reason = deactivateReason;
+      }
+
+      const res = await fetch('/api/super-admin/subscriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shopId: selectedShop.id,
-          action,
-          reason: actionData.reason,
-          extendDays: action === 'EXTEND' ? actionData.extendDays : undefined,
-        }),
+        body: JSON.stringify(body),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
       if (data.success) {
-        alert(`✅ ${data.data.message}`);
-        setShowActionModal(false);
-        setSelectedShop(null);
-        setAction('');
+        toast.success(data.message || 'Action completed successfully');
+        onClose();
         fetchShops();
       } else {
-        alert('❌ ' + (data.error || 'Failed to perform action'));
+        toast.error(data.message || 'Action failed');
       }
-    } catch (error) {
-      alert('❌ Error performing action');
+    } catch (err: any) {
+      toast.error(err.message || 'Action failed');
     } finally {
-      setSubmitting(false);
+      setActionLoading(false);
     }
   };
 
   const openActionModal = (shop: Shop, actionType: string) => {
     setSelectedShop(shop);
     setAction(actionType);
-    setShowActionModal(true);
+    
+    // Reset form values
+    setLifetimeAmount('65000');
+    setExtendDays('7');
+    setAmcDate('');
+    setDeactivateReason('');
+    
+    // Set default AMC date to 1 year from now
+    if (actionType === 'updateAMC') {
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      setAmcDate(futureDate.toISOString().split('T')[0]);
+    }
+    
+    onOpen();
   };
 
-  const getStatusBadge = (status: string) => {
-    const colors: { [key: string]: string } = {
-      TRIAL: '#3b82f6',
-      ACTIVE: '#10b981',
-      EXPIRED: '#ef4444',
-      PAUSED: '#f97316',
-      CANCELLED: '#6b7280',
-    };
-
-    return (
-      <span style={{
-        background: colors[status] || '#6b7280',
-        color: 'white',
-        padding: '4px 12px',
-        borderRadius: '6px',
-        fontSize: '0.85rem',
-        fontWeight: 600,
-      }}>
-        {status}
-      </span>
-    );
+  const getSubscriptionBadge = (shop: Shop) => {
+    if (shop.subscriptionType === 'TRIAL') {
+      if (shop.isTrialExpired) {
+        return <Badge colorScheme="red">TRIAL EXPIRED</Badge>;
+      }
+      return <Badge colorScheme="blue">TRIAL</Badge>;
+    }
+    return <Badge colorScheme="green">LIFETIME</Badge>;
   };
 
-  const getDaysRemaining = (endDate: string | null) => {
-    if (!endDate) return null;
-    const days = Math.ceil((new Date(endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    return days;
+  const getStatusBadge = (shop: Shop) => {
+    if (!shop.isActive) {
+      return <Badge colorScheme="red">DEACTIVATED</Badge>;
+    }
+    if (shop.isAmcExpired) {
+      return <Badge colorScheme="orange">AMC EXPIRED</Badge>;
+    }
+    return <Badge colorScheme="green">ACTIVE</Badge>;
   };
+
+  if (loading) {
+    return <LoadingSpinner text="Loading shops..." />;
+  }
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">📊 Subscription Management</h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-            Manage shop subscriptions and lifecycle
-          </p>
-        </div>
-        <button className="button" onClick={() => router.push('/super-admin')}>
-          ← Back
-        </button>
-      </div>
+    <Container maxW="container.xl" py={8}>
+      <VStack spacing={6} align="stretch">
+        {/* Header */}
+        <HStack justify="space-between">
+          <Heading size="lg">Subscription Management</Heading>
+        </HStack>
 
-      {/* Stats Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px',
-      }}>
-        {['TRIAL', 'ACTIVE', 'EXPIRED', 'PAUSED'].map(status => {
-          const count = shops.filter(s => s.subscriptionStatus === status).length;
-          const colors: { [key: string]: string } = {
-            TRIAL: '#3b82f6',
-            ACTIVE: '#10b981',
-            EXPIRED: '#ef4444',
-            PAUSED: '#f97316',
-          };
-
-          return (
-            <div key={status} style={{
-              background: 'white',
-              padding: '20px',
-              borderRadius: '12px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              borderLeft: `4px solid ${colors[status]}`,
-            }}>
-              <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '8px' }}>
-                {status} Shops
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: colors[status] }}>
-                {count}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Filter Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '24px',
-        borderBottom: '2px solid #e2e8f0',
-        paddingBottom: '8px',
-        flexWrap: 'wrap',
-      }}>
-        {['ALL', 'TRIAL', 'ACTIVE', 'EXPIRED', 'PAUSED'].map(status => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            style={{
-              padding: '8px 16px',
-              background: filter === status ? '#667eea' : 'transparent',
-              color: filter === status ? 'white' : '#64748b',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            {status}
-          </button>
-        ))}
-      </div>
-
-      {/* Shops Table */}
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        padding: '24px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      }}>
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <div className="spinner" />
-          </div>
-        ) : shops.length === 0 ? (
-          <p style={{ color: '#94a3b8', textAlign: 'center', padding: '40px' }}>
-            No shops found
-          </p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Shop</th>
-                  <th>Status</th>
-                  <th>Subscription</th>
-                  <th>AMC</th>
-                  <th>Users</th>
-                  <th>Activity</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shops.map((shop) => {
-                  const endDate = shop.subscriptionEndDate || shop.trialEndDate;
-                  const daysRemaining = getDaysRemaining(endDate);
-
-                  return (
-                    <tr key={shop.id}>
-                      <td>
-                        <div>
-                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>{shop.name}</div>
-                          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{shop.city}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                            📞 {shop.phone}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div>
-                          {getStatusBadge(shop.subscriptionStatus)}
-                          {shop.isPaused && (
-                            <div style={{
-                              marginTop: '4px',
-                              fontSize: '0.8rem',
-                              color: '#f97316',
-                              fontWeight: 600,
-                            }}>
-                              ⏸️ Paused
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        {endDate ? (
-                          <div>
-                            <div style={{ fontSize: '0.9rem', marginBottom: '4px' }}>
-                              {new Date(endDate).toLocaleDateString()}
-                            </div>
-                            {daysRemaining !== null && (
-                              <div style={{
-                                fontSize: '0.85rem',
-                                color: daysRemaining < 7 ? '#ef4444' : daysRemaining < 30 ? '#f97316' : '#10b981',
-                                fontWeight: 600,
-                              }}>
-                                {daysRemaining > 0 ? `${daysRemaining} days left` : 'Expired'}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>{getStatusBadge(shop.amcStatus)}</td>
-                      <td>
-                        <div style={{ fontSize: '1rem', fontWeight: 600 }}>
-                          {shop.currentUserCount} / {shop.maxUsers}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                          {shop._count.users} active
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ fontSize: '0.85rem' }}>
-                          <div>{shop._count.customers} customers</div>
-                          <div>{shop._count.salesOrders} orders</div>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {!shop.isPaused && (
-                            <>
-                              <button
-                                className="button"
-                                style={{
-                                  background: '#f97316',
-                                  color: 'white',
-                                  padding: '4px 10px',
-                                  fontSize: '0.85rem',
-                                }}
-                                onClick={() => openActionModal(shop, 'PAUSE')}
-                              >
-                                ⏸️ Pause
-                              </button>
-                              <button
-                                className="button"
-                                style={{
-                                  background: '#3b82f6',
-                                  color: 'white',
-                                  padding: '4px 10px',
-                                  fontSize: '0.85rem',
-                                }}
-                                onClick={() => openActionModal(shop, 'EXTEND')}
-                              >
-                                📅 Extend
-                              </button>
-                            </>
-                          )}
-                          {shop.isPaused && (
-                            <button
-                              className="button"
-                              style={{
-                                background: '#10b981',
-                                color: 'white',
-                                padding: '4px 10px',
-                                fontSize: '0.85rem',
-                              }}
-                              onClick={() => openActionModal(shop, 'RESUME')}
-                            >
-                              ▶️ Resume
-                            </button>
-                          )}
-                          <button
-                            className="button"
-                            style={{
-                              background: '#ef4444',
-                              color: 'white',
-                              padding: '4px 10px',
-                              fontSize: '0.85rem',
-                            }}
-                            onClick={() => openActionModal(shop, 'CANCEL')}
-                          >
-                            ✕ Cancel
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        {/* Stats */}
+        {stats && (
+          <SimpleGrid columns={{ base: 2, md: 5 }} spacing={4}>
+            <Box p={4} borderWidth="1px" borderRadius="lg" shadow="sm">
+              <VStack align="stretch" gap={1}>
+                <Text fontSize="sm" color="gray.600">Total Shops</Text>
+                <Text fontSize="2xl" fontWeight="bold">{stats.total}</Text>
+              </VStack>
+            </Box>
+            <Box p={4} borderWidth="1px" borderRadius="lg" shadow="sm">
+              <VStack align="stretch" gap={1}>
+                <Text fontSize="sm" color="gray.600">Trial</Text>
+                <Text fontSize="2xl" fontWeight="bold" color="blue.500">{stats.trial}</Text>
+              </VStack>
+            </Box>
+            <Box p={4} borderWidth="1px" borderRadius="lg" shadow="sm">
+              <VStack align="stretch" gap={1}>
+                <Text fontSize="sm" color="gray.600">Lifetime</Text>
+                <Text fontSize="2xl" fontWeight="bold" color="green.500">{stats.lifetime}</Text>
+              </VStack>
+            </Box>
+            <Box p={4} borderWidth="1px" borderRadius="lg" shadow="sm">
+              <VStack align="stretch" gap={1}>
+                <Text fontSize="sm" color="gray.600">Active</Text>
+                <Text fontSize="2xl" fontWeight="bold" color="green.500">{stats.active}</Text>
+              </VStack>
+            </Box>
+            <Box p={4} borderWidth="1px" borderRadius="lg" shadow="sm">
+              <VStack align="stretch" gap={1}>
+                <Text fontSize="sm" color="gray.600">Deactivated</Text>
+                <Text fontSize="2xl" fontWeight="bold" color="red.500">{stats.deactivated}</Text>
+              </VStack>
+            </Box>
+          </SimpleGrid>
         )}
-      </div>
+
+        {/* Filters */}
+        <HStack spacing={4}>
+          <NativeSelectRoot size="sm" maxW="200px">
+            <NativeSelectField value={filter} onChange={(e) => setFilter(e.target.value)}>
+              <option value="ALL">All Shops</option>
+              <option value="TRIAL">Trial</option>
+              <option value="LIFETIME">Lifetime</option>
+            </NativeSelectField>
+          </NativeSelectRoot>
+          <Input
+            placeholder="Search by name, email, or phone..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </HStack>
+
+        {/* Shops Table */}
+        <Box overflowX="auto">
+          <TableRoot variant="simple">
+            <TableHeader>
+              <TableRow>
+                <TableColumnHeader>Shop Name</TableColumnHeader>
+                <TableColumnHeader>Contact</TableColumnHeader>
+                <TableColumnHeader>Subscription</TableColumnHeader>
+                <TableColumnHeader>Status</TableColumnHeader>
+                <TableColumnHeader>Trial/AMC</TableColumnHeader>
+                <TableColumnHeader>Users</TableColumnHeader>
+                <TableColumnHeader>Actions</TableColumnHeader>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shops.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} textAlign="center" py={8}>
+                    <Text color="gray.500">No shops found</Text>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                shops.map((shop) => (
+                  <TableRow key={shop.id}>
+                    <TableCell>
+                      <VStack align="start" spacing={0}>
+                        <Text fontWeight="bold">{shop.name}</Text>
+                        <Text fontSize="sm" color="gray.500">{shop.city}</Text>
+                      </VStack>
+                    </TableCell>
+                    <TableCell>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm">{shop.email}</Text>
+                        <Text fontSize="sm" color="gray.500">{shop.phone}</Text>
+                      </VStack>
+                    </TableCell>
+                    <TableCell>
+                      <VStack align="start" spacing={1}>
+                        {getSubscriptionBadge(shop)}
+                        {shop.subscriptionType === 'LIFETIME' && shop.lifetimeAmount && (
+                          <Text fontSize="xs" color="gray.500">₹{shop.lifetimeAmount.toLocaleString()}</Text>
+                        )}
+                      </VStack>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(shop)}</TableCell>
+                    <TableCell>
+                      <VStack align="start" spacing={1}>
+                        {shop.trialDaysRemaining !== null && (
+                          <Text fontSize="sm" color={shop.trialDaysRemaining < 0 ? 'red.500' : 'blue.500'}>
+                            Trial: {shop.trialDaysRemaining < 0 ? 'Expired' : `${shop.trialDaysRemaining}d`}
+                          </Text>
+                        )}
+                        {shop.amcDaysRemaining !== null && (
+                          <Text fontSize="sm" color={shop.amcDaysRemaining < 0 ? 'red.500' : shop.amcDaysRemaining <= 30 ? 'orange.500' : 'green.500'}>
+                            AMC: {shop.amcDaysRemaining < 0 ? 'Expired' : `${shop.amcDaysRemaining}d`}
+                          </Text>
+                        )}
+                      </VStack>
+                    </TableCell>
+                    <TableCell>
+                      <Text fontSize="sm">{shop.activeUserCount}/{shop.maxUsers}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <VStack align="start" spacing={1}>
+                        {shop.subscriptionType === 'TRIAL' && (
+                          <Button
+                            size="xs"
+                            colorScheme="green"
+                            onClick={() => openActionModal(shop, 'convertToLifetime')}
+                          >
+                            Convert to Lifetime
+                          </Button>
+                        )}
+                        {shop.subscriptionType === 'TRIAL' && (
+                          <Button
+                            size="xs"
+                            colorScheme="blue"
+                            onClick={() => openActionModal(shop, 'extendTrial')}
+                          >
+                            Extend Trial
+                          </Button>
+                        )}
+                        {shop.subscriptionType === 'LIFETIME' && (
+                          <Button
+                            size="xs"
+                            colorScheme="purple"
+                            onClick={() => openActionModal(shop, 'updateAMC')}
+                          >
+                            Update AMC
+                          </Button>
+                        )}
+                        {shop.isActive ? (
+                          <Button
+                            size="xs"
+                            colorScheme="red"
+                            onClick={() => openActionModal(shop, 'deactivate')}
+                          >
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button
+                            size="xs"
+                            colorScheme="green"
+                            onClick={() => openActionModal(shop, 'reactivate')}
+                          >
+                            Reactivate
+                          </Button>
+                        )}
+                      </VStack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </TableRoot>
+        </Box>
+      </VStack>
 
       {/* Action Modal */}
-      {showActionModal && selectedShop && (
-        <div className="modal-overlay" onClick={() => setShowActionModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>🎯 {action} Subscription</h2>
-              <button className="close-button" onClick={() => setShowActionModal(false)}>
-                ✕
-              </button>
-            </div>
+      <DialogRoot open={isOpen} onOpenChange={(e) => !e.open && onClose()} size="md">
+        <DialogContent>
+          <DialogCloseTrigger />
+          <DialogHeader>
+            <DialogTitle>
+              {action === 'convertToLifetime' && 'Convert to Lifetime'}
+              {action === 'extendTrial' && 'Extend Trial Period'}
+              {action === 'updateAMC' && 'Update AMC Renewal Date'}
+              {action === 'deactivate' && 'Deactivate Shop'}
+              {action === 'reactivate' && 'Reactivate Shop'}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <VStack spacing={4} align="stretch">
+              <Text fontSize="sm">
+                Shop: <strong>{selectedShop?.name}</strong>
+              </Text>
 
-            <div style={{ marginBottom: '20px' }}>
-              <strong>Shop:</strong> {selectedShop.name}
-            </div>
+              {action === 'convertToLifetime' && (
+                <Field label="Lifetime Amount (with discount)">
+                  <Input
+                    type="number"
+                    value={lifetimeAmount}
+                    onChange={(e) => setLifetimeAmount(e.target.value)}
+                    min={0}
+                  />
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Standard: ₹65,000. Enter discounted amount if applicable.
+                  </Text>
+                </Field>
+              )}
 
-            {action === 'EXTEND' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label className="form-label">Extend By (Days) *</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={actionData.extendDays}
-                  onChange={(e) => setActionData({ ...actionData, extendDays: parseInt(e.target.value) })}
-                  min="1"
-                />
-              </div>
-            )}
+              {action === 'extendTrial' && (
+                <Field label="Extend by (days)">
+                  <Input
+                    type="number"
+                    value={extendDays}
+                    onChange={(e) => setExtendDays(e.target.value)}
+                    min={1}
+                  />
+                </Field>
+              )}
 
-            {(action === 'PAUSE' || action === 'CANCEL') && (
-              <div style={{ marginBottom: '20px' }}>
-                <label className="form-label">Reason *</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={actionData.reason}
-                  onChange={(e) => setActionData({ ...actionData, reason: e.target.value })}
-                  placeholder="Enter reason..."
-                  required
-                />
-              </div>
-            )}
+              {action === 'updateAMC' && (
+                <Field label="AMC Renewal Date">
+                  <Input
+                    type="date"
+                    value={amcDate}
+                    onChange={(e) => setAmcDate(e.target.value)}
+                  />
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Set the next AMC renewal date. Shop will be deactivated if not renewed by this date.
+                  </Text>
+                </Field>
+              )}
 
-            <div style={{
-              background: action === 'CANCEL' ? '#fee2e2' : '#e0e7ff',
-              padding: '16px',
-              borderRadius: '8px',
-              marginBottom: '20px',
-            }}>
-              <p style={{
-                fontSize: '0.9rem',
-                color: action === 'CANCEL' ? '#991b1b' : '#3730a3',
-                margin: 0,
-              }}>
-                {action === 'PAUSE' && '⏸️ Shop will be paused. Users cannot login until resumed.'}
-                {action === 'RESUME' && '▶️ Shop will be resumed. Users can login again.'}
-                {action === 'EXTEND' && '📅 Subscription will be extended by specified days.'}
-                {action === 'CANCEL' && '⚠️ WARNING: This will permanently cancel the subscription!'}
-              </p>
-            </div>
+              {action === 'deactivate' && (
+                <Field label="Deactivation Reason">
+                  <Textarea
+                    value={deactivateReason}
+                    onChange={(e) => setDeactivateReason(e.target.value)}
+                    placeholder="Enter reason for deactivation..."
+                  />
+                </Field>
+              )}
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                className="button"
-                onClick={() => setShowActionModal(false)}
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                className="button button-primary"
-                onClick={handleAction}
-                disabled={submitting || (action === 'PAUSE' && !actionData.reason)}
-                style={{
-                  background: action === 'CANCEL' ? '#ef4444' : undefined,
-                }}
-              >
-                {submitting ? 'Processing...' : `Confirm ${action}`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        .data-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        
-        .data-table th {
-          text-align: left;
-          padding: 12px;
-          background: #f8fafc;
-          font-weight: 600;
-          color: #475569;
-          font-size: #0.9rem;
-          border-bottom: 2px solid #e2e8f0;
-        }
-        
-        .data-table td {
-          padding: 16px 12px;
-          border-bottom: 1px solid #f1f5f9;
-          vertical-align: top;
-        }
-        
-        .data-table tr:hover {
-          background: #f8fafc;
-        }
-      `}</style>
-    </div>
+              {action === 'reactivate' && (
+                <Text>
+                  Are you sure you want to reactivate <strong>{selectedShop?.name}</strong>?
+                </Text>
+              )}
+            </VStack>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="ghost" mr={3} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme={action === 'deactivate' ? 'red' : 'green'}
+              onClick={handleAction}
+              isLoading={actionLoading}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
+    </Container>
   );
 }

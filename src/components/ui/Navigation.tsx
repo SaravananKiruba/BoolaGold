@@ -102,7 +102,6 @@ export default function Navigation() {
     {
       title: 'Business',
       items: [
-        { href: '/super-admin/payments', label: 'Payments', icon: '💳', desc: 'Verify Payments' },
         { href: '/super-admin/subscriptions', label: 'Subscriptions', icon: '📊', desc: 'Manage Subscriptions' },
       ],
     },

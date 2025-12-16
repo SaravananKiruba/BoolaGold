@@ -177,7 +177,7 @@ export default function DashboardPage() {
       {/* Subscription Status Banner */}
       {shopInfo && (
         <>
-          {shopInfo.subscriptionStatus === 'TRIAL' && shopInfo.trialEndDate && (
+          {shopInfo.subscriptionType === 'TRIAL' && shopInfo.trialEndDate && (
             <div style={{
               background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
               color: 'white',
@@ -210,13 +210,13 @@ export default function DashboardPage() {
                   cursor: 'pointer',
                 }}
               >
-                Subscribe Now
+                Upgrade to Lifetime
               </button>
             </div>
           )}
 
-          {shopInfo.subscriptionStatus === 'ACTIVE' && shopInfo.subscriptionEndDate && 
-           Math.ceil((new Date(shopInfo.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) < 30 && (
+          {shopInfo.subscriptionType === 'LIFETIME' && shopInfo.amcRenewalDate && 
+           Math.ceil((new Date(shopInfo.amcRenewalDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) < 30 && (
             <div style={{
               background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
               color: 'white',
@@ -230,11 +230,11 @@ export default function DashboardPage() {
             }}>
               <div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '4px' }}>
-                  ⚠️ Subscription Expiring Soon
+                  ⚠️ AMC Renewal Due Soon
                 </div>
                 <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
-                  Expires: {new Date(shopInfo.subscriptionEndDate).toLocaleDateString()} 
-                  ({Math.ceil((new Date(shopInfo.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days remaining)
+                  AMC Expires: {new Date(shopInfo.amcRenewalDate).toLocaleDateString()} 
+                  ({Math.ceil((new Date(shopInfo.amcRenewalDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days remaining)
                 </div>
               </div>
               <button
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                   cursor: 'pointer',
                 }}
               >
-                Renew Now
+                Renew AMC
               </button>
             </div>
           )}

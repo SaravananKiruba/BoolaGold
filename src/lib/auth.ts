@@ -44,8 +44,8 @@ export interface SessionPayload {
   role: string;
   shopId: string | null;  // NULL for SUPER_ADMIN
   shopName: string | null;  // NULL for SUPER_ADMIN
-  subscriptionStatus?: string | null;  // Shop subscription status (NULL for SUPER_ADMIN)
-  isPaused?: boolean;  // Shop pause status (false for SUPER_ADMIN)
+  subscriptionType?: string | null;  // TRIAL or LIFETIME (NULL for SUPER_ADMIN)
+  isActive?: boolean;  // Shop active status (true for SUPER_ADMIN)
   [key: string]: any;  // Index signature for JWTPayload compatibility
 }
 

@@ -10,11 +10,13 @@ import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
-    const product = await repos.product.findById(params.id);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
+    const product = await repos.product.findById(id);
 
     if (!product) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });

@@ -20,13 +20,15 @@ const payInstallmentSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
     const session = await getSession();
     const body = await request.json();
-    const emiPaymentId = params.id;
+    const emiPaymentId = id;
 
     // Validate input
     const validation = payInstallmentSchema.safeParse(body);

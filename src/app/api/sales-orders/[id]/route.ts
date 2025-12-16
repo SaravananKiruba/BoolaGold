@@ -21,9 +21,10 @@ const updateSalesOrderSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'SALES_VIEW')) {
@@ -32,7 +33,7 @@ export async function GET(
 
     const repos = await getRepositories(request);
     const repository = repos.salesOrder;
-    const salesOrder = await repository.findById(params.id);
+    const salesOrder = await repository.findById(id);
 
     if (!salesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
@@ -47,9 +48,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'SALES_EDIT')) {
@@ -71,7 +73,7 @@ export async function PATCH(
     const salesOrderRepository = repos.salesOrder;
 
     // Check if sales order exists
-    const existingSalesOrder = await repos.salesOrder.findById(params.id);
+    const existingSalesOrder = await repos.salesOrder.findById(id);
     if (!existingSalesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }
@@ -93,7 +95,7 @@ export async function PATCH(
 
         // Update sales order
         await tx.salesOrder.update({
-          where: { id: params.id },
+          where: { id: id },
           data: {
             status: SalesOrderStatus.CANCELLED,
             notes: data.notes || existingSalesOrder.notes,
@@ -102,13 +104,13 @@ export async function PATCH(
       });
     } else {
       // Regular update
-      await repos.salesOrder.update(params.id, data);
+      await repos.salesOrder.update(id, data);
     }
 
-    const updatedSalesOrder = await repos.salesOrder.findById(params.id);
+    const updatedSalesOrder = await repos.salesOrder.findById(id);
 
     // Log the update
-    await logUpdate(AuditModule.SALES_ORDERS, params.id, existingSalesOrder, updatedSalesOrder, session!.shopId!);
+    await logUpdate(AuditModule.SALES_ORDERS, id, existingSalesOrder, updatedSalesOrder, session!.shopId!);
 
     return NextResponse.json(successResponse(updatedSalesOrder), { status: 200 });
   } catch (error: any) {
@@ -119,14 +121,15 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;const session = await getSession();
     const repos = await getRepositories(request);
     const salesOrderRepository = repos.salesOrder;
     // Check if sales order exists
-    const existingSalesOrder = await repos.salesOrder.findById(params.id);
+    const existingSalesOrder = await repos.salesOrder.findById(id);
     if (!existingSalesOrder) {
       return NextResponse.json(notFoundResponse('Sales Order'), { status: 404 });
     }
@@ -147,7 +150,7 @@ export async function DELETE(
 
       // Mark order as cancelled
       await tx.salesOrder.update({
-        where: { id: params.id },
+        where: { id: id },
         data: {
           status: SalesOrderStatus.CANCELLED,
         },
@@ -155,13 +158,13 @@ export async function DELETE(
 
       // Soft delete
       await tx.salesOrder.update({
-        where: { id: params.id },
+        where: { id: id },
         data: { deletedAt: new Date() },
       });
     });
 
     // Log the deletion
-    await logDelete(AuditModule.SALES_ORDERS, params.id, existingSalesOrder, session!.shopId!);
+    await logDelete(AuditModule.SALES_ORDERS, id, existingSalesOrder, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Sales order cancelled and deleted successfully' }), { status: 200 });
   } catch (error: any) {

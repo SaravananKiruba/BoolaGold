@@ -12,11 +12,13 @@ import { getRepositories } from '@/utils/apiRepository';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
-    const emiPayment = await repos.emiPayment.findById(params.id);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
+    const emiPayment = await repos.emiPayment.findById(id);
 
     if (!emiPayment) {
       return NextResponse.json(notFoundResponse('EMI Payment'), { status: 404 });
@@ -31,22 +33,24 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;
+const session = await getSession();
     const repos = await getRepositories(request);
     // Check if EMI payment exists
-    const existingEmi = await repos.emiPayment.findById(params.id);
+    const existingEmi = await repos.emiPayment.findById(id);
     if (!existingEmi) {
       return NextResponse.json(notFoundResponse('EMI Payment'), { status: 404 });
     }
 
     // Soft delete
-    await repos.emiPayment.softDelete(params.id);
+    await repos.emiPayment.softDelete(id);
 
     // Log the deletion
-    await logDelete(AuditModule.EMI, params.id, existingEmi, session!.shopId!);
+    await logDelete(AuditModule.EMI, id, existingEmi, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'EMI payment deleted successfully' }), { status: 200 });
   } catch (error: any) {

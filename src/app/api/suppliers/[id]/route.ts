@@ -14,16 +14,18 @@ import { getRepositories } from '@/utils/apiRepository';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and permission
+    
+    const { id } = await params;
+// Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'SUPPLIER_VIEW')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const supplierId = params.id;
+    const supplierId = id;
 
     const repos = await getRepositories(request);
     const repository = repos.supplier;
@@ -50,16 +52,18 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and permission
+    
+    const { id } = await params;
+// Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'SUPPLIER_EDIT')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const supplierId = params.id;
+    const supplierId = id;
     const body = await request.json();
 
     // Get existing supplier
@@ -146,16 +150,18 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and permission
+    
+    const { id } = await params;
+// Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'SUPPLIER_DELETE')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
 
-    const supplierId = params.id;
+    const supplierId = id;
 
     const repos = await getRepositories(request);
     const repository = repos.supplier;

@@ -19,12 +19,14 @@ import { MetalType, AuditAction, AuditModule } from '@/domain/entities/types';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
     const body = await request.json();
-    const purchaseOrderId = params.id;
+    const purchaseOrderId = id;
 
     const {
       items, // Array of items to receive (can be single or multiple)
@@ -179,11 +181,13 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
-    const purchaseOrderId = params.id;
+    
+    const { id } = await params;
+const repos = await getRepositories(request);
+    const purchaseOrderId = id;
 
     const itemsToReceive = await repos.purchaseOrder.getItemsToReceive(purchaseOrderId);
 

@@ -9,8 +9,6 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    // Enable optimized package imports
-    optimizePackageImports: ['@chakra-ui/react'],
   },
   env: {
     APP_URL: process.env.APP_URL,

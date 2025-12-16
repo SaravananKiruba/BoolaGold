@@ -45,18 +45,19 @@ const updateProductSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const repos = await getRepositories(request);
-    const product = await repos.product.findById(params.id);
+    const product = await repos.product.findById(id);
 
     if (!product) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });
     }
 
     // Get stock summary
-    const stockSummary = await repos.stockItem.getStockSummaryByProduct(params.id);
+    const stockSummary = await repos.stockItem.getStockSummaryByProduct(id);
 
     return NextResponse.json(
       successResponse({
@@ -72,10 +73,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;const session = await getSession();
     const body = await request.json();
 
     const repos = await getRepositories(request);
@@ -90,7 +92,7 @@ export async function PUT(
     const data = validation.data;
 
     // Check if product exists
-    const existingProduct = await repos.product.findById(params.id);
+    const existingProduct = await repos.product.findById(id);
     if (!existingProduct) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });
     }
@@ -152,10 +154,10 @@ export async function PUT(
       }
     }
 
-    const updatedProduct = await repository.update(params.id, updateData);
+    const updatedProduct = await repository.update(id, updateData);
 
     // Log the update
-    await logUpdate(AuditModule.PRODUCTS, params.id, existingProduct, updatedProduct, session!.shopId!);
+    await logUpdate(AuditModule.PRODUCTS, id, existingProduct, updatedProduct, session!.shopId!);
 
     return NextResponse.json(successResponse(updatedProduct), { status: 200 });
   } catch (error: any) {
@@ -166,19 +168,20 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const repos = await getRepositories(request);
+    
+    const { id } = await params;const repos = await getRepositories(request);
     const session = await getSession();
-    const product = await repos.product.findById(params.id);
+    const product = await repos.product.findById(id);
 
     if (!product) {
       return NextResponse.json(notFoundResponse('Product'), { status: 404 });
     }
 
     // Check if product has active stock
-    const activeStock = await repos.stockItem.findAvailableByProduct(params.id, 1);
+    const activeStock = await repos.stockItem.findAvailableByProduct(id, 1);
     if (activeStock.length > 0) {
       return NextResponse.json(
         errorResponse('Cannot delete product with active stock items'),
@@ -186,10 +189,10 @@ export async function DELETE(
       );
     }
     const repository = repos.product;
-    await repository.softDelete(params.id);
+    await repository.softDelete(id);
 
     // Log the deletion
-    await logDelete(AuditModule.PRODUCTS, params.id, product, session!.shopId!);
+    await logDelete(AuditModule.PRODUCTS, id, product, session!.shopId!);
 
     return NextResponse.json(successResponse({ message: 'Product deleted successfully' }), { status: 200 });
   } catch (error: any) {

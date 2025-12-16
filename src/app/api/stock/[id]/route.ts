@@ -12,10 +12,12 @@ import { getSession } from '@/lib/auth';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    let repos;
+    
+    const { id } = await params;
+let repos;
     try {
       repos = await getRepositories(request);
     } catch (authError: any) {
@@ -25,7 +27,7 @@ export async function GET(
       );
     }
 
-    const stockItem = await repos.stockItem.findById(params.id);
+    const stockItem = await repos.stockItem.findById(id);
 
     if (!stockItem) {
       return NextResponse.json({ error: 'Stock item not found' }, { status: 404 });

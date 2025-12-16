@@ -23,15 +23,17 @@ const recordPaymentSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;
+const session = await getSession();
     
     // Create repository with session context for GET as well
     const repos = await getRepositories(request);
     const salesOrderRepository = repos.salesOrder;
-    const salesOrderId = params.id;
+    const salesOrderId = id;
 
     // Check if sales order exists
     const salesOrder = await repos.salesOrder.findById(salesOrderId);
@@ -68,10 +70,12 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    
+    const { id } = await params;
+const session = await getSession();
     
     // Check authentication - OWNER and ACCOUNTS can record payments
     if (!session || !['OWNER', 'ACCOUNTS'].includes(session.role)) {
@@ -90,7 +94,7 @@ export async function POST(
     }
     
     const body = await request.json();
-    const salesOrderId = params.id;
+    const salesOrderId = id;
 
     // Validate input
     const validation = recordPaymentSchema.safeParse(body);
