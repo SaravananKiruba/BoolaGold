@@ -3,9 +3,11 @@
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   text?: string;
+  message?: string;
 }
 
-export default function LoadingSpinner({ size = 'md', text }: LoadingSpinnerProps) {
+export default function LoadingSpinner({ size = 'md', text, message }: LoadingSpinnerProps) {
+  const displayText = text || message;
   const sizeMap = {
     sm: '24px',
     md: '40px',
@@ -30,9 +32,9 @@ export default function LoadingSpinner({ size = 'md', text }: LoadingSpinnerProp
           height: sizeMap[size],
         }}
       />
-      {text && (
+      {displayText && (
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', margin: 0 }}>
-          {text}
+          {displayText}
         </p>
       )}
     </div>

@@ -124,12 +124,12 @@ export default function SubscriptionPage() {
 
   return (
     <Container maxW="container.xl" py={8}>
-      <VStack spacing={6} align="stretch">
+      <VStack gap={6} align="stretch">
         {/* Header */}
         <Box>
           <HStack justify="space-between" align="center">
             <Heading size="lg">Subscription Management</Heading>
-            <HStack spacing={3}>
+            <HStack gap={3}>
               {getSubscriptionBadge()}
               {getStatusBadge()}
             </HStack>
@@ -153,7 +153,7 @@ export default function SubscriptionPage() {
         )}
 
         {/* Trial Warning */}
-        {subscription.subscriptionType === 'TRIAL' && subscription.trialDaysRemaining !== null && subscription.trialDaysRemaining > 0 && subscription.trialDaysRemaining <= 3 && (
+        {subscription.subscriptionType === 'TRIAL' && subscription.trialDaysRemaining !== null && subscription.trialDaysRemaining !== undefined && subscription.trialDaysRemaining > 0 && subscription.trialDaysRemaining <= 3 && (
           <Alert.Root status="warning">
             <Alert.Indicator />
             <Alert.Content>
@@ -166,7 +166,7 @@ export default function SubscriptionPage() {
         )}
 
         {/* AMC Warning */}
-        {subscription.amcDaysRemaining !== null && subscription.amcDaysRemaining > 0 && subscription.amcDaysRemaining <= 30 && (
+        {subscription.amcDaysRemaining !== null && subscription.amcDaysRemaining !== undefined && subscription.amcDaysRemaining > 0 && subscription.amcDaysRemaining <= 30 && (
           <Alert.Root status="warning">
             <Alert.Indicator />
             <Alert.Content>
@@ -178,11 +178,11 @@ export default function SubscriptionPage() {
           </Alert.Root>
         )}
 
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6}>
           {/* Subscription Details */}
           <Box borderWidth="1px" borderRadius="lg" p={6} bg="white" shadow="sm">
             <Heading size="md" mb={4}>Subscription Details</Heading>
-            <VStack align="stretch" spacing={4}>
+            <VStack align="stretch" gap={4}>
               <Box>
                 <Text fontWeight="bold" fontSize="sm" color="gray.500">Current Plan</Text>
                 <Text fontSize="2xl" fontWeight="bold">
@@ -198,7 +198,7 @@ export default function SubscriptionPage() {
                     <Text>
                       {subscription.trialStartDate && new Date(subscription.trialStartDate).toLocaleDateString()} - {subscription.trialEndDate && new Date(subscription.trialEndDate).toLocaleDateString()}
                     </Text>
-                    {subscription.trialDaysRemaining !== null && (
+                    {subscription.trialDaysRemaining !== null && subscription.trialDaysRemaining !== undefined && (
                       <Text fontSize="lg" fontWeight="bold" color={subscription.trialDaysRemaining < 0 ? 'red.500' : 'blue.500'}>
                         {subscription.trialDaysRemaining < 0 ? 'Expired' : `${subscription.trialDaysRemaining} days remaining`}
                       </Text>
@@ -229,7 +229,7 @@ export default function SubscriptionPage() {
                 {subscription.amcRenewalDate ? (
                   <>
                     <Text>Renewal Due: {new Date(subscription.amcRenewalDate).toLocaleDateString()}</Text>
-                    {subscription.amcDaysRemaining !== null && (
+                    {subscription.amcDaysRemaining !== null && subscription.amcDaysRemaining !== undefined && (
                       <Text fontSize="lg" fontWeight="bold" color={subscription.amcDaysRemaining < 0 ? 'red.500' : subscription.amcDaysRemaining <= 30 ? 'orange.500' : 'green.500'}>
                         {subscription.amcDaysRemaining < 0 ? 'Expired' : `${subscription.amcDaysRemaining} days remaining`}
                       </Text>
@@ -253,11 +253,11 @@ export default function SubscriptionPage() {
           {/* Payment Information */}
           <Box borderWidth="1px" borderRadius="lg" p={6} bg="white" shadow="sm">
             <Heading size="md" mb={4}>Payment Information</Heading>
-            <VStack align="stretch" spacing={6}>
+            <VStack align="stretch" gap={6}>
               {/* Pricing */}
               <Box>
                 <Text fontWeight="bold" mb={3}>Subscription Fees:</Text>
-                <VStack align="stretch" spacing={2}>
+                <VStack align="stretch" gap={2}>
                   <HStack justify="space-between">
                     <Text>Trial Period (7 days):</Text>
                     <Text fontWeight="bold">₹{subscription.paymentInfo.trialFee.toLocaleString()}</Text>
@@ -278,7 +278,7 @@ export default function SubscriptionPage() {
               {/* Payment Instructions */}
               <Box>
                 <Text fontWeight="bold" mb={3}>Payment Instructions:</Text>
-                <VStack align="stretch" spacing={3}>
+                <VStack align="stretch" gap={3}>
                   <Box>
                     <Text fontSize="sm" color="gray.600" mb={1}>1. Make payment via UPI:</Text>
                     <HStack justify="space-between" bg="gray.50" p={3} borderRadius="md">
@@ -294,7 +294,6 @@ export default function SubscriptionPage() {
                         alt="Payment QR Code" 
                         maxW="200px" 
                         mx="auto"
-                        fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999' font-family='Arial' font-size='14'%3EQR Code%3C/text%3E%3C/svg%3E"
                       />
                     </Box>
                   </Box>

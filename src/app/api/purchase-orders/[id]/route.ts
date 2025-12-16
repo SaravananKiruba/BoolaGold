@@ -58,7 +58,6 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { id } = params;
 
     // Get existing purchase order
     const repos = await getRepositories(request);
@@ -138,7 +137,6 @@ export async function PUT(
   try {
     
     const { id } = await params;
-const { id } = params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
@@ -187,7 +185,6 @@ export async function DELETE(
   try {
     
     const { id } = await params;
-const { id } = params;
 
     const session = await getSession();
     const repos = await getRepositories(request);

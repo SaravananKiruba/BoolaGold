@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       // 👥 CHECK USER LIMIT: Max 10 users per shop
       const targetShopId = session.shopId;
       const shop = await prisma.shop.findUnique({
-        where: { id: targetShopId },
+        where: { id: targetShopId ?? undefined },
         select: { currentUserCount: true, maxUsers: true, name: true }
       });
       

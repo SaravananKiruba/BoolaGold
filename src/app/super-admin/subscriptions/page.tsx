@@ -13,7 +13,6 @@ import {
   Input,
   Textarea,
   SimpleGrid,
-  Field,
   DialogRoot,
   DialogContent,
   DialogHeader,
@@ -201,7 +200,7 @@ export default function SuperAdminSubscriptionsPage() {
 
   return (
     <Container maxW="container.xl" py={8}>
-      <VStack spacing={6} align="stretch">
+      <VStack gap={6} align="stretch">
         {/* Header */}
         <HStack justify="space-between">
           <Heading size="lg">Subscription Management</Heading>
@@ -209,7 +208,7 @@ export default function SuperAdminSubscriptionsPage() {
 
         {/* Stats */}
         {stats && (
-          <SimpleGrid columns={{ base: 2, md: 5 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 5 }} gap={4}>
             <Box p={4} borderWidth="1px" borderRadius="lg" shadow="sm">
               <VStack align="stretch" gap={1}>
                 <Text fontSize="sm" color="gray.600">Total Shops</Text>
@@ -244,7 +243,7 @@ export default function SuperAdminSubscriptionsPage() {
         )}
 
         {/* Filters */}
-        <HStack spacing={4}>
+        <HStack gap={4}>
           <NativeSelectRoot size="sm" maxW="200px">
             <NativeSelectField value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="ALL">All Shops</option>
@@ -261,7 +260,7 @@ export default function SuperAdminSubscriptionsPage() {
 
         {/* Shops Table */}
         <Box overflowX="auto">
-          <TableRoot variant="simple">
+          <TableRoot variant="line">
             <TableHeader>
               <TableRow>
                 <TableColumnHeader>Shop Name</TableColumnHeader>
@@ -284,19 +283,19 @@ export default function SuperAdminSubscriptionsPage() {
                 shops.map((shop) => (
                   <TableRow key={shop.id}>
                     <TableCell>
-                      <VStack align="start" spacing={0}>
+                      <VStack align="start" gap={0}>
                         <Text fontWeight="bold">{shop.name}</Text>
                         <Text fontSize="sm" color="gray.500">{shop.city}</Text>
                       </VStack>
                     </TableCell>
                     <TableCell>
-                      <VStack align="start" spacing={0}>
+                      <VStack align="start" gap={0}>
                         <Text fontSize="sm">{shop.email}</Text>
                         <Text fontSize="sm" color="gray.500">{shop.phone}</Text>
                       </VStack>
                     </TableCell>
                     <TableCell>
-                      <VStack align="start" spacing={1}>
+                      <VStack align="start" gap={1}>
                         {getSubscriptionBadge(shop)}
                         {shop.subscriptionType === 'LIFETIME' && shop.lifetimeAmount && (
                           <Text fontSize="xs" color="gray.500">₹{shop.lifetimeAmount.toLocaleString()}</Text>
@@ -305,13 +304,13 @@ export default function SuperAdminSubscriptionsPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(shop)}</TableCell>
                     <TableCell>
-                      <VStack align="start" spacing={1}>
-                        {shop.trialDaysRemaining !== null && (
+                      <VStack align="start" gap={1}>
+                        {shop.trialDaysRemaining !== null && shop.trialDaysRemaining !== undefined && (
                           <Text fontSize="sm" color={shop.trialDaysRemaining < 0 ? 'red.500' : 'blue.500'}>
                             Trial: {shop.trialDaysRemaining < 0 ? 'Expired' : `${shop.trialDaysRemaining}d`}
                           </Text>
                         )}
-                        {shop.amcDaysRemaining !== null && (
+                        {shop.amcDaysRemaining !== null && shop.amcDaysRemaining !== undefined && (
                           <Text fontSize="sm" color={shop.amcDaysRemaining < 0 ? 'red.500' : shop.amcDaysRemaining <= 30 ? 'orange.500' : 'green.500'}>
                             AMC: {shop.amcDaysRemaining < 0 ? 'Expired' : `${shop.amcDaysRemaining}d`}
                           </Text>
@@ -322,7 +321,7 @@ export default function SuperAdminSubscriptionsPage() {
                       <Text fontSize="sm">{shop.activeUserCount}/{shop.maxUsers}</Text>
                     </TableCell>
                     <TableCell>
-                      <VStack align="start" spacing={1}>
+                      <VStack align="start" gap={1}>
                         {shop.subscriptionType === 'TRIAL' && (
                           <Button
                             size="xs"
@@ -391,13 +390,14 @@ export default function SuperAdminSubscriptionsPage() {
             </DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <VStack spacing={4} align="stretch">
+            <VStack gap={4} align="stretch">
               <Text fontSize="sm">
                 Shop: <strong>{selectedShop?.name}</strong>
               </Text>
 
               {action === 'convertToLifetime' && (
-                <Field label="Lifetime Amount (with discount)">
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={2}>Lifetime Amount (with discount)</Text>
                   <Input
                     type="number"
                     value={lifetimeAmount}
@@ -407,22 +407,24 @@ export default function SuperAdminSubscriptionsPage() {
                   <Text fontSize="xs" color="gray.500" mt={1}>
                     Standard: ₹65,000. Enter discounted amount if applicable.
                   </Text>
-                </Field>
+                </Box>
               )}
 
               {action === 'extendTrial' && (
-                <Field label="Extend by (days)">
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={2}>Extend by (days)</Text>
                   <Input
                     type="number"
                     value={extendDays}
                     onChange={(e) => setExtendDays(e.target.value)}
                     min={1}
                   />
-                </Field>
+                </Box>
               )}
 
               {action === 'updateAMC' && (
-                <Field label="AMC Renewal Date">
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={2}>AMC Renewal Date</Text>
                   <Input
                     type="date"
                     value={amcDate}
@@ -431,17 +433,18 @@ export default function SuperAdminSubscriptionsPage() {
                   <Text fontSize="xs" color="gray.500" mt={1}>
                     Set the next AMC renewal date. Shop will be deactivated if not renewed by this date.
                   </Text>
-                </Field>
+                </Box>
               )}
 
               {action === 'deactivate' && (
-                <Field label="Deactivation Reason">
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={2}>Deactivation Reason</Text>
                   <Textarea
                     value={deactivateReason}
                     onChange={(e) => setDeactivateReason(e.target.value)}
                     placeholder="Enter reason for deactivation..."
                   />
-                </Field>
+                </Box>
               )}
 
               {action === 'reactivate' && (
@@ -458,7 +461,7 @@ export default function SuperAdminSubscriptionsPage() {
             <Button
               colorScheme={action === 'deactivate' ? 'red' : 'green'}
               onClick={handleAction}
-              isLoading={actionLoading}
+              loading={actionLoading}
             >
               Confirm
             </Button>

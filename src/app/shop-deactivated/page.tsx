@@ -25,7 +25,7 @@ export default function ShopDeactivatedPage() {
 
   return (
     <Container maxW="container.md" py={20}>
-      <VStack spacing={6}>
+      <VStack gap={6}>
         <Alert.Root
           status="error"
           flexDirection="column"
@@ -41,7 +41,7 @@ export default function ShopDeactivatedPage() {
               Shop Deactivated
             </Alert.Title>
             <Alert.Description maxWidth="lg" fontSize="lg">
-              <VStack spacing={4} mt={4}>
+              <VStack gap={4} mt={4}>
                 <Text>
                   Your shop has been deactivated. This could be due to trial expiry or AMC not renewed.
                 </Text>
