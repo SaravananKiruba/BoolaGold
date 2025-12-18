@@ -69,7 +69,7 @@ export async function protectRouteWithPermission(
 ): Promise<SessionPayload | NextResponse | Response> {
   // First do standard protection
   const result = await protectRoute(request);
-  if (result instanceof NextResponse) return result;
+  if (result instanceof Response) return result;
 
   const session = result;
   
