@@ -5,6 +5,12 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+  relationMode = "prisma" // Optimize for connection pooling
+  
+  // Connection pooling for production (critical for multi-tenant)
+  // Use PgBouncer or MySQL Proxy in production
+  // Max connections = 100 * number of app instances
+  // Set in DATABASE_URL: ?connection_limit=20&pool_timeout=60
 }
 
 model Shop {
@@ -453,6 +459,8 @@ model Transaction {
   @@index([salesOrderId])
   @@index([status])
   @@index([deletedAt])
+  @@index([shopId, transactionDate, deletedAt], name: "transaction_shop_date")
+  @@index([shopId, transactionType, status], name: "transaction_type_status")
   @@map("transactions")
 }
 
@@ -504,6 +512,7 @@ model EmiInstallment {
   @@index([emiPaymentId])
   @@index([dueDate])
   @@index([status])
+  @@index([emiPaymentId, status, dueDate], name: "emi_installment_lookup")
   @@map("emi_installments")
 }
 

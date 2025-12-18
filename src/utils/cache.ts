@@ -1,24 +1,33 @@
 /**
- * 🚀 Simple In-Memory Cache for Performance Optimization
+ * 🚀 Multi-Tenant Production Cache Strategy
  * 
- * Caches frequently accessed data to reduce database queries
- * - Rate Master data (changes rarely)
- * - Product lookups by barcode
- * - Shop configuration
+ * CURRENT: In-memory cache (single server)
+ * PRODUCTION: Redis for multi-server deployment
  * 
- * For production with multiple servers, replace with Redis
+ * Cache Keys Pattern: {shopId}:{resource}:{identifier}
+ * Example: "shop-123:rate:GOLD-22K"
+ * 
+ * TTL Strategy:
+ * - Shop Config: 1 hour (rarely changes)
+ * - Rate Master: 5 minutes (changes daily)
+ * - Products: 2 minutes (inventory updates)
+ * - Session Data: 24 hours (JWT expiry)
+ * 
+ * For 300+ shops: Use Redis Cluster with 2-3 nodes
+ * Memory estimate: ~500MB for 300 shops × 1000 products
  */
 
 interface CacheEntry<T> {
   data: T;
   expiry: number;
+  shopId?: string; // For multi-tenant cache invalidation
 }
 
 class SimpleCache {
   private cache: Map<string, CacheEntry<any>>;
   private defaultTTL: number;
 
-  constructor(defaultTTL = 300000) { // Default 5 minutes
+  constructor(defaultTTL = 120000) { // Default 2 minutes (safer for multi-tenant)
     this.cache = new Map();
     this.defaultTTL = defaultTTL;
     
@@ -70,6 +79,21 @@ class SimpleCache {
         this.cache.delete(key);
       }
     }
+  }
+
+  /**
+   * 🔥 CRITICAL: Invalidate all cache for a specific shop
+   * Use when shop data changes (rate updates, config changes)
+   */
+  invalidateShop(shopId: string): void {
+    this.deletePattern(`^${shopId}:`);
+  }
+
+  /**
+   * Get cache key for multi-tenant resources
+   */
+  static buildKey(shopId: string, resource: string, identifier?: string): string {
+    return identifier ? `${shopId}:${resource}:${identifier}` : `${shopId}:${resource}`;
   }
 
   /**
