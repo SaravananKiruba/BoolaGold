@@ -4,6 +4,11 @@
 // CUSTOMER DOMAIN
 // ============================================
 
+export enum ShopBusinessType {
+  RETAIL = 'RETAIL',
+  WHOLESALE = 'WHOLESALE',
+}
+
 export enum CustomerType {
   RETAIL = 'RETAIL',
   WHOLESALE = 'WHOLESALE',
@@ -100,6 +105,11 @@ export enum StockStatus {
   SOLD = 'SOLD',
 }
 
+export enum StockAcquisitionType {
+  CASH_PURCHASE = 'CASH_PURCHASE',
+  METAL_EXCHANGE_IN = 'METAL_EXCHANGE_IN',
+}
+
 export interface StockItem {
   id: string;
   productId: string;
@@ -112,6 +122,13 @@ export interface StockItem {
   purchaseDate?: Date | null;
   saleDate?: Date | null;
   salesOrderLineId?: string | null;
+  acquisitionType?: StockAcquisitionType;
+  exchangeDetails?: {
+    inputWeight: number;
+    inputPurity: string;
+    outputWeight: number;
+    outputPurity: string;
+  } | null;
 }
 
 // ============================================
@@ -156,6 +173,7 @@ export enum PaymentMethod {
   BANK_TRANSFER = 'BANK_TRANSFER',
   CREDIT = 'CREDIT',
   EMI = 'EMI',
+  METAL_EXCHANGE = 'METAL_EXCHANGE',
 }
 
 export interface PurchaseOrder {
@@ -238,6 +256,8 @@ export enum TransactionType {
   METAL_PURCHASE = 'METAL_PURCHASE',
   GOLD_SCHEME = 'GOLD_SCHEME',
   ADJUSTMENT = 'ADJUSTMENT',
+  METAL_EXCHANGE_IN = 'METAL_EXCHANGE_IN',
+  METAL_EXCHANGE_OUT = 'METAL_EXCHANGE_OUT',
 }
 
 export enum TransactionCategory {
@@ -272,6 +292,8 @@ export interface Transaction {
   metalWeight?: number | null;
   metalRatePerGram?: number | null;
   metalCost?: number | null;
+  excludeFromProfitLoss?: boolean;
+  exchangeReferenceId?: string | null;
   createdBy?: string | null;
 }
 

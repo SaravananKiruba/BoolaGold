@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
         ifscCode: true,
         bankBranch: true,
         termsAndConditions: true,
+        shopBusinessType: true,
         subscriptionType: true,
         trialStartDate: true,
         trialEndDate: true,
@@ -170,11 +171,17 @@ export async function POST(request: NextRequest) {
       ifscCode,
       bankBranch,
       termsAndConditions,
+      shopBusinessType,
     } = body;
 
     // Validate required fields
     if (!name || !address || !city || !state || !pincode || !phone || !email || !gstNumber || !panNumber || !invoicePrefix) {
       return createErrorResponse('Missing required fields', 400);
+    }
+
+    // 🔒 CRITICAL: Validate shopBusinessType
+    if (shopBusinessType && !['RETAIL', 'WHOLESALE'].includes(shopBusinessType)) {
+      return createErrorResponse('Invalid shopBusinessType. Must be RETAIL or WHOLESALE', 400);
     }
 
     // Calculate trial period dates (7 days from creation)
@@ -203,6 +210,7 @@ export async function POST(request: NextRequest) {
         ifscCode,
         bankBranch,
         termsAndConditions: termsAndConditions ? JSON.stringify(termsAndConditions) : null,
+        shopBusinessType: shopBusinessType || 'RETAIL', // Default to RETAIL
         isActive: true,
         // 🎯 SUBSCRIPTION: Start with 7-day trial
         subscriptionType: 'TRIAL',

@@ -9,6 +9,8 @@ import { logAudit } from '@/utils/audit';
 import { AuditAction, AuditModule } from '@/domain/entities/types';
 import { getSession, hasPermission } from '@/lib/auth';
 import { getRepositories } from '@/utils/apiRepository';
+import { validatePaymentMethodForShopType, shouldExcludeFromProfitLoss } from '@/utils/wholesaleValidation';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/purchase-orders
@@ -121,7 +123,49 @@ export async function POST(request: NextRequest) {
       notes,
       items, // Array of { productId, quantity, unitPrice, expectedWeight, purchaseCost?, sellingPrice? }
       autoReceiveStock = false, // NEW: Auto-generate stock items for direct purchases
+      metalExchange, // For wholesale: { inputMetalType, inputPurity, inputWeight, outputMetalType, outputPurity, outputWeight }
     } = body;
+
+    console.log('📦 Purchase Order Request:', { 
+      supplierId, 
+      paymentMethod,
+      itemCount: items?.length,
+      autoReceiveStock 
+    });
+
+    // 🔒 Get shop and validate business type
+    const shop = await prisma.shop.findUnique({
+      where: { id: session!.shopId! },
+      select: { shopBusinessType: true },
+    });
+
+    if (!shop) {
+      return NextResponse.json(errorResponse('Shop not found'), { status: 404 });
+    }
+
+    // 🔒 Determine default payment method based on shop business type
+    const defaultPaymentMethod = shop.shopBusinessType === 'WHOLESALE' 
+      ? PaymentMethod.METAL_EXCHANGE 
+      : PaymentMethod.CASH;
+    
+    const finalPaymentMethod = paymentMethod || defaultPaymentMethod;
+
+    console.log('💳 Payment Method Resolution:', {
+      shopType: shop.shopBusinessType,
+      received: paymentMethod,
+      default: defaultPaymentMethod,
+      final: finalPaymentMethod
+    });
+
+    // 🔒 Validate payment method matches shop business type
+    const paymentValidation = validatePaymentMethodForShopType(
+      shop.shopBusinessType as 'RETAIL' | 'WHOLESALE',
+      finalPaymentMethod
+    );
+
+    if (!paymentValidation.valid) {
+      return NextResponse.json(errorResponse(paymentValidation.error!), { status: 400 });
+    }
 
     // Validate required fields
     if (!supplierId || !items || items.length === 0) {
@@ -159,7 +203,7 @@ export async function POST(request: NextRequest) {
       orderNumber,
       supplierId,
       expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : undefined,
-      paymentMethod: paymentMethod || PaymentMethod.CASH,
+      paymentMethod: finalPaymentMethod,
       discountAmount,
       totalAmount: finalAmount,
       paidAmount: 0,
@@ -216,6 +260,8 @@ export async function POST(request: NextRequest) {
             barcode: barcodes[i],
             purchaseCost: item.purchaseCost || item.unitPrice,
             purchaseDate: new Date(),
+            acquisitionType: shop.shopBusinessType === 'WHOLESALE' ? 'METAL_EXCHANGE_IN' : 'CASH_PURCHASE',
+            exchangeDetails: shop.shopBusinessType === 'WHOLESALE' && metalExchange ? metalExchange : undefined,
           });
         }
 

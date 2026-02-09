@@ -21,6 +21,7 @@ export interface ShopConfig {
   website?: string;
 
   // Business Details
+  shopBusinessType: 'RETAIL' | 'WHOLESALE';
   gstNumber: string;
   panNumber: string;
 
@@ -72,6 +73,7 @@ export async function getShopConfig(session: SessionPayload | null): Promise<Sho
     phone: shop.phone,
     email: shop.email,
     website: shop.website || undefined,
+    shopBusinessType: (shop.shopBusinessType as 'RETAIL' | 'WHOLESALE') || 'RETAIL',
     gstNumber: shop.gstNumber,
     panNumber: shop.panNumber,
     logo: shop.logo || undefined,
@@ -118,6 +120,7 @@ export async function getShopConfigById(shopId: string): Promise<ShopConfig | nu
     phone: shop.phone,
     email: shop.email,
     website: shop.website || undefined,
+    shopBusinessType: (shop.shopBusinessType as 'RETAIL' | 'WHOLESALE') || 'RETAIL',
     gstNumber: shop.gstNumber,
     panNumber: shop.panNumber,
     logo: shop.logo || undefined,
@@ -152,6 +155,7 @@ export const defaultShopConfig: ShopConfig = {
   phone: '+91 98765 43210',
   email: 'info@boolagold.com',
   website: 'www.boolagold.com',
+  shopBusinessType: 'RETAIL',
   gstNumber: '33AAAAA0000A1Z5',
   panNumber: 'AAAAA0000A',
   primaryColor: '#667eea',

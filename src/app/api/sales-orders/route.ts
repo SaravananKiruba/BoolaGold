@@ -14,6 +14,7 @@ import { generateInvoiceNumber } from '@/utils/barcode';
 import prisma from '@/lib/prisma';
 import { getSession, hasPermission } from '@/lib/auth';
 import { getRepositories } from '@/utils/apiRepository';
+import { validatePaymentMethodForShopType, shouldExcludeFromProfitLoss } from '@/utils/wholesaleValidation';
 
 const salesOrderLineSchema = z.object({
   stockItemId: uuidSchema.optional(),
@@ -33,6 +34,15 @@ const createSalesOrderSchema = z.object({
   notes: z.string().optional(),
   paymentAmount: amountSchema.optional(),
   createAsPending: z.boolean().default(false), // If true, create as PENDING and only RESERVE stock
+  // Wholesale metal exchange details
+  metalExchange: z.object({
+    inputMetalType: z.string(),
+    inputPurity: z.string(),
+    inputWeight: z.number().positive(),
+    outputMetalType: z.string(),
+    outputPurity: z.string(),
+    outputWeight: z.number().positive(),
+  }).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -106,6 +116,34 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validation.data;
+
+    // 🔒 Get shop and validate business type
+    const shop = await prisma.shop.findUnique({
+      where: { id: session!.shopId! },
+      select: { shopBusinessType: true },
+    });
+
+    if (!shop) {
+      return NextResponse.json(errorResponse('Shop not found'), { status: 404 });
+    }
+
+    // 🔒 Validate payment method matches shop business type
+    const paymentValidation = validatePaymentMethodForShopType(
+      shop.shopBusinessType as 'RETAIL' | 'WHOLESALE',
+      data.paymentMethod
+    );
+
+    if (!paymentValidation.valid) {
+      return NextResponse.json(errorResponse(paymentValidation.error!), { status: 400 });
+    }
+
+    // 🔒 Wholesale shops must provide metal exchange details
+    if (shop.shopBusinessType === 'WHOLESALE' && !data.metalExchange) {
+      return NextResponse.json(
+        errorResponse('Wholesale orders require metal exchange details'),
+        { status: 400 }
+      );
+    }
 
     // Calculate selling prices automatically from product + latest rate
     const { calculateSellingPriceForSale, batchCalculateSellingPrices } = await import('@/utils/sellingPrice');
@@ -287,22 +325,80 @@ export async function POST(request: NextRequest) {
 
       // Create income transaction only for completed orders
       if (orderStatus === 'COMPLETED') {
-        await tx.transaction.create({
-          data: {
-            shopId: session!.shopId!,
-            transactionDate: new Date(),
-            transactionType: TransactionType.INCOME,
-            amount: finalAmount,
-            paymentMode: data.paymentMethod,
-            category: TransactionCategory.SALES,
-            description: `Sales Order ${invoiceNumber}`,
-            referenceNumber: invoiceNumber,
-            customerId: data.customerId,
-            salesOrderId: order.id,
-            status: 'COMPLETED',
-            currency: 'INR',
-          },
-        });
+        const excludeFromPL = shouldExcludeFromProfitLoss(
+          shop.shopBusinessType as 'RETAIL' | 'WHOLESALE',
+          data.paymentMethod
+        );
+
+        // For wholesale, create metal exchange transactions
+        if (shop.shopBusinessType === 'WHOLESALE' && data.metalExchange) {
+          const exchangeRef = `EXC-${invoiceNumber}`;
+
+          // Transaction 1: Metal OUT (what we gave to customer)
+          await tx.transaction.create({
+            data: {
+              shopId: session!.shopId!,
+              transactionDate: new Date(),
+              transactionType: TransactionType.METAL_EXCHANGE_OUT,
+              amount: 0, // No cash
+              paymentMode: PaymentMethod.METAL_EXCHANGE,
+              category: TransactionCategory.SALES,
+              description: `Wholesale Metal Exchange OUT - ${invoiceNumber}`,
+              referenceNumber: invoiceNumber,
+              customerId: data.customerId,
+              salesOrderId: order.id,
+              status: 'COMPLETED',
+              currency: 'INR',
+              metalType: data.metalExchange.outputMetalType as any,
+              metalPurity: data.metalExchange.outputPurity,
+              metalWeight: data.metalExchange.outputWeight,
+              excludeFromProfitLoss: true,
+              exchangeReferenceId: exchangeRef,
+            },
+          });
+
+          // Transaction 2: Metal IN (what we received from customer)
+          await tx.transaction.create({
+            data: {
+              shopId: session!.shopId!,
+              transactionDate: new Date(),
+              transactionType: TransactionType.METAL_EXCHANGE_IN,
+              amount: 0, // No cash
+              paymentMode: PaymentMethod.METAL_EXCHANGE,
+              category: TransactionCategory.SALES,
+              description: `Wholesale Metal Exchange IN - ${invoiceNumber}`,
+              referenceNumber: invoiceNumber,
+              customerId: data.customerId,
+              salesOrderId: order.id,
+              status: 'COMPLETED',
+              currency: 'INR',
+              metalType: data.metalExchange.inputMetalType as any,
+              metalPurity: data.metalExchange.inputPurity,
+              metalWeight: data.metalExchange.inputWeight,
+              excludeFromProfitLoss: true,
+              exchangeReferenceId: exchangeRef,
+            },
+          });
+        } else {
+          // Retail: Create normal income transaction
+          await tx.transaction.create({
+            data: {
+              shopId: session!.shopId!,
+              transactionDate: new Date(),
+              transactionType: TransactionType.INCOME,
+              amount: finalAmount,
+              paymentMode: data.paymentMethod,
+              category: TransactionCategory.SALES,
+              description: `Sales Order ${invoiceNumber}`,
+              referenceNumber: invoiceNumber,
+              customerId: data.customerId,
+              salesOrderId: order.id,
+              status: 'COMPLETED',
+              currency: 'INR',
+              excludeFromProfitLoss: excludeFromPL,
+            },
+          });
+        }
       }
 
       // Create payment record if amount paid

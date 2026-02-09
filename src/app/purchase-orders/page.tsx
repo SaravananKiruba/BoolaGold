@@ -362,10 +362,12 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [shopBusinessType, setShopBusinessType] = useState<'RETAIL' | 'WHOLESALE'>('RETAIL');
+  const [loadingShopConfig, setLoadingShopConfig] = useState(true);
   const [formData, setFormData] = useState({
     supplierId: '',
     expectedDeliveryDate: '',
-    paymentMethod: 'CASH',
+    paymentMethod: 'CASH', // Default to CASH, will be updated based on shop type
     discountAmount: '',
     referenceNumber: '',
     notes: '',
@@ -382,9 +384,34 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
+    fetchShopConfig();
     fetchSuppliers();
     fetchProducts();
   }, []);
+
+  const fetchShopConfig = async () => {
+    try {
+      setLoadingShopConfig(true);
+      const response = await fetch('/api/config/shop');
+      const result = await response.json();
+      console.log('🏪 Shop Config Response:', result);
+      if (result.success && result.data) {
+        const businessType = result.data.shopBusinessType || 'RETAIL';
+        console.log('🔧 Setting shop business type to:', businessType);
+        setShopBusinessType(businessType);
+        // Set default payment method based on shop type
+        const defaultPaymentMethod = businessType === 'WHOLESALE' ? 'METAL_EXCHANGE' : 'CASH';
+        console.log('💳 Setting default payment method to:', defaultPaymentMethod);
+        setFormData(prev => ({ ...prev, paymentMethod: defaultPaymentMethod }));
+      }
+    } catch (error) {
+      console.error('Error fetching shop config:', error);
+      // Default to RETAIL if fetch fails
+      setFormData(prev => ({ ...prev, paymentMethod: 'CASH' }));
+    } finally {
+      setLoadingShopConfig(false);
+    }
+  };
 
   const fetchSuppliers = async () => {
     try {
@@ -486,7 +513,7 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
       const orderData = {
         supplierId: formData.supplierId,
         expectedDeliveryDate: formData.expectedDeliveryDate || undefined,
-        paymentMethod: formData.paymentMethod,
+        paymentMethod: formData.paymentMethod || (shopBusinessType === 'WHOLESALE' ? 'METAL_EXCHANGE' : 'CASH'),
         discountAmount: parseFloat(formData.discountAmount) || 0,
         referenceNumber: formData.referenceNumber || undefined,
         notes: formData.notes || undefined,
@@ -498,6 +525,12 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
           purchaseCost: item.purchaseCost ? parseFloat(item.purchaseCost) : parseFloat(item.unitPrice),
         })),
       };
+
+      console.log('Creating purchase order:', { 
+        shopBusinessType, 
+        paymentMethod: orderData.paymentMethod,
+        itemCount: orderData.items.length 
+      });
 
       const response = await fetch('/api/purchase-orders', {
         method: 'POST',
@@ -545,6 +578,19 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
           </div>
         )}
 
+        {shopBusinessType === 'WHOLESALE' && (
+          <div style={{
+            padding: '12px',
+            marginBottom: '15px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+            color: '#856404',
+          }}>
+            Wholesale shops can only perform metal-for-metal exchanges. Cash transactions are not allowed.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <h3 style={{ borderBottom: '2px solid #0070f3', paddingBottom: '10px', marginBottom: '15px' }}>
             Order Details
@@ -588,12 +634,19 @@ function PurchaseOrderFormModal({ onClose, onSuccess }: {
                 value={formData.paymentMethod}
                 onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                disabled={loadingShopConfig}
               >
-                <option value="CASH">Cash</option>
-                <option value="UPI">UPI</option>
-                <option value="CARD">Card</option>
-                <option value="BANK_TRANSFER">Bank Transfer</option>
-                <option value="CREDIT">Credit</option>
+                {shopBusinessType === 'RETAIL' ? (
+                  <>
+                    <option value="CASH">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="CARD">Card</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="CREDIT">Credit</option>
+                  </>
+                ) : (
+                  <option value="METAL_EXCHANGE">Metal Exchange</option>
+                )}
               </select>
             </div>
 

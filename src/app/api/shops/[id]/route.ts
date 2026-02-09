@@ -97,8 +97,41 @@ export async function PATCH(
       ifscCode,
       bankBranch,
       termsAndConditions,
+      shopBusinessType,
       isActive,
     } = body;
+
+    // 🔒 CRITICAL: Only SUPER_ADMIN can change shop business type, and only if shop has no transactions
+    if (shopBusinessType !== undefined) {
+      if (!isSuperAdmin(session)) {
+        return createErrorResponse('Unauthorized: Only Super Admin can change shop business type', 403);
+      }
+
+      // Check if shop business type is actually changing
+      const currentShop = await prisma.shop.findUnique({
+        where: { id },
+        select: { shopBusinessType: true },
+      });
+
+      if (currentShop && currentShop.shopBusinessType !== shopBusinessType) {
+        // Check if shop has any transactions
+        const transactionCount = await prisma.transaction.count({
+          where: { shopId: id, deletedAt: null },
+        });
+
+        if (transactionCount > 0) {
+          return createErrorResponse(
+            'Cannot change shop business type after transactions have been recorded. Contact SaaS provider for data migration.',
+            400
+          );
+        }
+      }
+
+      // Validate shopBusinessType value
+      if (!['RETAIL', 'WHOLESALE'].includes(shopBusinessType)) {
+        return createErrorResponse('Invalid shopBusinessType. Must be RETAIL or WHOLESALE', 400);
+      }
+    }
 
     const shop = await prisma.shop.update({
       where: { id },
@@ -122,6 +155,7 @@ export async function PATCH(
         ...(ifscCode !== undefined && { ifscCode }),
         ...(bankBranch !== undefined && { bankBranch }),
         ...(termsAndConditions && { termsAndConditions: JSON.stringify(termsAndConditions) }),
+        ...(shopBusinessType && { shopBusinessType }),
         ...(isActive !== undefined && { isActive }),
       },
     });

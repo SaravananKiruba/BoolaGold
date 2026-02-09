@@ -21,6 +21,7 @@ interface Shop {
   primaryColor: string;
   invoicePrefix: string;
   isActive: boolean;
+  shopBusinessType?: 'RETAIL' | 'WHOLESALE';
   createdAt: string;
   _count?: {
     users: number;
@@ -50,6 +51,7 @@ interface ShopFormData {
   ifscCode: string;
   bankBranch: string;
   termsAndConditions: string;
+  shopBusinessType: 'RETAIL' | 'WHOLESALE';
 }
 
 export default function ShopsPage() {
@@ -61,6 +63,7 @@ export default function ShopsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [formData, setFormData] = useState<ShopFormData>({
     name: '',
     tagline: '',
@@ -81,11 +84,29 @@ export default function ShopsPage() {
     ifscCode: '',
     bankBranch: '',
     termsAndConditions: '',
+    shopBusinessType: 'RETAIL',
   });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchShops();
+    // Get current user role from session
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Session data:', data);
+        if (data.data?.role) {
+          setUserRole(data.data.role);
+          console.log('User role set to:', data.data.role);
+        } else if (data.role) {
+          // Handle alternate response format
+          setUserRole(data.role);
+          console.log('User role set to:', data.role);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch session:', err);
+      });
   }, []);
 
   const fetchShops = async () => {
@@ -151,6 +172,7 @@ export default function ShopsPage() {
           ifscCode: '',
           bankBranch: '',
           termsAndConditions: '',
+          shopBusinessType: 'RETAIL',
         });
         fetchShops();
       } else {
@@ -165,7 +187,7 @@ export default function ShopsPage() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -213,6 +235,7 @@ export default function ShopsPage() {
       ifscCode: '',
       bankBranch: '',
       termsAndConditions: '',
+      shopBusinessType: shop.shopBusinessType || 'RETAIL',
     });
     setShowEditModal(true);
   };
@@ -579,6 +602,37 @@ export default function ShopsPage() {
                       fontSize: '0.95rem',
                     }}
                   />
+                </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Business Type <span style={{ color: 'red' }}>*</span>
+                    {(userRole && userRole !== 'SUPER_ADMIN') && <span style={{ color: '#666', fontSize: '0.85rem', marginLeft: '8px' }}>(Super Admin only)</span>}
+                  </label>
+                  <select
+                    name="shopBusinessType"
+                    value={formData.shopBusinessType}
+                    onChange={handleInputChange}
+                    disabled={userRole !== null && userRole !== 'SUPER_ADMIN'}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                      backgroundColor: (userRole !== null && userRole !== 'SUPER_ADMIN') ? '#f1f5f9' : 'white',
+                      cursor: (userRole !== null && userRole !== 'SUPER_ADMIN') ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <option value="RETAIL">Retail (Metal ↔ Cash)</option>
+                    <option value="WHOLESALE">Wholesale (Metal ↔ Metal)</option>
+                  </select>
+                  <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>
+                    {formData.shopBusinessType === 'RETAIL' 
+                      ? '💰 Retail shops sell jewelry for cash payments (CASH, UPI, Card, etc.)'
+                      : '🔄 Wholesale shops exchange metal for metal only (no cash transactions)'}
+                  </p>
                 </div>
 
                 <div style={{ gridColumn: 'span 2' }}>
@@ -1063,6 +1117,35 @@ export default function ShopsPage() {
                       fontSize: '0.95rem',
                     }}
                   />
+                </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Business Type <span style={{ color: 'red' }}>*</span>
+                    <span style={{ color: '#666', fontSize: '0.85rem', marginLeft: '8px' }}>(Cannot be changed)</span>
+                  </label>
+                  <select
+                    name="shopBusinessType"
+                    value={formData.shopBusinessType}
+                    onChange={handleInputChange}
+                    disabled={true}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                      backgroundColor: '#f1f5f9',
+                      cursor: 'not-allowed',
+                    }}
+                  >
+                    <option value="RETAIL">Retail (Metal ↔ Cash)</option>
+                    <option value="WHOLESALE">Wholesale (Metal ↔ Metal)</option>
+                  </select>
+                  <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>
+                    Shop business type cannot be changed after creation
+                  </p>
                 </div>
 
                 <div style={{ gridColumn: 'span 2' }}>
