@@ -2,29 +2,52 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Badge,
+  Box,
+  Flex,
+  Heading,
+  HStack,
+  SimpleGrid,
+  Stack,
+  Text,
+} from '@chakra-ui/react';
+import { PageShell } from '@/components/ui/PageShell';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonStatGrid, SkeletonTable } from '@/components/ui/Skeletons';
+import { CTAButton } from '@/components/ui/CTAButton';
+import {
+  IconAlert,
+  IconChevronRight,
+  IconPlus,
+  IconRefresh,
+  IconShieldCheck,
+  IconSparkle,
+  IconStore,
+  IconTrendUp,
+  IconUser,
+  IconUsers,
+} from '@/components/ui/icons';
+
+interface Shop {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  isActive: boolean;
+  createdAt: string;
+  _count: { users: number };
+}
 
 interface DashboardStats {
   totalShops: number;
   activeShops: number;
   totalUsers: number;
   activeUsers: number;
-  totalCustomers: number;
-  totalProducts: number;
-  totalSalesOrders: number;
-  shops: Array<{
-    id: string;
-    name: string;
-    city: string;
-    state: string;
-    isActive: boolean;
-    createdAt: string;
-    _count: {
-      users: number;
-      customers: number;
-      products: number;
-      salesOrders: number;
-    };
-  }>;
+  shops: Shop[];
 }
 
 export default function SuperAdminDashboard() {
@@ -33,15 +56,11 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/super-admin/dashboard');
-      
+      setError('');
+      const response = await fetch('/api/super-admin/dashboard', { cache: 'no-store' });
       if (!response.ok) {
         if (response.status === 403) {
           router.push('/dashboard');
@@ -49,314 +68,402 @@ export default function SuperAdminDashboard() {
         }
         throw new Error('Failed to fetch dashboard data');
       }
-
       const data = await response.json();
       setStats(data.data);
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message ?? 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <div className="spinner" style={{ width: '50px', height: '50px' }} />
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  if (error || !stats) {
-    return (
-      <div className="container">
-        <div className="alert alert-error">
-          <h3>❌ Error Loading Dashboard</h3>
-          <p>{error || 'Failed to load dashboard'}</p>
-          <button onClick={fetchDashboardData} className="button">🔄 Retry</button>
-        </div>
-      </div>
-    );
-  }
+  const shopActivationRate = stats && stats.totalShops > 0
+    ? Math.round((stats.activeShops / stats.totalShops) * 100)
+    : 0;
+  const userEngagementRate = stats && stats.totalUsers > 0
+    ? Math.round((stats.activeUsers / stats.totalUsers) * 100)
+    : 0;
 
-  // Super Admin dashboard focuses on shops and users management only
+  const columns: DataTableColumn<Shop>[] = [
+    {
+      key: 'name',
+      header: 'Shop',
+      primary: true,
+      cell: (row) => (
+        <HStack gap={3} align="center">
+          <Flex
+            align="center"
+            justify="center"
+            boxSize={9}
+            borderRadius="md"
+            bg="brand.subtle"
+            color="brand.emphasized"
+            flexShrink={0}
+          >
+            <IconStore size={18} />
+          </Flex>
+          <Stack gap={0} minW={0}>
+            <Text fontWeight="600" color="app.text" truncate>{row.name}</Text>
+            <Text fontSize="xs" color="app.subtle" truncate>
+              {row.city}{row.state ? `, ${row.state}` : ''}
+            </Text>
+          </Stack>
+        </HStack>
+      ),
+    },
+    {
+      key: 'location',
+      header: 'Location',
+      mobileLabel: 'Location',
+      hideBelow: 'lg',
+      cell: (row) => (
+        <Text fontSize="sm" color="app.text">
+          {row.city}{row.state ? `, ${row.state}` : ''}
+        </Text>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (row) => (
+        <Badge
+          variant="subtle"
+          bg={row.isActive ? 'green.50' : 'red.50'}
+          color={row.isActive ? 'status.success' : 'status.danger'}
+          borderWidth="1px"
+          borderColor={row.isActive ? 'green.200' : 'red.200'}
+          borderRadius="pill"
+          px={2.5}
+          py={0.5}
+          textTransform="uppercase"
+          letterSpacing="0.06em"
+          fontSize="10px"
+          fontWeight="700"
+        >
+          {row.isActive ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'users',
+      header: 'Users',
+      align: 'right',
+      hideBelow: 'md',
+      cell: (row) => (
+        <HStack gap={1.5} justify="flex-end">
+          <IconUsers size={14} />
+          <Text fontVariantNumeric="tabular-nums" fontWeight="600" color="app.text">
+            {row._count.users}
+          </Text>
+        </HStack>
+      ),
+    },
+    {
+      key: 'created',
+      header: 'Created',
+      hideBelow: 'md',
+      cell: (row) => (
+        <Text fontSize="sm" color="app.subtle" fontVariantNumeric="tabular-nums">
+          {new Date(row.createdAt).toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })}
+        </Text>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      cell: (row) => (
+        <CTAButton
+          size="sm"
+          variant="ghost"
+          color="brand.emphasized"
+          trailingIcon={<IconChevronRight size={14} />}
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            router.push('/shops');
+          }}
+        >
+          Manage
+        </CTAButton>
+      ),
+    },
+  ];
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">🎛️ Super Admin Dashboard</h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-            SaaS Platform - System Overview & Shop Management
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button 
-            className="button button-primary" 
-            onClick={() => router.push('/shops')}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+    <PageShell>
+      <PageHeader
+        eyebrow={
+          <HStack gap={2}>
+            <IconShieldCheck size={14} />
+            <Text>SaaS Platform · Super Admin</Text>
+          </HStack>
+        }
+        title="Tenant console"
+        description="Overview of every jewelry shop, user, and platform health metric."
+        actions={
+          <>
+            <CTAButton
+              variant="secondary"
+              icon={<IconRefresh size={16} />}
+              onClick={fetchDashboardData}
+              loading={loading && !!stats}
+            >
+              Refresh
+            </CTAButton>
+            <CTAButton
+              variant="secondary"
+              icon={<IconUser size={16} />}
+              onClick={() => router.push('/users')}
+            >
+              New user
+            </CTAButton>
+            <CTAButton
+              variant="primary"
+              icon={<IconPlus size={16} />}
+              onClick={() => router.push('/shops')}
+            >
+              New shop
+            </CTAButton>
+          </>
+        }
+      />
+
+      {error && (
+        <Flex
+          role="alert"
+          align="flex-start"
+          gap={3}
+          p={4}
+          bg="red.50"
+          borderWidth="1px"
+          borderColor="red.200"
+          borderRadius="lg"
+          color="red.700"
+        >
+          <Box mt={0.5}><IconAlert size={20} /></Box>
+          <Stack gap={0.5} flex="1">
+            <Text fontWeight="600">Couldn't load the dashboard</Text>
+            <Text fontSize="sm">{error}</Text>
+          </Stack>
+          <CTAButton
+            size="sm"
+            variant="ghost"
+            icon={<IconRefresh size={14} />}
+            onClick={fetchDashboardData}
+            color="red.700"
+            _hover={{ bg: 'red.100' }}
           >
-            <span style={{ fontSize: '1.2rem' }}>🏪</span>
-            Create Shop
-          </button>
-          <button 
-            className="button" 
-            onClick={() => router.push('/users')}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-              color: 'white',
-              border: 'none'
-            }}
+            Retry
+          </CTAButton>
+        </Flex>
+      )}
+
+      {loading && !stats ? (
+        <>
+          <SkeletonStatGrid columns={4} />
+          <SkeletonTable rows={5} />
+        </>
+      ) : stats ? (
+        <>
+          <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap={{ base: 3, md: 4 }}>
+            <StatCard
+              accent="brand"
+              icon={<IconStore size={18} />}
+              label="Total shops"
+              value={stats.totalShops}
+              hint={
+                <HStack gap={1}>
+                  <Text color="status.success" fontWeight="600">{stats.activeShops} active</Text>
+                  <Text>·</Text>
+                  <Text>{stats.totalShops - stats.activeShops} inactive</Text>
+                </HStack>
+              }
+            />
+            <StatCard
+              accent="success"
+              icon={<IconShieldCheck size={18} />}
+              label="Active shops"
+              value={stats.activeShops}
+              hint={`${shopActivationRate}% activation rate`}
+            />
+            <StatCard
+              accent="info"
+              icon={<IconUsers size={18} />}
+              label="System users"
+              value={stats.totalUsers}
+              hint={
+                <HStack gap={1}>
+                  <Text color="status.info" fontWeight="600">{stats.activeUsers} active</Text>
+                  <Text>·</Text>
+                  <Text>{stats.totalUsers - stats.activeUsers} disabled</Text>
+                </HStack>
+              }
+            />
+            <StatCard
+              accent="warning"
+              icon={<IconTrendUp size={18} />}
+              label="User engagement"
+              value={`${userEngagementRate}%`}
+              hint="Active vs. total users"
+            />
+          </SimpleGrid>
+
+          <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
+            <QuickAction
+              icon={<IconStore size={22} />}
+              accent="brand"
+              title="Create a new shop"
+              description="Set up shop profile, GST/PAN, invoice branding, retail vs wholesale flow, and bank details."
+              cta="Open shops"
+              onClick={() => router.push('/shops')}
+            />
+            <QuickAction
+              icon={<IconUser size={22} />}
+              accent="gold"
+              title="Add a shop owner"
+              description="Provision a shop-scoped OWNER user or platform SUPER_ADMIN. Roles and permissions are enforced everywhere."
+              cta="Open users"
+              onClick={() => router.push('/users')}
+            />
+          </SimpleGrid>
+
+          <Box
+            bg="app.canvas"
+            borderWidth="1px"
+            borderColor="app.border"
+            borderRadius="lg"
+            shadow="e2"
+            overflow="hidden"
           >
-            <span style={{ fontSize: '1.2rem' }}>👥</span>
-            Create Shop Owner
-          </button>
-        </div>
-      </div>
+            <Flex
+              px={{ base: 4, md: 6 }}
+              py={4}
+              borderBottomWidth="1px"
+              borderColor="app.border"
+              justify="space-between"
+              align={{ base: 'flex-start', md: 'center' }}
+              direction={{ base: 'column', md: 'row' }}
+              gap={3}
+            >
+              <Stack gap={0.5}>
+                <Heading size={{ base: 'md', md: 'lg' }} color="app.text" fontFamily="heading">
+                  Shops overview
+                </Heading>
+                <Text fontSize="sm" color="app.subtle">
+                  Every jewelry shop on the platform. Click a row to manage the tenant.
+                </Text>
+              </Stack>
+              <HStack gap={2}>
+                <Badge variant="subtle" bg="app.muted" color="app.text" borderRadius="pill" px={2.5}>
+                  {stats.shops.length} total
+                </Badge>
+                <CTAButton
+                  size="sm"
+                  variant="primary"
+                  icon={<IconPlus size={14} />}
+                  onClick={() => router.push('/shops')}
+                >
+                  New shop
+                </CTAButton>
+              </HStack>
+            </Flex>
 
-      {/* Quick Actions Banner */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-        borderRadius: '16px', 
-        padding: '32px', 
-        marginBottom: '30px',
-        boxShadow: '0 10px 40px rgba(102, 126, 234, 0.3)'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
-            🚀 Quick Actions
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1rem' }}>
-            Set up new jewelry shops and assign administrators
-          </p>
-        </div>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-          gap: '16px',
-          maxWidth: '900px',
-          margin: '0 auto'
-        }}>
-          <button
-            onClick={() => router.push('/shops')}
-            style={{
-              padding: '24px',
-              background: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-            }}
-          >
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🏪</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#333', marginBottom: '8px' }}>
-              Create New Shop
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#666', lineHeight: '1.5' }}>
-              Set up shop profile, branding, GST, and bank details
-            </div>
-            <div style={{ 
-              marginTop: '12px', 
-              fontSize: '0.85rem', 
-              fontWeight: 600, 
-              color: '#667eea',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              Get Started <span>→</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => router.push('/users')}
-            style={{
-              padding: '24px',
-              background: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-            }}
-          >
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>👑</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#333', marginBottom: '8px' }}>
-              Create Shop Owner
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#666', lineHeight: '1.5' }}>
-              Assign an OWNER with full control over their shop
-            </div>
-            <div style={{ 
-              marginTop: '12px', 
-              fontSize: '0.85rem', 
-              fontWeight: 600, 
-              color: '#f59e0b',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              Create User <span>→</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Primary Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div className="card">
-          <div style={{ padding: '24px' }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Total Shops</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>{stats.totalShops}</div>
-            <div style={{ marginTop: '12px' }}>
-              <span className="badge badge-success" style={{ marginRight: '8px' }}>{stats.activeShops} active</span>
-              <span className="badge badge-error">{stats.totalShops - stats.activeShops} inactive</span>
-            </div>
-            <div style={{ marginTop: '12px', height: '6px', background: '#e0e0e0', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${stats.totalShops > 0 ? (stats.activeShops / stats.totalShops) * 100 : 0}%`, 
-                background: 'var(--color-success)', 
-                transition: 'width 0.3s ease' 
-              }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div style={{ padding: '24px' }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>System Users</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>{stats.totalUsers}</div>
-            <div style={{ marginTop: '12px' }}>
-              <span className="badge badge-info" style={{ marginRight: '8px' }}>{stats.activeUsers} active</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                {stats.totalUsers - stats.activeUsers} inactive
-              </span>
-            </div>
-            <div style={{ marginTop: '12px', height: '6px', background: '#e0e0e0', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${stats.totalUsers > 0 ? (stats.activeUsers / stats.totalUsers) * 100 : 0}%`, 
-                background: 'var(--color-info)', 
-                transition: 'width 0.3s ease' 
-              }} />
-            </div>
-          </div>
-        </div>
-
-
-      </div>
-
-      {/* Secondary Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ padding: '24px', background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.9rem', color: '#7c3aed', fontWeight: 600, marginBottom: '8px' }}>Platform Health</div>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#5b21b6' }}>
-            {stats.totalShops > 0 ? Math.round((stats.activeShops / stats.totalShops) * 100) : 0}%
-          </div>
-          <div style={{ fontSize: '0.85rem', color: '#8b5cf6', marginTop: '8px' }}>Shop Activation Rate</div>
-        </div>
-
-        <div style={{ padding: '24px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.9rem', color: '#15803d', fontWeight: 600, marginBottom: '8px' }}>User Engagement</div>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#14532d' }}>
-            {stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}%
-          </div>
-          <div style={{ fontSize: '0.85rem', color: '#16a34a', marginTop: '8px' }}>Active Users Rate</div>
-        </div>
-      </div>
-
-      {/* Shops Table */}
-      <div className="card">
-        <div style={{ padding: '24px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '4px' }}>Shops Overview</h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Detailed view of all jewelry shops</p>
-          </div>
-          <button className="button button-primary" onClick={() => router.push('/shops')}>
-            ➕ Create New Shop
-          </button>
-        </div>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Shop Name</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Users</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.shops.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>No shops found</div>
-                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem', marginTop: '8px' }}>Create your first shop to get started</div>
-                  </td>
-                </tr>
-              ) : (
-                stats.shops.map((shop) => (
-                  <tr key={shop.id}>
-                    <td style={{ fontWeight: 600 }}>{shop.name}</td>
-                    <td style={{ fontSize: '0.9rem' }}>{shop.city}, {shop.state}</td>
-                    <td>
-                      <span className={`badge ${shop.isActive ? 'badge-success' : 'badge-error'}`}>
-                        {shop.isActive ? '✓ Active' : '✗ Inactive'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="badge badge-info">{shop._count.users}</span>
-                    </td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                      {new Date(shop.createdAt).toLocaleDateString()}
-                    </td>
-                    <td>
-                      <button 
-                        className="button button-small button-secondary"
-                        onClick={() => {
-                          console.log('🏪 Navigating to shops page from shop:', shop.id);
-                          router.push('/shops');
-                        }}
-                        title="Manage shop details, users, and configuration"
+            <Box p={{ base: 4, md: 6 }}>
+              <DataTable
+                columns={columns}
+                rows={stats.shops}
+                rowKey={(row) => row.id}
+                onRowClick={() => router.push('/shops')}
+                emptyState={
+                  <EmptyState
+                    icon={<IconSparkle size={26} />}
+                    title="No shops yet"
+                    description="Create your first tenant to see it here — you'll manage its users, subscription and shop-type flow from one place."
+                    action={
+                      <CTAButton
+                        variant="primary"
+                        icon={<IconPlus size={16} />}
+                        onClick={() => router.push('/shops')}
                       >
-                        ⚙️ Manage
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+                        Create your first shop
+                      </CTAButton>
+                    }
+                  />
+                }
+              />
+            </Box>
+          </Box>
+        </>
+      ) : null}
+    </PageShell>
+  );
+}
+
+interface QuickActionProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  cta: string;
+  onClick: () => void;
+  accent: 'brand' | 'gold';
+}
+
+function QuickAction({ icon, title, description, cta, onClick, accent }: QuickActionProps) {
+  // Gold CTA uses gold.800 so the arrow-text stays legible on white; icon tile stays soft.
+  const tokens =
+    accent === 'gold'
+      ? { bg: 'flow.retail.bg', fg: 'gold.800', border: 'gold.300', tile: 'gold.600' }
+      : { bg: 'brand.subtle', fg: 'brand.emphasized', border: 'brand.muted', tile: 'brand.emphasized' };
+
+  return (
+    <Box
+      as="button"
+      textAlign="left"
+      onClick={onClick}
+      bg="app.canvas"
+      borderWidth="1px"
+      borderColor="app.border"
+      borderRadius="lg"
+      p={{ base: 4, md: 5 }}
+      shadow="e2"
+      transition="all 0.2s ease"
+      _hover={{ shadow: 'e8', transform: 'translateY(-2px)', borderColor: tokens.border }}
+      _active={{ transform: 'translateY(0)' }}
+      cursor="pointer"
+    >
+      <HStack align="flex-start" gap={4}>
+        <Flex
+          align="center"
+          justify="center"
+          boxSize={11}
+          borderRadius="md"
+          bg={tokens.bg}
+          color={tokens.tile}
+          flexShrink={0}
+        >
+          {icon}
+        </Flex>
+        <Stack gap={1} flex="1">
+          <Text fontWeight="700" color="app.text" fontSize="md">
+            {title}
+          </Text>
+          <Text fontSize="sm" color="app.subtle" lineHeight={1.55}>
+            {description}
+          </Text>
+          <HStack gap={1} mt={2} color={tokens.fg} fontWeight="700" fontSize="sm">
+            <Text>{cta}</Text>
+            <IconChevronRight size={16} />
+          </HStack>
+        </Stack>
+      </HStack>
+    </Box>
   );
 }

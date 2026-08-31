@@ -133,3 +133,55 @@ export const IconDiamond = (p: IconProps) => (
     <path d="M12 9v12" />
   </BaseIcon>
 );
+
+export const IconPlus = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </BaseIcon>
+);
+
+export const IconChevronRight = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="m9 6 6 6-6 6" />
+  </BaseIcon>
+);
+
+export const IconSettings = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </BaseIcon>
+);
+
+export const IconUsers = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </BaseIcon>
+);
+
+export const IconTrendUp = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="m23 6-9.5 9.5-5-5L1 18" />
+    <path d="M17 6h6v6" />
+  </BaseIcon>
+);
+
+export const IconAlert = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <path d="M12 9v4" />
+    <circle cx="12" cy="17" r="0.5" fill="currentColor" />
+  </BaseIcon>
+);
+
+export const IconRefresh = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+    <path d="M3 21v-5h5" />
+  </BaseIcon>
+);
