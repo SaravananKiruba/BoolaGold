@@ -5,12 +5,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import prisma from '@/lib/prisma';
 import { successResponse, errorResponse, validationErrorResponse } from '@/utils/response';
 import { amountSchema, uuidSchema } from '@/utils/validation';
 import { TransactionType, TransactionCategory, TransactionStatus, PaymentMethod, MetalType, AuditModule } from '@/domain/entities/types';
 import { logCreate } from '@/utils/audit';
 import { getSession, hasPermission } from '@/lib/auth';
 import { getRepositories } from '@/utils/apiRepository';
+import {
+  validateTransactionForShopType,
+  computeExcludeFromProfitLoss,
+} from '@/utils/wholesaleValidation';
 
 const createTransactionSchema = z.object({
   transactionDate: z.string().datetime().optional(),
@@ -24,23 +29,36 @@ const createTransactionSchema = z.object({
   salesOrderId: uuidSchema.optional(),
   status: z.nativeEnum(TransactionStatus).default(TransactionStatus.COMPLETED),
   currency: z.string().default('INR'),
-  
-  // Metal Purchase specific fields
+
+  // Metal fields (used by METAL_PURCHASE and METAL_EXCHANGE_IN/OUT)
   metalType: z.nativeEnum(MetalType).optional(),
   metalPurity: z.string().optional(),
   metalWeight: z.number().positive().optional(),
   metalRatePerGram: z.number().positive().optional(),
   metalCost: amountSchema.optional(),
-  
+
+  // For wholesale metal-exchange pairing (IN <-> OUT)
+  exchangeReferenceId: z.string().max(100).optional(),
+  excludeFromProfitLoss: z.boolean().optional(),
+
   createdBy: z.string().optional(),
 }).refine((data) => {
-  // If metal purchase, require metal fields
   if (data.transactionType === TransactionType.METAL_PURCHASE) {
-    return data.metalType && data.metalPurity && data.metalWeight && data.metalRatePerGram;
+    return !!(data.metalType && data.metalPurity && data.metalWeight && data.metalRatePerGram);
   }
   return true;
 }, {
   message: 'Metal purchase requires metalType, metalPurity, metalWeight, and metalRatePerGram',
+}).refine((data) => {
+  if (
+    data.transactionType === TransactionType.METAL_EXCHANGE_IN ||
+    data.transactionType === TransactionType.METAL_EXCHANGE_OUT
+  ) {
+    return !!(data.metalType && data.metalPurity && data.metalWeight);
+  }
+  return true;
+}, {
+  message: 'Metal-exchange transactions require metalType, metalPurity, and metalWeight',
 });
 
 export async function GET(request: NextRequest) {
@@ -91,15 +109,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication and permission
     const session = await getSession();
     if (!hasPermission(session, 'TRANSACTION_CREATE')) {
       return NextResponse.json(errorResponse('Unauthorized'), { status: 403 });
     }
+    if (!session?.shopId) {
+      return NextResponse.json(errorResponse('Unauthorized: No shop context'), { status: 403 });
+    }
 
     const body = await request.json();
-
-    // Validate input
     const validation = createTransactionSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(validationErrorResponse(validation.error.errors), { status: 400 });
@@ -107,12 +125,45 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
-    // Calculate metal cost if not provided
-    if (data.transactionType === TransactionType.METAL_PURCHASE && data.metalWeight && data.metalRatePerGram) {
+    // Load the shop to know its business type — this is what drives retail vs wholesale rules.
+    const shop = await prisma.shop.findFirst({
+      where: { id: session.shopId, deletedAt: null },
+      select: { shopBusinessType: true },
+    });
+    if (!shop) {
+      return NextResponse.json(errorResponse('Shop not found'), { status: 404 });
+    }
+    const shopBusinessType = shop.shopBusinessType as 'RETAIL' | 'WHOLESALE';
+
+    const flowCheck = validateTransactionForShopType(shopBusinessType, {
+      transactionType: data.transactionType,
+      paymentMethod: data.paymentMode,
+      amount: data.amount,
+      metalWeight: data.metalWeight ?? null,
+    });
+    if (!flowCheck.valid) {
+      return NextResponse.json(errorResponse(flowCheck.error || 'Invalid transaction'), { status: 400 });
+    }
+
+    // Auto-derive metalCost when weight + rate provided (matches previous behavior).
+    if (
+      (data.transactionType === TransactionType.METAL_PURCHASE ||
+        data.transactionType === TransactionType.METAL_EXCHANGE_IN ||
+        data.transactionType === TransactionType.METAL_EXCHANGE_OUT) &&
+      data.metalWeight &&
+      data.metalRatePerGram &&
+      data.metalCost === undefined
+    ) {
       data.metalCost = data.metalWeight * data.metalRatePerGram;
     }
 
-    // Create transaction
+    // Server-computed exclude flag wins over anything the client sent.
+    const excludeFromProfitLoss = computeExcludeFromProfitLoss(
+      shopBusinessType,
+      data.transactionType,
+      data.paymentMode,
+    );
+
     const repos = await getRepositories(request);
     const repository = repos.transaction;
     const transaction = await repository.create({
@@ -132,11 +183,12 @@ export async function POST(request: NextRequest) {
       metalWeight: data.metalWeight || null,
       metalRatePerGram: data.metalRatePerGram || null,
       metalCost: data.metalCost || null,
-      createdBy: data.createdBy || null,
+      exchangeReferenceId: data.exchangeReferenceId || null,
+      excludeFromProfitLoss,
+      createdBy: data.createdBy || session.username || null,
     });
 
-    // Log the creation
-    await logCreate(AuditModule.TRANSACTIONS, transaction.id, transaction, session!.shopId!);
+    await logCreate(AuditModule.TRANSACTIONS, transaction.id, transaction, session.shopId);
 
     return NextResponse.json(successResponse(transaction), { status: 201 });
   } catch (error: any) {

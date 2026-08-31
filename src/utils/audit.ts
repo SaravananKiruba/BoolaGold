@@ -1,9 +1,7 @@
 // Audit Logging Utility
 
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { AuditAction, AuditModule, AuditSeverity } from '@/domain/entities/types';
-
-const prisma = new PrismaClient();
 
 export interface AuditLogInput {
   userId?: string;

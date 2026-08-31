@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ChakraProvider } from '@/components/providers/ChakraProvider';
+import { ShopProvider } from '@/components/providers/ShopProvider';
 import Navigation from '@/components/ui/Navigation';
 import './globals.css';
 
@@ -17,8 +18,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ChakraProvider>
-          <Navigation />
-          {children}
+          <ShopProvider>
+            <Navigation />
+            {children}
+          </ShopProvider>
         </ChakraProvider>
       </body>
     </html>

@@ -210,3 +210,113 @@ export function shouldExcludeFromProfitLoss(
     paymentMethod === PaymentMethod.METAL_EXCHANGE
   );
 }
+
+/**
+ * Retail = cash-first: every income/expense hits ₹ cash P&L.
+ * Wholesale = metal-first: sales-related metal exchanges are excluded from P&L,
+ * but operating expenses (rent, salary, utilities…) are recorded as CASH with
+ * `excludeFromProfitLoss = false` so the shop's real cash P&L is still tracked.
+ *
+ * Rules for POST /api/transactions:
+ *  RETAIL   INCOME/EXPENSE/EMI/METAL_PURCHASE       -> amount > 0, no METAL_EXCHANGE payment method
+ *  WHOLESALE METAL_EXCHANGE_IN/OUT                  -> amount = 0, requires metal fields, exclude=true
+ *  WHOLESALE INCOME/EXPENSE (operating)              -> cash payment method allowed, exclude=false, positive amount
+ *  WHOLESALE METAL_EXCHANGE payment method          -> only allowed with the METAL_EXCHANGE_* transaction types
+ */
+export interface TransactionValidationInput {
+  transactionType: string;
+  paymentMethod: PaymentMethod;
+  amount: number;
+  metalWeight?: number | null;
+}
+
+export function validateTransactionForShopType(
+  shopBusinessType: ShopBusinessType,
+  input: TransactionValidationInput,
+): ValidationResult {
+  const { transactionType, paymentMethod, amount, metalWeight } = input;
+  const isMetalExchangeTxn =
+    transactionType === 'METAL_EXCHANGE_IN' || transactionType === 'METAL_EXCHANGE_OUT';
+
+  if (paymentMethod === PaymentMethod.METAL_EXCHANGE && !isMetalExchangeTxn) {
+    return {
+      valid: false,
+      error:
+        'METAL_EXCHANGE payment method is only valid for METAL_EXCHANGE_IN / METAL_EXCHANGE_OUT transactions.',
+    };
+  }
+
+  if (shopBusinessType === 'RETAIL') {
+    if (isMetalExchangeTxn) {
+      return {
+        valid: false,
+        error: 'Retail shops cannot record metal-exchange transactions.',
+      };
+    }
+    if (paymentMethod === PaymentMethod.METAL_EXCHANGE) {
+      return {
+        valid: false,
+        error: 'Retail shops cannot use METAL_EXCHANGE as a payment method.',
+      };
+    }
+    if (amount <= 0) {
+      return {
+        valid: false,
+        error: 'Retail transactions must have a positive amount.',
+      };
+    }
+    return { valid: true };
+  }
+
+  // WHOLESALE
+  if (isMetalExchangeTxn) {
+    if (paymentMethod !== PaymentMethod.METAL_EXCHANGE) {
+      return {
+        valid: false,
+        error: 'Metal-exchange transactions must use METAL_EXCHANGE payment method.',
+      };
+    }
+    if (amount !== 0) {
+      return {
+        valid: false,
+        error: 'Wholesale metal-exchange transactions cannot carry a cash amount.',
+      };
+    }
+    if (!metalWeight || metalWeight <= 0) {
+      return {
+        valid: false,
+        error: 'Metal-exchange transactions require a positive metalWeight.',
+      };
+    }
+    return { valid: true };
+  }
+
+  // Wholesale operational income/expense (rent, salary, utilities…):
+  // allowed as cash but tracked separately from metal flow.
+  if (amount <= 0) {
+    return {
+      valid: false,
+      error: 'Operating income/expense must have a positive amount.',
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Whether a given transaction should have `excludeFromProfitLoss = true`.
+ * Only the metal-exchange legs are excluded; wholesale operating expenses are
+ * included in cash P&L just like retail.
+ */
+export function computeExcludeFromProfitLoss(
+  shopBusinessType: ShopBusinessType,
+  transactionType: string,
+  paymentMethod: PaymentMethod,
+): boolean {
+  if (
+    shopBusinessType === 'WHOLESALE' &&
+    (transactionType === 'METAL_EXCHANGE_IN' || transactionType === 'METAL_EXCHANGE_OUT')
+  ) {
+    return true;
+  }
+  return shouldExcludeFromProfitLoss(shopBusinessType, paymentMethod);
+}
